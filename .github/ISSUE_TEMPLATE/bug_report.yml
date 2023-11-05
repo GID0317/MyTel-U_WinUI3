@@ -13,30 +13,42 @@ body:
     label: Affected MyTel-U Version
     placeholder: Input the version number here, for example (1.0.0)
     description: You can find it on the settings page within the application.
+  validations:
+    required: true
 
 - type: input
   attributes:
     label: Which version of Windows are you using?
     placeholder: Input the data here
     description: You can find it by hovering over the start icon (the Windows Logo on the taskbar), right-clicking, and then selecting 'System'. You can input the data under 'Device Specification' and 'Windows Specification' here. Alternatively (and this is recommended), you can also press 'Windows + R' on your keyboard, type "dxdiag" into the run dialog, then hit enter. Choose 'Save All Information', then drag and drop the file into your issue, or attach it through the file selection dialog.
+  validations:
+    required: true
 
 - type: input
   attributes:
     label: Expected behaviour and bug behaviour
     placeholder: the expected behavior and the behaviour of the bug
+  validations:
+    required: true
 
 - type: input
   attributes:
     label: Steps to reproduce the bug
     description: Please describe the steps you took to reproduce the bug, providing as much detail as possible.
     placeholder: describe the bug in as much detail as possible.
+  validations:
+    required: true
 
 - type: input
   attributes:
     label: Screenshot(s)
     description: You can take a screenshots by using the Snipping Tool. This can be accessed by pressing 'Windows + Shift + S' or by pressing the 'PrtSc' button. Even better, you can also attach a GIF here.
     placeholder: attach the image here
+  validations:
+    required: true
 
 - type: input
   attributes:
     label: Additional detail
+  validations:
+    required: true
