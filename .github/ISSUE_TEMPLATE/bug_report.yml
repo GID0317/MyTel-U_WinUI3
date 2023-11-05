@@ -5,7 +5,7 @@ description: This is a bug report section. Thank you for taking the time to repo
     label: Affected MyTel-U Version
     placeholder: Input the version number here, for example (1.0.0)
     description: You can find it on the settings page within the application.
-  validations:
+    validations:
     required: true
 
 - type: input
@@ -18,7 +18,7 @@ description: This is a bug report section. Thank you for taking the time to repo
   attributes:
     label: Expected behaviour and bug behaviour
     placeholder: the expected behavior and the behaviour of the bug
-  validations:
+    validations:
     required: true
 
 - type: input
@@ -26,7 +26,7 @@ description: This is a bug report section. Thank you for taking the time to repo
     label: Steps to reproduce the bug
     description: Please describe the steps you took to reproduce the bug, providing as much detail as possible.
     placeholder: describe the bug in as much detail as possible.
-  validations:
+    validations:
     required: true
 
 - type: input
@@ -34,5 +34,5 @@ description: This is a bug report section. Thank you for taking the time to repo
     label: Screenshot(s)
     description: You can attach screenshots by using the Snipping Tool. This can be accessed by pressing 'Windows + Shift + S' or by pressing the 'PrtSc' button. Even better, you can also attach a GIF here.
     placeholder: attach the image here
-  validations:
+    validations:
     required: true
