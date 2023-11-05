@@ -1,5 +1,8 @@
 name: "Bug report"
 description: This is a bug report section. Thank you for taking the time to report a bug in this application so we can improve it. Please follow the form provided below to report the bug you encountered.
+labels:
+- Issue-Bug
+- Needs-Triage
 body:
 - type: input
   attributes:
