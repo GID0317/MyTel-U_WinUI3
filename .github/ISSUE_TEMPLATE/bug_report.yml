@@ -29,7 +29,7 @@ description: This is a bug report section. Thank you for taking the time to repo
   validations:
     required: true
 
-    - type: input
+- type: input
   attributes:
     label: Screenshot(s)
     description: You can attach screenshots by using the Snipping Tool. This can be accessed by pressing 'Windows + Shift + S' or by pressing the 'PrtSc' button. Even better, you can also attach a GIF here.
