@@ -3,7 +3,6 @@ description: This is a bug report section. Thank you for taking the time to repo
 labels:
 - Issue-Bug
 - Needs-Triage
-body:
 - type: input
   attributes:
     label: Affected MyTel-U Version
