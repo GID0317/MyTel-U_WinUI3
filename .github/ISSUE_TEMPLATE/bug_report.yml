@@ -6,8 +6,7 @@ labels:
 body:
 - type: markdown
     attributes:
-      value: |
-        Thank you for taking the time to report a bug in this application so we can improve it. Please follow the form provided below to report the bug you encountered.
+      value: Thank you for taking the time to report a bug in this application so we can improve it. Please follow the form provided below to report the bug you encountered.
 
 - type: input
   attributes:
