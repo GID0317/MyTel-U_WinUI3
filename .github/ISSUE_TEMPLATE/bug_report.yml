@@ -32,3 +32,7 @@ body:
     label: Screenshot(s)
     description: You can take a screenshots by using the Snipping Tool. This can be accessed by pressing 'Windows + Shift + S' or by pressing the 'PrtSc' button. Even better, you can also attach a GIF here.
     placeholder: attach the image here
+
+- type: input
+  attributes:
+    label: Additional detail
