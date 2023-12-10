@@ -1,5 +1,5 @@
 
-![App Screenshot](https://github.com/GID0317/MyTel-U_WinUI3/assets/108791227/8e446260-b43f-442e-b0ad-34c630acdaf7)
+![Banner](https://github.com/GID0317/MyTel-U_WinUI3/assets/108791227/5ba451b7-b7e8-430e-98e4-0007bee8f7be)
 
 This application was developed in response to the absence of a native desktop application for MyTel-U. Utilizing Microsoft's WinUI3 fluent design, Now you can use My Tel-U Natively On the desktop!
 
