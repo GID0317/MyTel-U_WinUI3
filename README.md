@@ -3,7 +3,7 @@
 This application was developed in response to the absence of a native desktop application for MyTel-U. Utilizing Microsoft's WinUI3 fluent design, Now you can use My Tel-U Natively On the desktop!
 
 # How Can I Download It?
-Go to the Release Page > Click At the Assets > Download The Latest Version (Recomended) Or Download Apropriate Versions You Need
+Go to the Release Page > Click At the Assets > [Download The Latest Version](https://github.com/GID0317/MyTel-U_WinUI3/releases/latest "Download The Latest Version") (Recomended) Or [Download Apropriate Versions You Need](https://github.com/GID0317/MyTel-U_WinUI3/releases "Download Apropriate Versions You Need")
 
 # Third-party Package used
 - `CommunityToolkit`
