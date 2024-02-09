@@ -15,5 +15,4 @@ Go to the Release Page > Click At the Assets > [Download The Latest Version](htt
 > This project is entirely community-driven and is not affiliated with MyTel-U in any way. this project is open sourced so any contribution are welcomed! 
 
 # UI Aplication Overview
-![Preview](https://github.com/GID0317/MyTel-U_WinUI3/assets/108791227/33094ae5-14f8-49b6-9bac-f40a5b559dbf)
-
+![Aplication_Preview](https://github.com/GID0317/MyTel-U_WinUI3/assets/108791227/8d085ea8-f38b-471f-8bec-261f8f2f9de9)
