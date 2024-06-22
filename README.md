@@ -11,6 +11,12 @@ This project is open sourced so any contribution are welcomed! （￣︶￣）�
 
 We recommend you download the latest version for a better experience!
 
+# Features
+- **Home**: Application Hub, ported from MyTel-U for mobile devices.
+- **Attendance**: Check attendance periodically during the semester.
+- **Schedule**: Access the current semester’s course schedule.
+- **Community Tools**: Explore tools listed by laboratory websites and community made tool websites.
+
 # Third-party Package used
 - `CommunityToolkit`
 - `Win App SDK`
