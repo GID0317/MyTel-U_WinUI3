@@ -5,7 +5,7 @@
 </div>
 
 <div align="center">
-  <a href="https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime">
+  <a href="https://dotnet.microsoft.com/en-us/download/dotnet/latest/runtime">
     <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-blue?logo=windows11&style=flat-square&color=1E9BFA" />
   </a>
   <a href="https://github.com/GID0317/MyTel-U_WinUI3/releases">
