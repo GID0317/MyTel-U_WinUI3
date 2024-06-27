@@ -25,7 +25,7 @@ This project is open sourced, so any contributions are welcomed! （￣︶￣）
 > [!NOTE]
 > Go to the Release Page > Click At the Assets > [Download The Latest Version](https://github.com/GID0317/MyTel-U_WinUI3/releases/latest "Download The Latest Version") (Recomended) Or [Download Apropriate Version  You Need](https://github.com/GID0317/MyTel-U_WinUI3/releases "Download Apropriate Versions You Need")
 
-Please read our [Instalation Guide](https://github.com/GID0317/MyTel-U_WinUI3/wiki/MyTel%E2%80%90U-Installation-Guide) for more detail about instalation process. Also we recommend you download the latest version for a better experience!
+Please read our [Instalation Guide](https://github.com/GID0317/MyTel-U_WinUI3/wiki/My-Tel%E2%80%90U-Launcher-Installation-Guide) for more detail about instalation process. Also we recommend you download the latest version for a better experience!
 
 # Features
 - **Home**: Application Hub, ported from MyTel-U for mobile devices.
