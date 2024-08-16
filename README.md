@@ -23,6 +23,8 @@ This project is open sourced, so any contributions are welcomed! （￣︶￣）
 
 Please read our [Instalation Guide](https://github.com/GID0317/MyTel-U_WinUI3/wiki/My-Tel%E2%80%90U-Launcher-Installation-Guide) for more detail about instalation process. Also we recommend you download the latest version for a better experience!
 
+Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c1f2c5b1eae2eeee22e962d55b2edbbc821eedad0c11a94d69ef7c686b8b8)
+
 # Features
 - **Home**: Application Hub, ported from MyTel-U for mobile devices.
 - **Attendance**: Check attendance periodically during the semester.
