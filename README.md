@@ -13,9 +13,9 @@
 </div>
 
 
-This application was made by the community for MyTel-U on the modern desktop Windows 10 or 11. Developed using Microsoft’s WinUI3 fluent design, now you can use My Tel-U natively on your desktop!
+This application was made by the community for MyTel-U on the modern desktop Windows 10 or 11. Developed using Microsoft’s WinUI3 fluent design, now you can use My Tel-U on your desktop!
 
-This project is open sourced, so any contributions are welcomed! （￣︶￣）↗
+This project is open sourced (Uploaded soon) , so any contributions are welcomed! （￣︶￣）↗
 
 # How Can I Download It?
 > [!NOTE]
