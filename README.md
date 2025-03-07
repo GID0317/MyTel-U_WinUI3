@@ -1,4 +1,5 @@
-![Banner](https://github.com/GID0317/MyTel-U_WinUI3/assets/108791227/5ab35671-2aaa-4957-abf7-ad8ddb9107fd)
+![289362191-5ab35671-2aaa-4957-abf7-ad8ddb9107fd](https://github.com/user-attachments/assets/52afdf06-c5a6-49ff-996e-ee9feb6e41e5)
+
 #
 <div align="center">
   <a href="https://dotnet.microsoft.com/en-us/download/dotnet/latest/runtime">
