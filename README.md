@@ -1,4 +1,4 @@
-![289362191-5ab35671-2aaa-4957-abf7-ad8ddb9107fd](https://github.com/user-attachments/assets/52afdf06-c5a6-49ff-996e-ee9feb6e41e5)
+![289362191-5ab35671-2aaa-4957-abf7-ad8ddb9107fd](https://github.com/user-attachments/assets/9577ace3-8f67-47be-838d-14c99c6b1432)
 
 #
 <div align="center">
