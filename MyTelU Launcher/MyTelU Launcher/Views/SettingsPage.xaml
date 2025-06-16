@@ -1,0 +1,135 @@
+﻿<Page
+    x:Class="MyTelU_Launcher.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:helpers="using:MyTelU_Launcher.Helpers"
+    xmlns:xaml="using:Microsoft.UI.Xaml"
+    xmlns:ui="using:Microsoft.UI.Xaml.Controls"
+    xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
+    behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
+    mc:Ignorable="d"
+    DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}">
+
+    <Page.Resources>
+        <!-- Converter for friendly theme names -->
+        <helpers:ThemeToStringConverter x:Key="ThemeToStringConverter" />
+    </Page.Resources>
+
+    <!-- Root Grid for layering -->
+    <Grid>
+        <!-- Background Layer: Full-size acrylic rectangle that is immune to content margins -->
+        <Rectangle Fill="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+           HorizontalAlignment="Stretch"
+           VerticalAlignment="Stretch"
+           Margin="-100,-100,-100,-100"/>
+
+        <!-- Foreground Content Layer -->
+        <Grid Margin="20,20,20,20">
+
+            <StackPanel x:Name="ContentArea" Spacing="5">
+                <TextBlock FontWeight="SemiBold" Text="Settings" Margin="3,20,5,5" FontSize="32"/>
+                <!-- SettingsCard with Theme Changer ComboBox as its content -->
+                <controls:SettingsCard x:Name="ThemeSettingsCard"
+                                       Header="App Theme"
+                                       Margin="0,0,0,0"
+                                       Description="Select which app theme to display">
+                    <controls:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xE790;" />
+                    </controls:SettingsCard.HeaderIcon>
+                    <ComboBox
+                        x:Uid="Settings_Theme_ComboBox"
+                        ItemsSource="{x:Bind ViewModel.Themes, Mode=OneWay}"
+                        SelectedItem="{x:Bind ViewModel.ElementTheme, Mode=TwoWay}"
+                        FontSize="15">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="xaml:ElementTheme">
+                                <TextBlock Text="{Binding Converter={StaticResource ThemeToStringConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </controls:SettingsCard>
+
+                <controls:SettingsExpander Description="Use custom background image by picking an image from directory" 
+                           Header="Custom background image" 
+                           IsExpanded="True">
+                    <controls:SettingsExpander.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xEE71;" />
+                    </controls:SettingsExpander.HeaderIcon>
+                    <ToggleSwitch x:Name="CostumImageBGToggleSwitch" IsOn="{x:Bind ViewModel.IsCustomImageBGEnabled, Mode=TwoWay}"/>
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard x:Name="CostumImageBGTxt" 
+                               Header="Pick an image from directory" 
+                               Description="{x:Bind ViewModel.CustomImagePathDescription, Mode=OneWay}">
+                            <Button x:Name="CostumImageBGBtn" 
+                    Content="Select Image" 
+                    Style="{StaticResource AccentButtonStyle}" 
+                    CornerRadius="10" 
+                    IsEnabled="{x:Bind ViewModel.IsCustomImageBGEnabled, Mode=OneWay}"
+                    Click="CostumImageBGBtn_Click"/>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <!-- Update Check Card -->
+                <controls:SettingsCard x:Name="UpdateSettingsCard"
+                       Header="Update Check"
+                       Margin="0,0,0,0"
+                       Description="Current version: 3.0.1">
+                    <controls:SettingsCard.HeaderIcon>
+                        <FontIcon Glyph="&#xE895;" />
+                    </controls:SettingsCard.HeaderIcon>
+                    <Button Content="Check for update" Click="CheckUpdateButton_Click"/>
+                </controls:SettingsCard>
+
+                <!-- InfoBar to display the update result when already up-to-date -->
+                <InfoBar
+                x:Name="UpdateUptodateInfoBar"
+                IsOpen="True"
+                Visibility="Collapsed"
+                Severity="Success"
+                Message="You are already up-to-date"
+                IsClosable="False"/>
+
+                <TextBlock FontWeight="SemiBold" Text="About" Margin="3,10,5,5"/>
+
+                <controls:SettingsExpander Header="MyTel-U Launcher" 
+                                           Description="Copyright © GID Under MIT License. All rights reserved."
+                                           IsExpanded="True"
+                                           Margin="0,0,0,0">
+                    <controls:SettingsExpander.HeaderIcon>
+                        <ui:ImageIcon Source="ms-appx:///Assets/Icon_App.png" />
+                    </controls:SettingsExpander.HeaderIcon>
+                    <TextBlock IsTextSelectionEnabled="True"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Version 3.0.1" />
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="Send a Feedback, File a bug or contribute to the project">
+                            <HyperlinkButton Content="Go to the page"
+                                             NavigateUri="https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose" />
+                        </controls:SettingsCard>
+                        <controls:SettingsCard Header="Help us with the translations">
+                            <HyperlinkButton Content="Go to the page"
+                                             NavigateUri="https://github.com/GID0317/MyTel-U_WinUI3" />
+                        </controls:SettingsCard>
+                        <controls:SettingsCard Header="Open Source contributors">
+                            <HyperlinkButton Content="Go to the page"
+                                              NavigateUri="https://github.com/GID0317/MyTel-U_WinUI3/graphs/contributors" />
+                        </controls:SettingsCard>
+                        <controls:SettingsCard HorizontalContentAlignment="Left"
+                                                 ContentAlignment="Left">
+                            <StackPanel Margin="-12,0,0,0" Orientation="Vertical">
+                                <TextBlock Text="Dependencies  references" Padding="10,5,0,5"/>
+                                <HyperlinkButton Content="Win App SDK 1.6" NavigateUri="https://github.com/microsoft/WindowsAppSDK"/>
+                                <HyperlinkButton Content="Win UI Library" NavigateUri="https://learn.microsoft.com/en-us/windows/apps/winui/winui3/"/>
+                                <HyperlinkButton Content="Windows Community Toolkit" NavigateUri="https://github.com/CommunityToolkit/Windows"/>
+                            </StackPanel>
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

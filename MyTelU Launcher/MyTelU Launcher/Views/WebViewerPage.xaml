@@ -1,0 +1,93 @@
+﻿<!-- WebViewerPage.xaml -->
+<Page x:Class="MyTelU_Launcher.Views.WebViewerPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
+      behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
+      mc:Ignorable="d">
+
+    <Grid x:Name="ContentArea">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- WebView2 spans both rows -->
+        <WebView2 x:Name="WebView"
+                  Source="{x:Bind ViewModel.Source, Mode=OneWay}"
+                  Grid.RowSpan="2" />
+
+        <!-- Loading Indicator -->
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}">
+            <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+            <TextBlock x:Uid="WebView_Loading" Foreground="Black" FontWeight="SemiBold"/>
+        </StackPanel>
+
+        <!-- Error Grid -->
+        <Grid Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+              Visibility="{x:Bind ViewModel.HasFailures, Mode=OneWay}">
+            <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <Rectangle Fill="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+                   HorizontalAlignment="Stretch"
+                   VerticalAlignment="Stretch"
+                   Margin="0,0,0,0" />
+                <TextBlock x:Uid="WebView_FailedMessage"
+                   Text="Something went wrong!"
+                   HorizontalAlignment="Center"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   TextWrapping="WrapWholeWords" />
+                <Button x:Uid="WebView_Reloads"
+                        Margin="0,10,0,0"
+                        Padding="8"
+                        Width="150"
+                        CornerRadius="10"
+                        Command="{x:Bind ViewModel.ReloadCommand}"
+                        HorizontalAlignment="Center"
+                        Background="{ThemeResource SystemControlBackgroundAccentBrush}"
+                        Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <SymbolIcon Symbol="Refresh" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}" />
+                        <TextBlock Text="Refresh" Margin="8,0,0,0" Foreground="{ThemeResource SystemControlForegroundBaseHighBrush}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Browser Controls (optional) -->
+        <Grid Grid.Row="1" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Uid="BrowserBackButton"
+                        Command="{x:Bind ViewModel.BrowserBackCommand, Mode=OneWay}"
+                        Margin="{StaticResource XSmallLeftTopRightBottomMargin}"
+                        Padding="{StaticResource XXSmallLeftTopRightBottomMargin}">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE72B;" />
+                </Button>
+                <Button x:Uid="BrowserForwardButton"
+                        Command="{x:Bind ViewModel.BrowserForwardCommand, Mode=OneWay}"
+                        Margin="{StaticResource XSmallLeftTopRightBottomMargin}"
+                        Padding="{StaticResource XXSmallLeftTopRightBottomMargin}">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE72A;" />
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Uid="ReloadButton"
+                        Command="{x:Bind ViewModel.ReloadCommand}"
+                        Margin="{StaticResource XSmallLeftTopRightBottomMargin}"
+                        Padding="{StaticResource XXSmallLeftTopRightBottomMargin}">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE72C;" />
+                </Button>
+                <Button x:Uid="OpenInBrowserButton"
+                        Command="{x:Bind ViewModel.OpenInBrowserCommand}"
+                        Margin="{StaticResource XSmallLeftTopRightBottomMargin}"
+                        Padding="{StaticResource XXSmallLeftTopRightBottomMargin}">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE774;" />
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

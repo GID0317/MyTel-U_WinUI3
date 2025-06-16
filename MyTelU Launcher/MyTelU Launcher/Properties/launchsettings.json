@@ -1,0 +1,10 @@
+﻿{
+    "profiles": {
+      "MyTelU Launcher (Package)": {
+        "commandName": "MsixPackage"
+      },
+      "MyTelU Launcher (Unpackaged)": {
+        "commandName": "Project"
+      }
+    }
+}
