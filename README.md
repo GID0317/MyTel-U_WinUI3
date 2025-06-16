@@ -3,7 +3,7 @@
 #
 <div align="center">
   <a href="https://dotnet.microsoft.com/en-us/download/dotnet/latest/runtime">
-    <img alt="Windows" src="https://img.shields.io/badge/platform-Windows-blue?logo=windows11&style=flat-square&color=1E9BFA" />
+    <img alt="Windows" src="https://custom-icon-badges.demolab.com/badge/Windows-0078D6?logo=windows11&logoColor=white" />
   </a>
   <a href="https://github.com/GID0317/MyTel-U_WinUI3/releases">
     <img alt="下载数" src="https://img.shields.io/github/downloads/GID0317/MyTel-U_WinUI3/total?logo=github&style=flat-square&color=1E9BFA">
