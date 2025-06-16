@@ -43,3 +43,8 @@ Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose)
 
 # UI Aplication Overview
 ![UIOverviewBanner](https://github.com/user-attachments/assets/09021b24-957d-4035-9dc4-1bc825c87e0b)
+
+Art by: X @mintificial 
+<p align="left">
+  <img src="https://github.com/user-attachments/assets/a026ddc2-6893-4364-901c-39b5fd8b7b21" alt="Art by: mintificial" width="100">
+</p>
