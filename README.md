@@ -32,15 +32,6 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 - **Schedule**: Access the current semester’s course schedule.
 - **Community Tools**: Explore tools listed by laboratory websites and community made tool websites.
 
-# Third-party Package used
-- `CommunityToolkit`
-- `Win App SDK`
-- `WinUIEX`
-- `DotNet`
-
-# Feedback
-Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose) issue
-
 # UI Aplication Overview
 ![UIOverviewBanner](https://github.com/user-attachments/assets/09021b24-957d-4035-9dc4-1bc825c87e0b)
 
@@ -48,3 +39,12 @@ Art by: X @mintificial
 <p align="left">
   <img src="https://github.com/user-attachments/assets/a026ddc2-6893-4364-901c-39b5fd8b7b21" alt="Art by: mintificial" width="100">
 </p>
+
+# Feedback
+Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose) issue
+
+# Third-party Package used
+- `CommunityToolkit`
+- `Win App SDK`
+- `WinUIEX`
+- `DotNet`
