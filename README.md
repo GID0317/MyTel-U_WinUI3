@@ -22,7 +22,7 @@ This project is open sourced (Uploaded soon) , so any contributions are welcomed
 > [!NOTE]
 > Go to the Release Page > Click At the Assets > [Download The Latest Version](https://github.com/GID0317/MyTel-U_WinUI3/releases/latest "Download The Latest Version") (Recomended) Or [Download Apropriate Version  You Need](https://github.com/GID0317/MyTel-U_WinUI3/releases "Download Apropriate Versions You Need")
 
-Please read our [Instalation Guide](https://github.com/GID0317/MyTel-U_WinUI3/wiki/My-Tel%E2%80%90U-Launcher-Installation-Guide) for more detail about instalation process. Also we recommend you download the latest version for a better experience!
+Please read our [Instalation Guide](https://github.com/GID0317/MyTel-U_WinUI3/wiki/My-Tel%E2%80%90U-Launcher-Installation-Guide) for more detail about instalation process, we recommend you download the latest version for a better experience. Also don't forget to Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose) issue if you have any!
 
 Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c1f2c5b1eae2eeee22e962d55b2edbbc821eedad0c11a94d69ef7c686b8b8)
 
@@ -35,13 +35,12 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 # UI Aplication Overview
 ![UIOverviewBanner](https://github.com/user-attachments/assets/09021b24-957d-4035-9dc4-1bc825c87e0b)
 
-Art by: X @mintificial 
-<p align="left">
-  <img src="https://github.com/user-attachments/assets/a026ddc2-6893-4364-901c-39b5fd8b7b21" alt="Art by: mintificial" width="100">
-</p>
-
-# Feedback
-Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose) issue
+<table align="center">
+  <tr>
+    <td style="vertical-align: middle; font-size: 18px;">Art by: mintificial</td>
+    <td><img src="https://github.com/user-attachments/assets/a026ddc2-6893-4364-901c-39b5fd8b7b21" alt="Artwork by mintificial" width="50"></td>
+  </tr>
+</table>
 
 # Third-party Package used
 - `CommunityToolkit`
