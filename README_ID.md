@@ -9,7 +9,7 @@
     <img alt="Jumlah Unduhan" src="https://img.shields.io/github/downloads/GID0317/MyTel-U_WinUI3/total?logo=github&style=flat-square&color=1E9BFA">
   </a>
   <a href="https://github.com/GID0317/MyTel-U_WinUI3/releases">
-    <img alt="Rilis" src="https://img.shields.io/github/v/release/GID0317/MyTel-U_WinUI3?logo=visualstudio&style=flat-square&color=1E9BFA">
+    <img alt="Release" src="https://img.shields.io/github/v/release/GID0317/MyTel-U_WinUI3?logo=visualstudio&style=flat-square&color=1E9BFA">
   </a>
 </div>
 
