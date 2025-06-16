@@ -13,6 +13,15 @@
   </a>
 </div>
 
+<div align="center">
+  <a href="../../README.md">
+    <img src="https://img.shields.io/badge/README-en-red.svg" alt="English README">
+  </a>
+  <a href="README_ID.md">
+    <img src="https://img.shields.io/badge/README-id-red.svg" alt="Indonesian README">
+  </a>
+</div>
+
 Aplikasi ini dibuat oleh komunitas MyTel‑U Launcher untuk dijalankan di desktop modern Windows 10 atau 11. Dikembangkan menggunakan desain Fluent WinUI 3 dari Microsoft, kini Anda dapat menggunakan My Tel‑U di desktop Anda!
 
 Proyek ini bersifat open source, jadi kontribusi sangat disambut! （￣︶￣）↗
