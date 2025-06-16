@@ -42,4 +42,4 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose) issue
 
 # UI Aplication Overview
-![Aplication_Preview](https://github.com/GID0317/MyTel-U_WinUI3/assets/108791227/8d085ea8-f38b-471f-8bec-261f8f2f9de9)
+![UIOverviewBanner](https://github.com/user-attachments/assets/a43eb85c-0c5d-4b13-95b5-0ddfd51cc679)
