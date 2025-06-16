@@ -13,6 +13,14 @@
   </a>
 </div>
 
+<div align="center">
+  <a href="../../README.md">
+    <img src="https://img.shields.io/badge/README-en-red.svg" alt="English README">
+  </a>
+  <a href="README_ID.md">
+    <img src="https://img.shields.io/badge/README-id-red.svg" alt="Indonesian README">
+  </a>
+</div>
 
 This application was made by the MyTel-U Launcher community to run on the modern desktop Windows 10 or 11. Developed using Microsoft’s WinUI3 fluent design, now you can use My Tel-U on your desktop!
 
