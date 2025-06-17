@@ -1,0 +1,148 @@
+/**
+ * Any CSS included here will be global.
+ */
+
+/* ================================
+   Infima variable overrides
+   ================================ */
+:root {
+  --ifm-color-primary: #ff0000; /* Bright Red */
+  --ifm-color-primary-dark: #cc0000;
+  --ifm-color-primary-darker: #990000;
+  --ifm-color-primary-darkest: #660000;
+  --ifm-color-primary-light: #ff3333;
+  --ifm-color-primary-lighter: #ff6666;
+  --ifm-color-primary-lightest: #ff9999;
+}
+
+/* Dark Mode variable overrides */
+[data-theme='dark'] {
+  --ifm-color-primary: #ff4444;
+  --ifm-color-primary-dark: #cc2222;
+  --ifm-color-primary-darker: #aa1111;
+  --ifm-color-primary-darkest: #880000;
+  --ifm-color-primary-light: #ff6666;
+  --ifm-color-primary-lighter: #ff8888;
+  --ifm-color-primary-lightest: #ffbbbb;
+}
+
+/* ================================
+   Scoped frosted navbar (desktop only)
+   ================================ */
+@media (min-width: 960px) {
+  .navbar {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  [data-theme='dark'] .navbar {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* ================================
+   Footer override
+   ================================ */
+.footer {
+  background-color: black !important;
+  color: white !important;
+}
+
+/* ================================
+   Docs sidebar behavior
+   ================================ */
+/* Desktop: sticky, 250px sidebar */
+@media (min-width: 960px) {
+  .docSidebarContainer {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    width: 250px;
+  }
+}
+
+/* Mobile: reset sidebar so it slides full‑width */
+@media (max-width: 959px) {
+  .docSidebarContainer,
+  .theme-doc-sidebar-container {
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
+
+/* Prevent any horizontal clipping */
+html,
+body {
+  overflow-x: visible !important;
+}
+
+/* ================================
+   Hero banner & buttons
+   ================================ */
+.heroBanner {
+  padding: 4rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem;
+  }
+}
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================================
+   Animated Hamburger → X (single pseudo)
+   ================================ */
+/* 1. Hide the built‑in SVG icon and any spans */
+.navbar__toggle svg,
+.navbar__toggle span {
+  display: none !important;
+}
+
+/* 2. Prepare the button wrapper */
+.navbar__toggle {
+  position: relative;
+  width: 24px;    /* bar width */
+  height: 18px;   /* total height for 3 bars (2px bar + 8px gap) */
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: currentColor;
+}
+
+/* 3. Draw 3 bars with ::before + box-shadow */
+.navbar__toggle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: currentColor;
+  /* shadows create the top and bottom bars */
+  box-shadow:
+    0 -8px 0 currentColor,
+    0  8px 0 currentColor;
+  transform: translateY(-50%);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 4. Morph into an “X” on open */
+.navbar__toggle[aria-expanded="true"]::before {
+  transform: translateY(-50%) rotate(45deg);
+  /* hide the two shadow bars */
+  box-shadow: none;
+}
