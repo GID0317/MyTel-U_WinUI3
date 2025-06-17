@@ -45,7 +45,7 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 
 <table align="center">
   <tr>
-    <td style="vertical-align: middle; font-size: 18px;">Art by: mintificial</td>
+    <td style="vertical-align: middle; font-size: 18px;">Ilustration by: mintificial</td>
     <td><img src="https://github.com/user-attachments/assets/a026ddc2-6893-4364-901c-39b5fd8b7b21" alt="Artwork by mintificial" width="50"></td>
   </tr>
 </table>
