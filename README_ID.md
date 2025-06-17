@@ -46,7 +46,7 @@ Pemeriksaan Virus Total: [Hasil Virus Total](https://www.virustotal.com/gui/file
 
 <table align="center">
   <tr>
-    <td style="vertical-align: middle; font-size: 18px;">Art oleh: mintificial</td>
+    <td style="vertical-align: middle; font-size: 18px;">Ilustrasi oleh: mintificial</td>
     <td><img src="https://github.com/user-attachments/assets/a026ddc2-6893-4364-901c-39b5fd8b7b21" alt="Artwork by mintificial" width="50"></td>
   </tr>
 </table>
