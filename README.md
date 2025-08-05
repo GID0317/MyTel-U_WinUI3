@@ -22,6 +22,8 @@
   </a>
 </div>
 
+<p align="center">Don't forget to give a star 🌟 to get notified about updates!</p>
+
 This application was made by the MyTel-U Launcher community to run on the modern desktop Windows 10 or 11. Developed using Microsoft’s WinUI3 fluent design, now you can use My Tel-U on your desktop!
 
 This project is open source, so any contributions are welcomed! （￣︶￣）↗
