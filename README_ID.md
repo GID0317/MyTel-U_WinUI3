@@ -22,6 +22,8 @@
   </a>
 </div>
 
+<p align="center">Jangan lupa memberi bintang 🌟 untuk mendapatkan info update terbaru!</p>
+
 Aplikasi ini dibuat oleh komunitas MyTel‑U Launcher untuk dijalankan di desktop modern Windows 10 atau 11. Dikembangkan menggunakan desain Fluent WinUI 3 dari Microsoft, kini Anda dapat menggunakan My Tel‑U di desktop Anda!
 
 Proyek ini bersifat open source, jadi kontribusi sangat disambut! （￣︶￣）↗
