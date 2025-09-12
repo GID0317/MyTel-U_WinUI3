@@ -66,7 +66,6 @@
                             <Button x:Name="CostumImageBGBtn" 
                     Content="Select Image" 
                     Style="{StaticResource AccentButtonStyle}" 
-                    CornerRadius="10" 
                     IsEnabled="{x:Bind ViewModel.IsCustomImageBGEnabled, Mode=OneWay}"
                     Click="CostumImageBGBtn_Click"/>
                         </controls:SettingsCard>
