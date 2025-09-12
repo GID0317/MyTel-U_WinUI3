@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -132,8 +132,11 @@
   <data name="WebView_Loading.Text" xml:space="preserve">
     <value>Now Loading...</value>
   </data>
-  <data name="WebView_FailedMessage.Text" xml:space="preserve">
-    <value>Something went wrong! Network is disconected</value>
+  <data name="WebView_FailedMessageTitle.Text" xml:space="preserve">
+    <value>Something went wrong!</value>
+  </data>
+  <data name="WebView_FailedMessageBody.Text" xml:space="preserve">
+    <value>It looks like you aren't connected to the internet.</value>
   </data>
   <data name="BrowserBackButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Browser back</value>
