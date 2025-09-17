@@ -1,0 +1,123 @@
+{
+    "$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
+    "type": "AdaptiveCard",
+    "version": "1.5",
+    "backgroundImage": {
+        "url": "https://tse2.mm.bing.net/th/id/OIP.akAGIGeNqZ3PG8sbCeVZlQHaEK?rs=1&pid=ImgDetMain&o=7&rm=3"
+    },
+    "minHeight": "250px",
+    "body": [
+        {
+            "type": "Container",
+            "items": [
+                {
+                    "type": "ColumnSet",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "width": "stretch",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": "Wed",
+                                    "wrap": true,
+                                    "size": "Medium",
+                                    "style": "default",
+                                    "fontType": "Default",
+                                    "isSubtle": true
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "ACK3BAB3 - KECERDASAN BUATAN",
+                                    "wrap": true,
+                                    "style": "heading",
+                                    "fontType": "Default",
+                                    "spacing": "None",
+                                    "size": "Large"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "verticalContentAlignment": "Top",
+            "height": "stretch"
+        },
+        {
+            "type": "Container",
+            "items": [
+                {
+                    "type": "ColumnSet",
+                    "horizontalAlignment": "Center",
+                    "columns": [
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": "Waktu",
+                                    "weight": "Bolder",
+                                    "spacing": "None",
+                                    "horizontalAlignment": "Center",
+                                    "color": "Dark"
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "07:30 – 10:30",
+                                    "spacing": "None",
+                                    "horizontalAlignment": "Center",
+                                    "isSubtle": true
+                                }
+                            ],
+                            "width": "stretch"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": "Ruangan",
+                                    "weight": "Bolder",
+                                    "spacing": "None",
+                                    "horizontalAlignment": "Center",
+                                    "color": "Dark"
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "TULT 13.10",
+                                    "spacing": "None",
+                                    "horizontalAlignment": "Center",
+                                    "isSubtle": true
+                                }
+                            ],
+                            "width": "stretch"
+                        },
+                        {
+                            "type": "Column",
+                            "items": [
+                                {
+                                    "type": "TextBlock",
+                                    "text": "Kode Dosen",
+                                    "weight": "Bolder",
+                                    "spacing": "None",
+                                    "horizontalAlignment": "Center",
+                                    "color": "Dark"
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": "BIR",
+                                    "spacing": "None",
+                                    "horizontalAlignment": "Center",
+                                    "isSubtle": true
+                                }
+                            ],
+                            "width": "stretch"
+                        }
+                    ]
+                }
+            ],
+            "verticalContentAlignment": "Bottom",
+            "height": "stretch"
+        }
+    ]
+}
