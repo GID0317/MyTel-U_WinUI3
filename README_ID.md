@@ -29,7 +29,7 @@ Aplikasi ini dibuat oleh komunitas MyTel‑U Launcher untuk dijalankan di deskto
 Proyek ini bersifat open source, jadi kontribusi sangat disambut! （￣︶￣）↗
 
 # Bagaimana Cara Mengunduh?
-> [!CATATAN]
+> [!NOTE]
 > Kunjungi Halaman Rilis > Klik pada **Assets** > [Unduh Versi Terbaru](https://github.com/GID0317/MyTel-U_WinUI3/releases/latest "Download The Latest Version") (Disarankan)  
 > Atau [Unduh Versi yang Sesuai dengan Kebutuhan Anda](https://github.com/GID0317/MyTel-U_WinUI3/releases "Download Apropriate Versions You Need")
 
