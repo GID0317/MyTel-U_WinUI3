@@ -5,11 +5,23 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
+    xmlns:helpers="using:MyTelU_Launcher.Helpers"
+    xmlns:models="using:MyTelU_Launcher.Models"
     behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
+    NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <Grid x:Name="AppListVew" Margin="20, 20, 20, 0">
-        <TextBlock x:Name="ApplicationListTxtTitle" FontWeight="SemiBold" Text="Application Hub" Margin="3,20,5,5" FontSize="32" Foreground="Black"/>
+    <Page.Resources>
+        <helpers:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+    </Page.Resources>
+
+    <Page.Background>
+        <SolidColorBrush Color="Transparent"/>
+    </Page.Background>
+
+    <Grid x:Name="AppListVew" Margin="20,20,20,0" Background="Transparent">
+        
+        <TextBlock x:Name="ApplicationListTxtTitle" FontWeight="SemiBold" Text="Application Hub" Margin="3,20,5,5" FontSize="32" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
         
         <!-- Horizontal Application List Container -->
         <ScrollViewer x:Name="AplicationListContainer"
@@ -23,7 +35,7 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
                         Spacing="15"
-                        Margin="0,100,0,0">
+                        Margin="0,100,0,20">
                 <!-- Item 1 -->
                 <Grid Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}" CornerRadius="4">
                     <Button Click="MyTuctuc_Click"
@@ -469,59 +481,78 @@ VerticalAlignment="Center">
                     </StackPanel>
                     <FlyoutBase.AttachedFlyout>
                         <Flyout x:Name="CustomFlyout">
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="10"
-                                        Padding="-7,-7,-7,-7">
-                                <StackPanel HorizontalAlignment="Stretch"
-                                            Spacing="10">
-                                    <TextBlock Text="Tools"
-                                               FontWeight="SemiBold"
-                                               FontSize="18"/>
-                                    <Button FontWeight="SemiBold"
-                                            HorizontalAlignment="Stretch"
-                                            Style="{StaticResource AccentButtonStyle}"
-                                            Click="BrowserUIOpenFisdas_Click"
-                                            HorizontalContentAlignment="Left">
-                                        <StackPanel Orientation="Horizontal"
-                                                    HorizontalAlignment="Left">
-                                            <TextBlock Text="🚀 Lab Fisika Dasar"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button FontWeight="SemiBold"
-                                            HorizontalAlignment="Stretch"
-                                            Style="{StaticResource AccentButtonStyle}"
-                                            Click="BrowserUIOpenSEALab_Click"
-                                            HorizontalContentAlignment="Left">
-                                        <StackPanel Orientation="Horizontal"
-                                                    HorizontalAlignment="Left">
-                                            <TextBlock Text="💻 SEA Lab"/>
-                                        </StackPanel>
-                                    </Button>
+                            <StackPanel Spacing="12" Padding="-7,-7,-7,-7">
+                                <!-- Tools and Community Tools in horizontal layout -->
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <StackPanel HorizontalAlignment="Stretch"
+                                                Spacing="10">
+                                        <TextBlock Text="Tools"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="18"/>
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.Tools, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:ToolItem">
+                                                    <Button FontWeight="SemiBold"
+                                                            HorizontalAlignment="Stretch"
+                                                            Style="{StaticResource AccentButtonStyle}"
+                                                            Click="ToolButton_Click"
+                                                            Tag="{x:Bind Url}"
+                                                            HorizontalContentAlignment="Left"
+                                                            Margin="0,0,0,10">
+                                                        <StackPanel Orientation="Horizontal"
+                                                                    HorizontalAlignment="Left">
+                                                            <TextBlock Text="{x:Bind Icon}" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="{x:Bind Name}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <StackPanel HorizontalAlignment="Stretch"
+                                                Spacing="10">
+                                        <TextBlock Text="Community Tools"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="18"/>
+                                        <ItemsControl ItemsSource="{x:Bind ViewModel.CommunityTools, Mode=OneWay}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:ToolItem">
+                                                    <Button FontWeight="SemiBold"
+                                                            HorizontalAlignment="Stretch"
+                                                            Click="ToolButton_Click"
+                                                            Tag="{x:Bind Url}"
+                                                            HorizontalContentAlignment="Left"
+                                                            Margin="0,0,0,10">
+                                                        <StackPanel Orientation="Horizontal"
+                                                                    HorizontalAlignment="Left">
+                                                            <TextBlock Text="{x:Bind Icon}" Margin="0,0,8,0"/>
+                                                            <TextBlock Text="{x:Bind Name}"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </StackPanel>
-                                <StackPanel HorizontalAlignment="Stretch"
-                                            Spacing="10">
-                                    <TextBlock Text="Community Tools"
-                                               FontWeight="SemiBold"
-                                               FontSize="18"/>
-                                    <Button FontWeight="SemiBold"
-                                            HorizontalAlignment="Stretch"
-                                            Click="BrowserUIOpenJeyyFileKuliah_Click"
-                                            HorizontalContentAlignment="Left">
-                                        <StackPanel Orientation="Horizontal"
-                                                    HorizontalAlignment="Left">
-                                            <TextBlock Text="😂 Jeey college files"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button FontWeight="SemiBold"
-                                            HorizontalAlignment="Stretch"
-                                            Click="BrowserUIOpenRegresiLinear_Click"
-                                            HorizontalContentAlignment="Left">
-                                        <StackPanel Orientation="Horizontal"
-                                                    HorizontalAlignment="Left">
-                                            <TextBlock Text="🧮 Regresi Linear"/>
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
+                                
+                                <!-- Manage Tools Footer -->
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Manage tools"
+                                               VerticalAlignment="Center"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               FontSize="12"/>
+                                    <HyperlinkButton x:Name="EditToolsButton"
+                                                     Grid.Column="1"
+                                                     Click="EditToolsButton_Click"
+                                                     Padding="4,2"
+                                                     FontSize="12"
+                                                     Content="Edit"/>
+                                </Grid>
                             </StackPanel>
                         </Flyout>
                     </FlyoutBase.AttachedFlyout>
