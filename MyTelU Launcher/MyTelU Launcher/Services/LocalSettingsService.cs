@@ -4,6 +4,7 @@ using MyTelU_Launcher.Core.Contracts.Services;
 using MyTelU_Launcher.Core.Helpers;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.Models;
+using System.Threading;
 using Windows.ApplicationModel;
 using Windows.Storage;
 
@@ -24,6 +25,7 @@ public class LocalSettingsService : ILocalSettingsService
     private IDictionary<string, object> _settings;
 
     private bool _isInitialized;
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     public LocalSettingsService(IFileService fileService, IOptions<LocalSettingsOptions> options)
     {
@@ -48,39 +50,55 @@ public class LocalSettingsService : ILocalSettingsService
 
     public async Task<T?> ReadSettingAsync<T>(string key)
     {
-        if (RuntimeHelper.IsMSIX)
+        await _semaphore.WaitAsync();
+        try
         {
-            if (ApplicationData.Current.LocalSettings.Values.TryGetValue(key, out var obj))
+            if (RuntimeHelper.IsMSIX)
             {
-                return await Json.ToObjectAsync<T>((string)obj);
+                if (ApplicationData.Current.LocalSettings.Values.TryGetValue(key, out var obj))
+                {
+                    return await Json.ToObjectAsync<T>((string)obj);
+                }
             }
+            else
+            {
+                await InitializeAsync();
+
+                if (_settings != null && _settings.TryGetValue(key, out var obj))
+                {
+                    return await Json.ToObjectAsync<T>((string)obj);
+                }
+            }
+
+            return default;
         }
-        else
+        finally
         {
-            await InitializeAsync();
-
-            if (_settings != null && _settings.TryGetValue(key, out var obj))
-            {
-                return await Json.ToObjectAsync<T>((string)obj);
-            }
+            _semaphore.Release();
         }
-
-        return default;
     }
 
     public async Task SaveSettingAsync<T>(string key, T value)
     {
-        if (RuntimeHelper.IsMSIX)
+        await _semaphore.WaitAsync();
+        try
         {
-            ApplicationData.Current.LocalSettings.Values[key] = await Json.StringifyAsync(value);
+            if (RuntimeHelper.IsMSIX)
+            {
+                ApplicationData.Current.LocalSettings.Values[key] = await Json.StringifyAsync(value);
+            }
+            else
+            {
+                await InitializeAsync();
+
+                _settings[key] = await Json.StringifyAsync(value);
+
+                await Task.Run(() => _fileService.Save(_applicationDataFolder, _localsettingsFile, _settings));
+            }
         }
-        else
+        finally
         {
-            await InitializeAsync();
-
-            _settings[key] = await Json.StringifyAsync(value);
-
-            await Task.Run(() => _fileService.Save(_applicationDataFolder, _localsettingsFile, _settings));
+            _semaphore.Release();
         }
     }
 }

@@ -12,13 +12,15 @@ public class ActivationService : IActivationService
     private readonly ActivationHandler<LaunchActivatedEventArgs> _defaultHandler;
     private readonly IEnumerable<IActivationHandler> _activationHandlers;
     private readonly IThemeSelectorService _themeSelectorService;
+    private readonly AccentColorService _accentColorService;
     private UIElement? _shell = null;
 
-    public ActivationService(ActivationHandler<LaunchActivatedEventArgs> defaultHandler, IEnumerable<IActivationHandler> activationHandlers, IThemeSelectorService themeSelectorService)
+    public ActivationService(ActivationHandler<LaunchActivatedEventArgs> defaultHandler, IEnumerable<IActivationHandler> activationHandlers, IThemeSelectorService themeSelectorService, AccentColorService accentColorService)
     {
         _defaultHandler = defaultHandler;
         _activationHandlers = activationHandlers;
         _themeSelectorService = themeSelectorService;
+        _accentColorService = accentColorService;
     }
 
     public async Task ActivateAsync(object activationArgs)
@@ -32,6 +34,11 @@ public class ActivationService : IActivationService
             _shell = App.GetService<ShellPage>();
             App.MainWindow.Content = _shell ?? new Frame();
         }
+
+        // Apply the stored accent color NOW — the FrameworkElement exists but the window
+        // is not yet visible, so this is the last moment before frame-1 is painted.
+        // This eliminates the system-accent flash on startup.
+        AccentColorService.ApplyCachedAccentEarly();
 
         // Handle activation via ActivationHandlers.
         await HandleActivationAsync(activationArgs);
@@ -67,6 +74,10 @@ public class ActivationService : IActivationService
     private async Task StartupAsync()
     {
         await _themeSelectorService.SetRequestedThemeAsync();
+        // Re-apply after theme change: SetRequestedThemeAsync can trigger WinUI to
+        // re-evaluate themed brushes from the XAML dictionaries, momentarily reverting
+        // to the system accent.  Forcing a re-apply here keeps the custom colour intact.
+        AccentColorService.ApplyCachedAccentEarly();
         await Task.CompletedTask;
     }
 }
