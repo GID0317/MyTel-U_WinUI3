@@ -57,3 +57,4 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 - `Win App SDK`
 - `WinUIEX`
 - `DotNet`
+- `ColorThief`
