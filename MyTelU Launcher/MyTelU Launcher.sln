@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTelU Launcher", "MyTelU L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTelU Launcher.Core", "MyTelU Launcher.Core\MyTelU Launcher.Core.csproj", "{C6E2385F-01A8-C06D-E222-3F13B9614229}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ColorThief", "ColorThief\ColorThief\ColorThief.csproj", "{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -25,14 +27,22 @@ Global
 		{14669AFF-7127-23CE-A10D-C346E5419E7E}.Release|x64.ActiveCfg = Release|x64
 		{14669AFF-7127-23CE-A10D-C346E5419E7E}.Release|x64.Build.0 = Release|x64
 		{14669AFF-7127-23CE-A10D-C346E5419E7E}.Release|x64.Deploy.0 = Release|x64
-		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Debug|ARM64.ActiveCfg = Debug|x64
-		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Debug|ARM64.Build.0 = Debug|x64
+		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Debug|ARM64.Build.0 = Debug|ARM64
 		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Debug|x64.ActiveCfg = Debug|x64
 		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Debug|x64.Build.0 = Debug|x64
-		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Release|ARM64.ActiveCfg = Release|x64
-		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Release|ARM64.Build.0 = Release|x64
+		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Release|ARM64.ActiveCfg = Release|ARM64
+		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Release|ARM64.Build.0 = Release|ARM64
 		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Release|x64.ActiveCfg = Release|x64
 		{C6E2385F-01A8-C06D-E222-3F13B9614229}.Release|x64.Build.0 = Release|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Debug|ARM64.ActiveCfg = Debug|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Debug|ARM64.Build.0 = Debug|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Debug|x64.ActiveCfg = Debug|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Debug|x64.Build.0 = Debug|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Release|ARM64.ActiveCfg = Release|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Release|ARM64.Build.0 = Release|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Release|x64.ActiveCfg = Release|x64
+		{8A1E9C7D-4F3B-4A8E-9B2D-5C6E8F9A0B1C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
