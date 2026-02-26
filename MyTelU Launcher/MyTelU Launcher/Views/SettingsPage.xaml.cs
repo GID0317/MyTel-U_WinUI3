@@ -1,145 +1,141 @@
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using MyTelU_Launcher.Contracts.Services;
-using MyTelU_Launcher.Helpers;
-using Windows.ApplicationModel;
-using Windows.Storage;
-using Microsoft.Windows.Storage.Pickers;
+using MyTelU_Launcher.Notifications;
+using MyTelU_Launcher.ViewModels;
 
-namespace MyTelU_Launcher.ViewModels
+namespace MyTelU_Launcher.Views
 {
-    public partial class SettingsViewModel : ObservableRecipient
+    public sealed partial class SettingsPage : Page
     {
-        private readonly IThemeSelectorService _themeSelectorService;
-        private readonly ILocalSettingsService _localSettingsService;
-
-        [ObservableProperty]
-        private ElementTheme _elementTheme;
-
-        [ObservableProperty]
-        private string _versionDescription;
-
-        [ObservableProperty]
-        private bool _isCustomImageBGEnabled;
-
-        // Explicit backing field and property for the custom image path.
-        private string _customImagePath;
-        public string CustomImagePath
-        {
-            get => _customImagePath;
-            set => SetProperty(ref _customImagePath, value);
-        }
-
-        // Computed property for the description.
-        public string CustomImagePathDescription => string.IsNullOrEmpty(CustomImagePath)
-            ? "Path: Not selected"
-            : $"Path: {CustomImagePath}";
-
-        public IEnumerable<ElementTheme> Themes
+        public SettingsViewModel ViewModel
         {
             get;
-        } = new List<ElementTheme>
-        {
-            ElementTheme.Light,
-            ElementTheme.Dark,
-            ElementTheme.Default
-        };
-
-        public SettingsViewModel(IThemeSelectorService themeSelectorService, ILocalSettingsService localSettingsService)
-        {
-            _themeSelectorService = themeSelectorService;
-            _localSettingsService = localSettingsService;
-            _elementTheme = _themeSelectorService.Theme;
-            _versionDescription = GetVersionDescription();
-            // Initialize with default value.
-            _customImagePath = string.Empty;
-            InitializeSettingsAsync();
         }
 
-        private async void InitializeSettingsAsync()
+        public SettingsPage()
         {
-            _isCustomImageBGEnabled = await _localSettingsService.ReadSettingAsync<bool>("IsCustomImageBGEnabled");
-            // Load any previously saved custom image path.
-            CustomImagePath = await _localSettingsService.ReadSettingAsync<string>("CustomBackgroundImagePath");
-            OnPropertyChanged(nameof(CustomImagePathDescription));
+            ViewModel = App.GetService<SettingsViewModel>();
+            this.InitializeComponent();
         }
 
-        partial void OnElementThemeChanged(ElementTheme value)
+        private async void CostumImageBGBtn_Click(object sender, RoutedEventArgs e)
         {
-            _ = _themeSelectorService.SetThemeAsync(value);
+            await ViewModel.PickBackgroundImageAsync();
         }
 
-        partial void OnIsCustomImageBGEnabledChanged(bool value)
+        private async void OpenImageLocationBtn_Click(object sender, RoutedEventArgs e)
         {
-            OnIsCustomImageBGEnabledChangedAsync(value);
-        }
-
-        private async void OnIsCustomImageBGEnabledChangedAsync(bool value)
-        {
-            await _localSettingsService.SaveSettingAsync("IsCustomImageBGEnabled", value);
-
-            if (value)
+            var path = ViewModel.CustomImagePath;
+            if (!string.IsNullOrEmpty(path))
             {
-                // When enabled, retrieve the stored image path and send it.
-                var path = await _localSettingsService.ReadSettingAsync<string>("CustomBackgroundImagePath");
-                WeakReferenceMessenger.Default.Send(new BackgroundImageChangedMessage(path));
-            }
-            else
-            {
-                // When disabled, signal default image usage.
-                WeakReferenceMessenger.Default.Send(new BackgroundImageChangedMessage(string.Empty));
+                var folder = System.IO.Path.GetDirectoryName(path);
+                if (folder != null)
+                {
+                    await Windows.System.Launcher.LaunchFolderPathAsync(folder);
+                }
             }
         }
 
-        public async Task PickBackgroundImageAsync()
+        private async void ResetToolsButton_Click(object sender, RoutedEventArgs e)
         {
-            // Use new WinAppSDK 1.8+ picker that supports elevated processes (Microsoft.Windows.Storage.Pickers)
-            var picker = new FileOpenPicker(App.MainWindow.AppWindow.Id)
+            ContentDialog resetToolsDialog = new ContentDialog
             {
-                SuggestedStartLocation = PickerLocationId.PicturesLibrary,
-                ViewMode = PickerViewMode.Thumbnail
+                Title = "Reset Tools?",
+                Content = "This will restore the tools list to its default state. All custom tools, community tools, and changes will be lost. Are you sure?",
+                PrimaryButtonText = "Reset",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+                XamlRoot = this.XamlRoot
             };
 
-            picker.FileTypeFilter.Add(".jpg");
-            picker.FileTypeFilter.Add(".jpeg");
-            picker.FileTypeFilter.Add(".jfif");
-            picker.FileTypeFilter.Add(".png");
-            picker.FileTypeFilter.Add(".bmp");
-            picker.FileTypeFilter.Add(".tiff");
-            picker.FileTypeFilter.Add(".tif");
-            picker.FileTypeFilter.Add(".webp");
+            // Apply dynamic accent colors to fix ContentDialog button hover states
+            var accentService = App.GetService<MyTelU_Launcher.Services.AccentColorService>();
+            accentService?.ApplyToContentDialog(resetToolsDialog);
 
-            var result = await picker.PickSingleFileAsync();
-            if (result != null)
+            var result = await resetToolsDialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
             {
-                // PickFileResult exposes Path directly
-                var filePath = result.Path;
-                await _localSettingsService.SaveSettingAsync("CustomBackgroundImagePath", filePath);
-                CustomImagePath = filePath;
-                OnPropertyChanged(nameof(CustomImagePathDescription));
-                WeakReferenceMessenger.Default.Send(new BackgroundImageChangedMessage(filePath));
+                ViewModel.ResetTools();
+                ResetSuccessInfoBar.Visibility = Visibility.Visible;
+                await Task.Delay(3000);
+                ResetSuccessInfoBar.Visibility = Visibility.Collapsed;
             }
         }
 
-        private static string GetVersionDescription()
+        private async void CheckUpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            Version version;
-            if (RuntimeHelper.IsMSIX)
+            try
             {
-                var packageVersion = Package.Current.Id.Version;
-                version = new Version(packageVersion.Major, packageVersion.Minor, packageVersion.Build, packageVersion.Revision);
-            }
-            else
-            {
-                version = Assembly.GetExecutingAssembly().GetName().Version!;
-            }
+                System.Diagnostics.Debug.WriteLine("Starting update check from settings page...");
+                using (var client = new HttpClient())
+                {
+                    // Use the raw URL to fetch the version string.
+                    var url = "https://raw.githubusercontent.com/GID0317/MyTel-U_WinUI3/main/UpdateHelper/Versions.config";
+                    System.Diagnostics.Debug.WriteLine($"Fetching update info from: {url}");
+                    var response = await client.GetAsync(url);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        string remoteVersionString = content.Trim();
+                        System.Diagnostics.Debug.WriteLine($"Remote version string: {remoteVersionString}");
 
-            return $"{"AppDisplayName".GetLocalized()} - {version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+                        // Create a Version object from the remote version string.
+                        Version remoteVersion = new Version(remoteVersionString);
+
+                        // Use the stored package version from App.
+                        Version localVersion = App.AppVersion;
+                        System.Diagnostics.Debug.WriteLine($"Local version: {localVersion}");
+                        System.Diagnostics.Debug.WriteLine($"Remote version: {remoteVersion}");
+
+                        if (remoteVersion > localVersion)
+                        {
+                            System.Diagnostics.Debug.WriteLine("A newer version is available!");
+                            // Set the ShellPage update flag so its InfoBar becomes visible.
+                            if (ShellPage.Current != null)
+                            {
+                                var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+                                if (dispatcherQueue.HasThreadAccess)
+                                {
+                                    ShellPage.Current.ViewModel.IsUpdateAvailable = true;
+                                }
+                                else
+                                {
+                                    dispatcherQueue.TryEnqueue(() =>
+                                    {
+                                        ShellPage.Current.ViewModel.IsUpdateAvailable = true;
+                                    });
+                                }
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Already up-to-date.");
+                            // Show the up-to-date InfoBar on the SettingsPage.
+                            UpdateUptodateInfoBar.Visibility = Visibility.Visible;
+                            await Task.Delay(3000);
+                            UpdateUptodateInfoBar.Visibility = Visibility.Collapsed;
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Failed to fetch update file. Status code: {response.StatusCode}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Update check from settings failed: {ex.Message}");
+                // Resolve your AppNotificationService and call its ShowUpdateErrorDialog method.
+                var notificationService = App.GetService<IAppNotificationService>();
+                notificationService.ShowUpdateErrorDialog();
+            }
         }
     }
 }
