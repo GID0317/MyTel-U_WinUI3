@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
+using MyTelU_Launcher.Services;
 using MyTelU_Launcher.ViewModels;
 using Windows.System;
 
@@ -38,6 +39,11 @@ namespace MyTelU_Launcher.Views
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
+            // Apply the cached accent color synchronously RIGHT NOW before first paint.
+            // This is the earliest moment App.MainWindow.Content exists as a FrameworkElement,
+            // which is required for the theme toggle inside ApplyAccentColorCore to work.
+            AccentColorService.ApplyCachedAccentEarly();
+
             TitleBarHelper.UpdateTitleBar(RequestedTheme);
 
             KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
@@ -127,11 +133,6 @@ namespace MyTelU_Launcher.Views
         {
             if (args.SelectedItem is NavigationViewItem selectedItem)
             {
-                if (selectedItem == ScheduleNavItem)
-                {
-                    // Navigate to the web viewer using your custom method.
-                    NavigateToWebViewer("https://igracias.telkomuniversity.ac.id/registration/index.php?pageid=2901");
-                }
                 // Check if the selected item is the "Atendance" item.
                 if (selectedItem == AttendanceNavItem)
                 {

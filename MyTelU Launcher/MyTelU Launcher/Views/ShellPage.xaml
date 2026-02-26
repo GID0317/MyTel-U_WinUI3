@@ -20,6 +20,13 @@
             <SolidColorBrush Color="Transparent"/>
         </Grid.Background>
 
+        <!-- Background Image -->
+        <Image Source="{x:Bind ViewModel.BackgroundImage, Mode=OneWay}"
+               Stretch="UniformToFill"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Stretch"
+               Canvas.ZIndex="-1"/>
+
         <!-- App Title Bar -->
         <Grid x:Name="AppTitleBar"
               Canvas.ZIndex="1"
@@ -44,7 +51,7 @@
             x:Name="NavigationViewControl"
             SelectionChanged="NavigationViewControl_SelectionChanged"
             Canvas.ZIndex="0"
-            Background="Transparent"
+            Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
             IsBackButtonVisible="Visible"
             IsBackEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}"
@@ -60,7 +67,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 <NavigationViewItemHeader Content="Utilities"/>
-                <NavigationViewItem Content="Schedule" x:Name="ScheduleNavItem">
+                <NavigationViewItem Content="Schedule" x:Name="ScheduleNavItem" helpers:NavigationHelper.NavigateTo="MyTelU_Launcher.ViewModels.ScheduleViewModel">
                     <NavigationViewItem.Icon>
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE787;"/>
                     </NavigationViewItem.Icon>
@@ -73,14 +80,13 @@
             </NavigationView.MenuItems>
 
             <!-- Main Content Area -->
-            <Grid Margin="0,-1,0,0">
-                <!-- Background Image -->
+            <Grid Margin="0,-1,0,0" Background="Transparent">
+                <!-- Content Area Background Image -->
                 <Image Source="{x:Bind ViewModel.BackgroundImage, Mode=OneWay}"
                        Stretch="UniformToFill"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch"
-                       Canvas.ZIndex="-1"
-                       Margin="0,-100,0,0"/>
+                       Canvas.ZIndex="-1"/>
 
                 <InfoBar
                     x:Name="UpdateAvailableInfoBar"
@@ -102,8 +108,9 @@
                 <!-- Main Navigation Frame -->
                 <ScrollViewer VerticalScrollMode="Auto"
                               VerticalScrollBarVisibility="Auto"
-                              Canvas.ZIndex="1">
-                    <Frame x:Name="NavigationFrame">
+                              Canvas.ZIndex="1"
+                              Background="Transparent">
+                    <Frame x:Name="NavigationFrame" Background="Transparent">
                         <Frame.ContentTransitions>
                             <TransitionCollection>
                                 <NavigationThemeTransition/>
