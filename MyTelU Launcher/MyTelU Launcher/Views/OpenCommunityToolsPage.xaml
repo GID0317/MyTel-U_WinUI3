@@ -5,10 +5,106 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
+    xmlns:models="using:MyTelU_Launcher.Models"
     behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
     mc:Ignorable="d">
 
-    <Grid x:Name="ContentArea">
-        
+    <Grid x:Name="ContentArea" Padding="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tools Content -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="30">
+                <!-- Tools Section -->
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Tools" 
+                               FontSize="24" 
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.Tools}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:ToolItem">
+                                <Button Click="ToolButton_Click"
+                                        Tag="{x:Bind Url}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="16,12"
+                                        Margin="0,0,0,8"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Background="{ThemeResource AccentAAFillColorDefaultBrush}"
+                                                Width="40"
+                                                Height="40"
+                                                CornerRadius="8">
+                                            <FontIcon Glyph="{x:Bind Icon}"
+                                                      FontSize="20"
+                                                      Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                        </Border>
+                                        <TextBlock Text="{x:Bind Name}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="16"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Community Tools Section -->
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Community Tools" 
+                               FontSize="24" 
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.CommunityTools}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:ToolItem">
+                                <Button Click="ToolButton_Click"
+                                        Tag="{x:Bind Url}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="16,12"
+                                        Margin="0,0,0,8"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                        CornerRadius="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <Border Background="{ThemeResource AccentAAFillColorDefaultBrush}"
+                                                Width="40"
+                                                Height="40"
+                                                CornerRadius="8">
+                                            <FontIcon Glyph="{x:Bind Icon}"
+                                                      FontSize="20"
+                                                      Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"/>
+                                        </Border>
+                                        <TextBlock Text="{x:Bind Name}"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="16"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Edit Button at Bottom -->
+        <Button Grid.Row="1"
+                x:Name="EditButton"
+                Click="EditButton_Click"
+                HorizontalAlignment="Stretch"
+                Margin="0,16,0,0"
+                Padding="16"
+                CornerRadius="8"
+                Style="{StaticResource AccentButtonStyle}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <FontIcon Glyph="&#xE70F;" FontSize="16"/>
+                <TextBlock Text="Edit" FontSize="16"/>
+            </StackPanel>
+        </Button>
     </Grid>
 </Page>

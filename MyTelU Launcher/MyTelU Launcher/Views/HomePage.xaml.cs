@@ -1,12 +1,18 @@
-﻿using Microsoft.UI.Xaml;
+﻿using System;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using MyTelU_Launcher.ViewModels;
+using MyTelU_Launcher.Models;
+
 namespace MyTelU_Launcher.Views
 {
     public sealed partial class HomePage : Page
     {
+        public OpenCommunityToolsViewModel ViewModel { get; }
         public HomePage()
         {
+            ViewModel = App.GetService<OpenCommunityToolsViewModel>();
             this.InitializeComponent();
         }
 
@@ -71,6 +77,20 @@ namespace MyTelU_Launcher.Views
             FlyoutBase.ShowAttachedFlyout((FrameworkElement)sender);
         }
 
+        private async void EditToolsButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Close the flyout first
+            CustomFlyout.Hide();
+
+            // Show the manage tools dialog
+            var dialog = new ManageToolsDialog
+            {
+                XamlRoot = this.XamlRoot
+            };
+
+            await dialog.ShowAsync();
+        }
+
         private void Applicationlist_Toggle(object sender, RoutedEventArgs e)
         {
             var toggleSwitch = sender as ToggleSwitch;
@@ -91,46 +111,20 @@ namespace MyTelU_Launcher.Views
             }
         }
 
-        private void BrowserUIOpenFisdas_Click(object sender, RoutedEventArgs e)
+        private void ToolButton_Click(object sender, RoutedEventArgs e)
         {
-            // Set the target URL for the web viewer.
-            string targetUrl = "https://labfisdas-telu.com/";
-
-            // Use the static ShellPage reference to show the overlay.
-            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), targetUrl);
-        }
-
-        private void BrowserUIOpenSEALab_Click(object sender, RoutedEventArgs e)
-        {
-            // Set the target URL for the web viewer.
-            string targetUrl = "https://sealab-telu.com/";
-
-            // Use the static ShellPage reference to show the overlay.
-            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), targetUrl);
-        }
-
-        private void BrowserUIOpenJeyyFileKuliah_Click(object sender, RoutedEventArgs e)
-        {
-            // Set the target URL for the web viewer.
-            string targetUrl = "https://ac.jeyy.xyz/files/";
-
-            // Use the static ShellPage reference to show the overlay.
-            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), targetUrl);
-        }
-
-        private void BrowserUIOpenRegresiLinear_Click(object sender, RoutedEventArgs e)
-        {
-            // Set the target URL for the web viewer.
-            string targetUrl = "https://regresi.msatrio.com/";
-
-            // Use the static ShellPage reference to show the overlay.
-            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), targetUrl);
+            if (sender is Button button && button.Tag is string url)
+            {
+                ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), url);
+            }
         }
 
         private void NavigateToWebViewer(string url)
         {
             Frame.Navigate(typeof(WebViewerPage), url);
         }
+
+
     }
 
 }
