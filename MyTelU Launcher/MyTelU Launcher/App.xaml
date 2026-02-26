@@ -1,9 +1,60 @@
-<Application
+﻿<Application
     x:Class="MyTelU_Launcher.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- Default (dark) theme accent placeholders — overwritten at runtime by AccentColorService -->
+                <ResourceDictionary x:Key="Default">
+                    <Color x:Key="SystemAccentColor">#FF0078D4</Color>
+                    <Color x:Key="AccentFillColorDefault">#FF0078D4</Color>
+                    <Color x:Key="AccentFillColorSecondary">#CC0078D4</Color>
+                    <Color x:Key="AccentFillColorTertiary">#A00078D4</Color>
+                    <Color x:Key="AccentFillColorDisabled">#500078D4</Color>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#CC0078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#A00078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#500078D4"/>
+                    <SolidColorBrush x:Key="AccentColor" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="ControlAccentFillColorDefaultBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="SystemAccentColor">#FF0078D4</Color>
+                    <Color x:Key="AccentFillColorDefault">#FF0078D4</Color>
+                    <Color x:Key="AccentFillColorSecondary">#CC0078D4</Color>
+                    <Color x:Key="AccentFillColorTertiary">#A00078D4</Color>
+                    <Color x:Key="AccentFillColorDisabled">#500078D4</Color>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#CC0078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#A00078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#500078D4"/>
+                    <SolidColorBrush x:Key="AccentColor" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="ControlAccentFillColorDefaultBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="SystemAccentColor">#FF0078D4</Color>
+                    <Color x:Key="AccentFillColorDefault">#FF0078D4</Color>
+                    <Color x:Key="AccentFillColorSecondary">#CC0078D4</Color>
+                    <Color x:Key="AccentFillColorTertiary">#A00078D4</Color>
+                    <Color x:Key="AccentFillColorDisabled">#500078D4</Color>
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#CC0078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#A00078D4"/>
+                    <SolidColorBrush x:Key="AccentFillColorDisabledBrush" Color="#500078D4"/>
+                    <SolidColorBrush x:Key="AccentColor" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="ControlAccentFillColorDefaultBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="#FF0078D4"/>
+                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <ResourceDictionary Source="/Styles/FontSizes.xaml" />

@@ -46,6 +46,10 @@ public partial class App : Application
     {
         InitializeComponent();
 
+        // Apply the previously-cached accent color synchronously before any window is created.
+        // This ensures frame 1 already has the correct color, eliminating the startup flash.
+        AccentColorService.ApplyCachedAccentEarly();
+
         Host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
             .UseContentRoot(AppContext.BaseDirectory)
             .ConfigureServices((context, services) =>
@@ -60,12 +64,15 @@ public partial class App : Application
                 services.AddSingleton<IAppNotificationService, AppNotificationService>();
                 services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
                 services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
+                services.AddSingleton<AccentColorService>();
                 services.AddTransient<IWebViewService, WebViewService>();
                 services.AddTransient<INavigationViewService, NavigationViewService>();
 
                 services.AddSingleton<IActivationService, ActivationService>();
                 services.AddSingleton<IPageService, PageService>();
                 services.AddSingleton<INavigationService, NavigationService>();
+                services.AddSingleton<IScheduleService, ScheduleService>();
+                services.AddSingleton<IBrowserLoginService, BrowserLoginService>();
 
                 // Core Services
                 services.AddSingleton<IFileService, FileService>();
@@ -77,10 +84,12 @@ public partial class App : Application
                 services.AddTransient<SettingsPage>();
                 services.AddTransient<WebViewerViewModel>();
                 services.AddTransient<WebViewerPage>();
-                services.AddTransient<OpenCommunityToolsViewModel>();
+                services.AddSingleton<OpenCommunityToolsViewModel>();
                 services.AddTransient<OpenCommunityToolsPage>();
                 services.AddTransient<HomeViewModel>();
                 services.AddTransient<HomePage>();
+                services.AddTransient<ScheduleViewModel>();
+                services.AddTransient<SchedulePage>();
                 services.AddTransient<ShellPage>();
                 services.AddTransient<ShellViewModel>();
 
@@ -111,11 +120,12 @@ public partial class App : Application
         {
             // Log error and use a fallback version.
             System.Diagnostics.Debug.WriteLine("Failed to get package version: " + ex.Message);
-            AppVersion = new Version(3, 0, 0, 1);
+            AppVersion = new Version(3, 0, 2, 0);
         }
 
         base.OnLaunched(args);
         //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
+        _ = App.GetService<IScheduleService>().StartServerAsync();
         await App.GetService<IActivationService>().ActivateAsync(args);
     }
 }
