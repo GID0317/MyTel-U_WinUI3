@@ -13,8 +13,24 @@ public class FileService : IFileService
         var path = Path.Combine(folderPath, fileName);
         if (File.Exists(path))
         {
-            var json = File.ReadAllText(path);
-            return JsonConvert.DeserializeObject<T>(json);
+            // Retry logic for file locking issues
+            int retries = 3;
+            while (retries > 0)
+            {
+                try
+                {
+                    using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    using var streamReader = new StreamReader(fileStream);
+                    var json = streamReader.ReadToEnd();
+                    return JsonConvert.DeserializeObject<T>(json);
+                }
+                catch (IOException)
+                {
+                    retries--;
+                    if (retries == 0) throw;
+                    Thread.Sleep(100);
+                }
+            }
         }
 
         return default;
@@ -28,7 +44,24 @@ public class FileService : IFileService
         }
 
         var fileContent = JsonConvert.SerializeObject(content);
-        File.WriteAllText(Path.Combine(folderPath, fileName), fileContent, Encoding.UTF8);
+        var path = Path.Combine(folderPath, fileName);
+        
+        // Retry logic for file locking issues
+        int retries = 3;
+        while (retries > 0)
+        {
+            try
+            {
+                File.WriteAllText(path, fileContent, Encoding.UTF8);
+                break;
+            }
+            catch (IOException)
+            {
+                retries--;
+                if (retries == 0) throw;
+                Thread.Sleep(100);
+            }
+        }
     }
 
     public void Delete(string folderPath, string fileName)
