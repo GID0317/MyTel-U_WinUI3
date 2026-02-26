@@ -9,7 +9,7 @@ using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using Windows.ApplicationModel;
 using Windows.Storage;
-using Windows.Storage.Pickers;
+using Microsoft.Windows.Storage.Pickers;
 
 namespace MyTelU_Launcher.ViewModels
 {
@@ -96,11 +96,20 @@ namespace MyTelU_Launcher.ViewModels
             }
         }
 
+        public async void ResetTools()
+        {
+            WeakReferenceMessenger.Default.Send(new ToolsResetMessage());
+        }
+
         public async Task PickBackgroundImageAsync()
         {
-            var picker = new FileOpenPicker();
-            picker.ViewMode = PickerViewMode.Thumbnail;
-            picker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
+            // Use new WinAppSDK 1.8+ picker that supports elevated processes (Microsoft.Windows.Storage.Pickers)
+            var picker = new FileOpenPicker(App.MainWindow.AppWindow.Id)
+            {
+                SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+                ViewMode = PickerViewMode.Thumbnail
+            };
+
             picker.FileTypeFilter.Add(".jpg");
             picker.FileTypeFilter.Add(".jpeg");
             picker.FileTypeFilter.Add(".jfif");
@@ -110,19 +119,14 @@ namespace MyTelU_Launcher.ViewModels
             picker.FileTypeFilter.Add(".tif");
             picker.FileTypeFilter.Add(".webp");
 
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
-            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-            StorageFile file = await picker.PickSingleFileAsync();
-            if (file != null)
+            var result = await picker.PickSingleFileAsync();
+            if (result != null)
             {
-                var filePath = file.Path;
+                // PickFileResult exposes Path directly
+                var filePath = result.Path;
                 await _localSettingsService.SaveSettingAsync("CustomBackgroundImagePath", filePath);
-                // Update the observable property.
                 CustomImagePath = filePath;
                 OnPropertyChanged(nameof(CustomImagePathDescription));
-
-                // Notify ShellViewModel via Messenger.
                 WeakReferenceMessenger.Default.Send(new BackgroundImageChangedMessage(filePath));
             }
         }
