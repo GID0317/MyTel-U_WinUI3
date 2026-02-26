@@ -82,7 +82,14 @@ namespace MyTelU_Launcher.ViewModels
         {
             if (parameter is string url)
             {
-                Source = new Uri(url);
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    Source = uri;
+                }
+                else if (Uri.TryCreate("https://" + url, UriKind.Absolute, out var httpsUri))
+                {
+                    Source = httpsUri;
+                }
             }
 
             WebViewService.NavigationCompleted += OnNavigationCompleted;
@@ -90,6 +97,7 @@ namespace MyTelU_Launcher.ViewModels
 
         public void OnNavigatedFrom()
         {
+            _failureTimer.Stop();
             WebViewService.UnregisterEvents();
             WebViewService.NavigationCompleted -= OnNavigationCompleted;
         }

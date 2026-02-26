@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
+using MyTelU_Launcher.Services;
 using MyTelU_Launcher.Views;
 using Windows.Networking.Connectivity;
 using Windows.Storage;
@@ -32,6 +33,7 @@ namespace MyTelU_Launcher.ViewModels
         private bool isUpdateAvailable;
 
         private readonly ILocalSettingsService _localSettingsService;
+        private readonly AccentColorService _accentColorService;
 
         public INavigationService NavigationService
         {
@@ -46,12 +48,14 @@ namespace MyTelU_Launcher.ViewModels
             INavigationService navigationService,
             INavigationViewService navigationViewService,
             ILocalSettingsService localSettingsService,
+            AccentColorService accentColorService,
             SettingsViewModel settingsViewModel)
         {
             NavigationService = navigationService;
             NavigationService.Navigated += OnNavigated;
             NavigationViewService = navigationViewService;
             _localSettingsService = localSettingsService;
+            _accentColorService = accentColorService;
 
             // Register for background image update messages.
             WeakReferenceMessenger.Default.Register<BackgroundImageChangedMessage>(this, async (r, m) =>
@@ -94,44 +98,68 @@ namespace MyTelU_Launcher.ViewModels
         private async void LoadBackgroundImageAsync()
         {
             var isCustomEnabled = await _localSettingsService.ReadSettingAsync<bool>("IsCustomImageBGEnabled");
+            System.Diagnostics.Debug.WriteLine($"===== LOADING BACKGROUND IMAGE =====");
+            System.Diagnostics.Debug.WriteLine($"Custom Background Enabled: {isCustomEnabled}");
+            
             if (isCustomEnabled)
             {
                 var imagePath = await _localSettingsService.ReadSettingAsync<string>("CustomBackgroundImagePath");
+                System.Diagnostics.Debug.WriteLine($"Stored Image Path: {imagePath}");
+                System.Diagnostics.Debug.WriteLine($"File Exists: {!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath)}");
                 await UpdateBackgroundImageAsync(imagePath);
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("Using default background (no custom image)");
                 await UpdateBackgroundImageAsync(string.Empty);
             }
+            System.Diagnostics.Debug.WriteLine($"====================================");
         }
 
         private async Task UpdateBackgroundImageAsync(string imagePath)
         {
-            BitmapImage bitmap = null;
-            if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
+            System.Diagnostics.Debug.WriteLine($"UpdateBackgroundImageAsync called with path: {imagePath}");
+            
+            // Set the background image immediately to ensure UI updates before color extraction starts
+            // This ensures acrylics have the correct background to sample from
+            BitmapImage bitmap;
+            string colorExtractionPath = string.Empty;
+            bool isCustomImage = !string.IsNullOrEmpty(imagePath) && File.Exists(imagePath);
+
+            var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+
+            if (isCustomImage)
             {
+                // Custom background case
                 try
                 {
+                    // Create bitmap for UI
+                    // Use a stream to avoid file locking issues that might affect color extraction
                     var file = await StorageFile.GetFileFromPathAsync(imagePath);
                     using (var stream = await file.OpenAsync(FileAccessMode.Read))
                     {
                         bitmap = new BitmapImage();
                         await bitmap.SetSourceAsync(stream);
                     }
+                    
+                    // Set path for color extraction
+                    colorExtractionPath = imagePath;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Handle or log error if needed.
+                    System.Diagnostics.Debug.WriteLine($"Error loading custom background image: {ex.Message}");
+                    // Fallback to default if loading fails
+                    bitmap = new BitmapImage(new Uri("ms-appx:///Assets/Img_Background.png"));
+                    isCustomImage = false; 
                 }
             }
-
-            // Load default background if custom image fails.
-            if (bitmap == null)
+            else
             {
+                // Default background case
                 bitmap = new BitmapImage(new Uri("ms-appx:///Assets/Img_Background.png"));
             }
 
-            var dispatcherQueue = DispatcherQueue.GetForCurrentThread();
+            // Update the UI immediately
             if (dispatcherQueue.HasThreadAccess)
             {
                 BackgroundImage = bitmap;
@@ -139,6 +167,58 @@ namespace MyTelU_Launcher.ViewModels
             else
             {
                 dispatcherQueue.TryEnqueue(() => BackgroundImage = bitmap);
+            }
+
+            // Now extract and apply the accent color
+            // This happens after the background is set, so acrylic effects will sample the correct image
+            // when the theme refresh happens
+            try
+            {
+                if (isCustomImage)
+                {
+                   System.Diagnostics.Debug.WriteLine($"Extracting accent color from custom path: {colorExtractionPath}");
+                   await _accentColorService.UpdateAccentFromImageAsync(colorExtractionPath);
+                }
+                else
+                {
+                    // Find the default background file for color extraction
+                    System.Diagnostics.Debug.WriteLine("No custom background, using default background accent");
+                    string defaultBgPath = string.Empty;
+
+                    // 1. Try finding relative to base directory (works in unpackaged/debug)
+                    var basePath = AppDomain.CurrentDomain.BaseDirectory;
+                    var candidatePath = Path.Combine(basePath, "Assets", "Img_Background.png");
+                    
+                    if (File.Exists(candidatePath))
+                    {
+                        defaultBgPath = candidatePath;
+                    }
+                    else
+                    {
+                        // 2. Try packaged asset URI (works in packaged app)
+                        var file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/Img_Background.png"));
+                        if (file != null)
+                        {
+                            defaultBgPath = file.Path;
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(defaultBgPath) && File.Exists(defaultBgPath))
+                    {
+                        await _accentColorService.UpdateAccentFromImageAsync(defaultBgPath);
+                    }
+                    else
+                    {
+                        // Fallback to extraction from empty string (which returns system accent)
+                        // or just set system accent directly
+                        var systemColor = await _accentColorService.ExtractDominantColorAsync(string.Empty);
+                        _accentColorService.ApplyAccentColor(systemColor);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating accent color: {ex.Message}");
             }
         }
 
