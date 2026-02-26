@@ -96,7 +96,7 @@ namespace MyTelU_Launcher.Views
         {
             if (ContentFrame.Content is WebViewerPage currentPage)
             {
-                string currentUrl = currentPage.ViewModel.Source?.ToString();
+                string? currentUrl = currentPage.ViewModel.Source?.ToString();
                 if (!string.IsNullOrEmpty(currentUrl))
                 {
                     ContentFrame.Navigate(typeof(WebViewerPage), currentUrl);
@@ -109,7 +109,7 @@ namespace MyTelU_Launcher.Views
             if (ContentFrame.Content is WebViewerPage page && page.BrowserWebView.Source != null)
             {
                 // Use the Launcher to open the URL in the system browser.
-                await Launcher.LaunchUriAsync(new Uri(page.BrowserWebView.Source.ToString()));
+                await Launcher.LaunchUriAsync(page.BrowserWebView.Source);
             }
         }
 
