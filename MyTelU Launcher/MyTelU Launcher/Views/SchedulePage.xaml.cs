@@ -56,41 +56,49 @@ namespace MyTelU_Launcher.Views
             // Listen for direction changes to swap animations before each transition
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
 
-            // With NavigationCacheMode="Required" the same page instance is reused on
-            // every navigation. Register/unregister via Loaded/Unloaded so the handler
-            // is always present while the page is on screen.
-            Loaded   += (_, _) => RegisterOfflineMessageHandler();
-            Unloaded += (_, _) => WeakReferenceMessenger.Default.Unregister<OfflineModeMessage>(this);
+            Loaded   += (_, _) => RegisterSessionExpiredHandler();
+            Unloaded += (_, _) => WeakReferenceMessenger.Default.Unregister<SessionExpiredMessage>(this);
         }
 
-        private void RegisterOfflineMessageHandler()
+        protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
         {
-            // Unregister first to prevent duplicate registration on repeated Loaded events.
-            WeakReferenceMessenger.Default.Unregister<OfflineModeMessage>(this);
-            WeakReferenceMessenger.Default.Register<OfflineModeMessage>(this, async (_, msg) =>
+            base.OnNavigatedTo(e);
+
+            // If a load is in progress but we already have data, cancel it so the page
+            // is immediately usable with cached data instead of being blocked by the overlay.
+            if (ViewModel.IsLoading && ViewModel.Courses.Count > 0)
+            {
+                ViewModel.CancelLoad();
+                return;
+            }
+
+            // Re-trigger a load if we have a session but no data yet and nothing is running.
+            // This handles the case where the VM was created after SessionCookiesSavedMessage
+            // already fired (e.g., user logged in from the Attendance page before ever visiting here).
+            if (!ViewModel.IsLoading && ViewModel.Courses.Count == 0 && !ViewModel.NeedsLogin)
+                _ = ViewModel.LoadScheduleAsync();
+        }
+
+        private void RegisterSessionExpiredHandler()
+        {
+            WeakReferenceMessenger.Default.Unregister<SessionExpiredMessage>(this);
+            WeakReferenceMessenger.Default.Register<SessionExpiredMessage>(this, async (_, _) =>
             {
                 var dialog = new ContentDialog
                 {
-                    XamlRoot        = XamlRoot,
-                    Title           = "You\u2019re in offline mode",
-                    DefaultButton   = ContentDialogButton.Close,
-                    CloseButtonText = "OK",
-                    Content         = new StackPanel { Spacing = 12, Children =
-                    {
-                        new TextBlock
-                        {
-                            Text         = "The schedule shown is the last cached version and it may not reflect the latest data. Please connect to the internet and try again later.",
-                            TextWrapping = TextWrapping.WrapWholeWords,
-                            Opacity      = 0.85
-                        }
-                    }}
+                    XamlRoot            = XamlRoot,
+                    Title               = "Session expired",
+                    Content             = "Your session has expired. The schedule shown may be outdated.\n\nWould you like to relog to get the latest data?",
+                    PrimaryButtonText   = "Relog",
+                    CloseButtonText     = "Later",
+                    DefaultButton       = ContentDialogButton.Primary,
                 };
 
-                // Apply dynamic accent colors to fix ContentDialog button hover states
-                var accentService = App.GetService<AccentColorService>();
-                accentService?.ApplyToContentDialog(dialog);
+                App.GetService<AccentColorService>()?.ApplyToContentDialog(dialog);
 
-                await dialog.ShowAsync();
+                var result = await dialog.ShowAsync();
+                if (result == ContentDialogResult.Primary)
+                    ViewModel.TriggerReloginCommand.Execute(null);
             });
         }
 

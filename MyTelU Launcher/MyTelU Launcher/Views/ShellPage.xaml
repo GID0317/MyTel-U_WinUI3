@@ -49,7 +49,6 @@
         <!-- NavigationView -->
         <NavigationView
             x:Name="NavigationViewControl"
-            SelectionChanged="NavigationViewControl_SelectionChanged"
             Canvas.ZIndex="0"
             Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
             IsBackButtonVisible="Visible"
@@ -72,7 +71,7 @@
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE787;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem x:Name="AttendanceNavItem" Content="Atendance">
+                <NavigationViewItem x:Name="AttendanceNavItem" Content="Attendance" helpers:NavigationHelper.NavigateTo="MyTelU_Launcher.ViewModels.AttendanceViewModel">
                     <NavigationViewItem.Icon>
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEE6F;"/>
                     </NavigationViewItem.Icon>

@@ -1,7 +1,11 @@
 ﻿using System;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Media;
+using CommunityToolkit.Mvvm.Messaging;
+using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.ViewModels;
 using MyTelU_Launcher.Models;
 
@@ -14,6 +18,22 @@ namespace MyTelU_Launcher.Views
         {
             ViewModel = App.GetService<OpenCommunityToolsViewModel>();
             this.InitializeComponent();
+
+            // Adapt title text color to background brightness
+            WeakReferenceMessenger.Default.Register<BackgroundBrightnessChangedMessage>(this, (r, m) =>
+            {
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    ApplicationListTxtTitle.Foreground = m.Value
+                        ? new SolidColorBrush(Colors.White)
+                        : new SolidColorBrush(Colors.Black);
+                });
+            });
+        }
+
+        private void Page_Unloaded(object sender, RoutedEventArgs e)
+        {
+            WeakReferenceMessenger.Default.Unregister<BackgroundBrightnessChangedMessage>(this);
         }
 
         // Event handlers for Main Buttons

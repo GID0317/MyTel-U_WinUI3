@@ -134,11 +134,19 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 
                         <!-- Refresh -->
-                        <Button Command="{x:Bind ViewModel.RefreshScheduleCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon Glyph="&#xE72C;" FontSize="16"/>
-                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                            </StackPanel>
+                        <Button Command="{x:Bind ViewModel.RefreshScheduleCommand}"
+                                IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}">
+                            <Grid MinWidth="80">
+                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                            Visibility="{x:Bind ViewModel.IsNotLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                              Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                              Width="16" Height="16"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Button>
 
                         <!-- View layout dropdown -->
@@ -215,25 +223,44 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0">
-                    <InfoBar Severity="Informational" IsClosable="False"
-                             Title="Offline mode"
-                             Message="{x:Bind ViewModel.CacheTimestampMessage, Mode=OneWay}"
-                             IsOpen="{x:Bind ViewModel.IsOffline, Mode=OneWay}">
-                        <InfoBar.ActionButton>
-                            <HyperlinkButton Content="Refresh"
-                                             Command="{x:Bind ViewModel.RefreshScheduleCommand}"/>
-                        </InfoBar.ActionButton>
-                    </InfoBar>
-                    <InfoBar Severity="Error"
-                             Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
-                             IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"/>
+                    <Border Margin="0,0,0,10"
+                            Visibility="{x:Bind ViewModel.IsOffline, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <InfoBar Severity="Informational" IsClosable="False"
+                                 Title="Offline mode"
+                                 Message="{x:Bind ViewModel.CacheTimestampMessage, Mode=OneWay}"
+                                 IsOpen="{x:Bind ViewModel.IsOffline, Mode=OneWay}">
+                            <InfoBar.ActionButton>
+                                <Button Command="{x:Bind ViewModel.RefreshScheduleCommand}"
+                                        IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"
+                                        CornerRadius="5"
+                                        HorizontalAlignment="Right">
+                                    <Grid MinWidth="54">
+                                        <TextBlock Text="Refresh"
+                                                   Visibility="{x:Bind ViewModel.IsNotLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                                      Width="16" Height="16"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+                    </Border>
+                    <Border Margin="0,0,0,10"
+                            Visibility="{x:Bind ViewModel.HasError, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <InfoBar Severity="Error"
+                                 Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                                 IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"/>
+                    </Border>
                 </StackPanel>
 
                 <!-- Shared slot for loading overlay AND actual content -->
                 <Grid Grid.Row="1">
 
-                    <!-- ── Loading overlay: shown while IsLoading ── -->
+                    <!-- Loading overlay: visible during any loading, non-blocking (IsHitTestVisible=False). -->
                     <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          IsHitTestVisible="False"
                           Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
                             <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
