@@ -207,7 +207,7 @@ public class ScheduleService : IScheduleService, IDisposable
                     settings["semesterCode"]  = semCode;
                     SaveSettings(settings); // This uses lock now, safe.
                 }
-                else { yearCode = "2526"; semCode = "2"; }
+                else { (yearCode, semCode) = ComputeDefaultAcademicYear(); }
             }
 
             string schoolYear = $"{yearCode}/{semCode}";
@@ -661,6 +661,30 @@ public class ScheduleService : IScheduleService, IDisposable
         {
             return new HttpClient();
         }
+    }
+
+    /// <summary>
+    /// Computes the current academic year and semester code dynamically.
+    /// Semester 1 = Aug–Jan, Semester 2 = Feb–Jul.
+    /// </summary>
+    private static (string yearCode, string semCode) ComputeDefaultAcademicYear()
+    {
+        var now = DateTime.Now;
+        int y1, y2;
+        string sem;
+        if (now.Month >= 8)
+        {
+            y1 = now.Year % 100;
+            y2 = (now.Year + 1) % 100;
+            sem = "1";
+        }
+        else
+        {
+            y1 = (now.Year - 1) % 100;
+            y2 = now.Year % 100;
+            sem = "2";
+        }
+        return ($"{y1:D2}{y2:D2}", sem);
     }
 
     public void Dispose() => _httpClient.Dispose();

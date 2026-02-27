@@ -8,7 +8,15 @@ namespace MyTelU_Launcher.Helpers;
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            return (value is bool flag && flag) ? Visibility.Visible : Visibility.Collapsed;
+            var flag = value is bool b && b;
+
+            // Support ConverterParameter="Invert" to negate the boolean
+            if (parameter is string p && p.Equals("Invert", StringComparison.OrdinalIgnoreCase))
+            {
+                flag = !flag;
+            }
+
+            return flag ? Visibility.Visible : Visibility.Collapsed;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, string language)
