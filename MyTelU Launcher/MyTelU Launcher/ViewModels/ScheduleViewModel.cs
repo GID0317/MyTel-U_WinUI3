@@ -80,7 +80,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     /// <summary>Full message shown in the offline InfoBar, including the last-synced time.</summary>
     public string CacheTimestampMessage =>
-        IsOffline ? $"Viewing cached schedule \u2014 last synced {CacheTimestamp}." : string.Empty;
+        IsOffline ? $"Viewing cached schedule, last synced {CacheTimestamp}." : string.Empty;
 
     [ObservableProperty]
     private bool _isBrowserLoginRunning;
@@ -154,7 +154,6 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     private bool _suppressDayChange;
     private bool _bypassCacheOnNextLoad;
-    private string _pendingOfflineActionLabel = string.Empty;
     private string _previousDay = string.Empty;
 
     // 1 = forward (tapped day is later in the week), -1 = backward
@@ -202,7 +201,14 @@ public partial class ScheduleViewModel : ObservableRecipient,
     {
         OnPropertyChanged(nameof(IsNotLoading));
         OnPropertyChanged(nameof(IsNotLoadingAndNotEmpty));
+        OnPropertyChanged(nameof(IsInitialLoading));
     }
+
+    /// <summary>
+    /// True only during the initial load when there is no data yet.
+    /// The full-page loading overlay binds to this — refreshes use the button spinner instead.
+    /// </summary>
+    public bool IsInitialLoading => IsLoading && Courses.Count == 0;
 
     [ObservableProperty]
     private AcademicYearOption? _selectedAcademicYear;
@@ -214,7 +220,6 @@ public partial class ScheduleViewModel : ObservableRecipient,
         if (_suppressAcademicYearChange || value == null) return;
         _scheduleService.SaveAcademicYear(value.YearCode, value.SemesterCode);
 
-        _pendingOfflineActionLabel = "Change Academic Year";
         _bypassCacheOnNextLoad = true;
         await LoadScheduleAsync();
     }
@@ -365,9 +370,32 @@ public partial class ScheduleViewModel : ObservableRecipient,
         }
     }
 
+    [RelayCommand]
+    public void TriggerRelogin()
+    {
+        ClearDisplayedScheduleData();
+        IsOffline = false;
+        NeedsLogin = true;
+    }
+
     private bool CanLoginWithBrowser() => !IsBrowserLoginRunning;
 
     private CancellationTokenSource? _loadCts;
+
+    /// <summary>
+    /// Cancels any in-progress load and immediately marks the page as not-loading.
+    /// Call this when navigating back to the page mid-refresh so the existing
+    /// cached data is visible instead of an overlay blocking interaction.
+    /// </summary>
+    public void CancelLoad()
+    {
+        if (!IsLoading) return;
+        _loadCts?.Cancel();
+        IsLoading = false;
+        // Restore the offline indicator so the InfoBar reappears if we're still offline.
+        if (Schedule != null)
+            IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
+    }
 
     [RelayCommand]
     public async Task LoadScheduleAsync()
@@ -389,8 +417,6 @@ public partial class ScheduleViewModel : ObservableRecipient,
         {
             bool bypass = _bypassCacheOnNextLoad;
             _bypassCacheOnNextLoad = false;
-            var actionLabel = _pendingOfflineActionLabel;
-            _pendingOfflineActionLabel = string.Empty;
 
             // ── 1. No session → show login immediately (do NOT serve stale cache) ──
             // Run on background thread — CookieStore.Load() hits PasswordVault (synchronous crypto).
@@ -427,20 +453,26 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
             if (sessionStatus == SessionValidationResult.NoSession)
             {
+                // If we have cached content, keep showing it and let the View prompt the user.
+                if (_scheduleService.HasCachedSchedule)
+                {
+                    var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
+                    if (cached != null)
+                    {
+                        IsOffline = true;
+                        PopulateScheduleData(cached);
+                        WeakReferenceMessenger.Default.Send(new SessionExpiredMessage());
+                        return;
+                    }
+                }
+                // No cache — nothing to show, must relog.
                 ClearDisplayedScheduleData();
                 NeedsLogin = true;
                 return;
             }
             if (sessionStatus == SessionValidationResult.NetworkError)
             {
-                // Explicit action (Refresh / Change Academic Year): keep current content and show dialog.
-                if (!string.IsNullOrWhiteSpace(actionLabel))
-                {
-                    WeakReferenceMessenger.Default.Send(new OfflineModeMessage { ActionLabel = actionLabel });
-                    return;
-                }
-
-                // Non-explicit load: fall back to cache when available.
+                // Explicit or implicit offline: fall back to cache and show the InfoBar.
                 if (_scheduleService.HasCachedSchedule)
                 {
                     var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
@@ -494,12 +526,11 @@ public partial class ScheduleViewModel : ObservableRecipient,
     [RelayCommand]
     private async Task RefreshScheduleAsync()
     {
-        _pendingOfflineActionLabel = "Refresh";
         _bypassCacheOnNextLoad = true;
         await LoadScheduleAsync();
 
-        // If refresh succeeded online, repopulate the academic-year dropdown in background.
-        if (!IsOffline && !NeedsLogin)
+        // Always refresh the dropdown — offline path collapses it to the cached entry.
+        if (!NeedsLogin)
             _ = LoadAcademicYearsAsync();
     }
 

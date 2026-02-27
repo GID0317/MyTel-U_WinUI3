@@ -220,6 +220,16 @@ namespace MyTelU_Launcher.ViewModels
             {
                 System.Diagnostics.Debug.WriteLine($"Error updating accent color: {ex.Message}");
             }
+
+            // Broadcast background brightness so subscribers (e.g. HomePage) can adapt text color.
+            if (_accentColorService.LastExtractedColor.HasValue)
+            {
+                var c = _accentColorService.LastExtractedColor.Value;
+                // Relative luminance (ITU-R BT.601)
+                double luminance = 0.299 * c.R + 0.587 * c.G + 0.114 * c.B;
+                bool isDark = luminance < 128;
+                WeakReferenceMessenger.Default.Send(new BackgroundBrightnessChangedMessage(isDark));
+            }
         }
 
         /// <summary>
