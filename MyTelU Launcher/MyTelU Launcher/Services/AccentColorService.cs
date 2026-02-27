@@ -27,6 +27,12 @@ public class AccentColorService
     private static Color s_cachedColor;
     private static bool s_hasCachedColor = false;
 
+    /// <summary>
+    /// The dominant color most recently extracted from the background image.
+    /// Can be used by other components to determine background brightness.
+    /// </summary>
+    public Color? LastExtractedColor { get; private set; }
+
     // Sets a resource in the flat dict AND in every theme dictionary so WinUI picks it up
     private static void SetResource(ResourceDictionary resources, string key, object value)
     {
@@ -87,7 +93,8 @@ public class AccentColorService
             System.Diagnostics.Debug.WriteLine($"  Original   : RGB({quantizedColor.Color.R},{quantizedColor.Color.G},{quantizedColor.Color.B})");
             System.Diagnostics.Debug.WriteLine($"  Saturated  : RGB({saturatedColor.R},{saturatedColor.G},{saturatedColor.B})");
             System.Diagnostics.Debug.WriteLine($"======================================");
-            
+
+            LastExtractedColor = saturatedColor;
             return saturatedColor;
         }
         catch (Exception ex)
@@ -96,7 +103,9 @@ public class AccentColorService
             System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
         }
 
-        return GetSystemAccentColor();
+        var fallback = GetSystemAccentColor();
+        LastExtractedColor = fallback;
+        return fallback;
     }
 
     /// <summary>
@@ -490,7 +499,9 @@ public class AccentColorService
             "SystemControlHighlightAccent3Brush",
             "SystemControlBackgroundAccentBrush",
             "SystemControlDisabledAccentBrush",
-            "SystemControlForegroundAccentBrush"
+            "SystemControlForegroundAccentBrush",
+            "TextControlSelectionHighlightColor",
+            "AccentColor"
         };
 
         foreach (var key in keys)
