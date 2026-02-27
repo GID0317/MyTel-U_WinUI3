@@ -72,6 +72,7 @@ public partial class App : Application
                 services.AddSingleton<IPageService, PageService>();
                 services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<IScheduleService, ScheduleService>();
+                services.AddSingleton<IAttendanceService, AttendanceService>();
                 services.AddSingleton<IBrowserLoginService, BrowserLoginService>();
 
                 // Core Services
@@ -90,6 +91,8 @@ public partial class App : Application
                 services.AddTransient<HomePage>();
                 services.AddTransient<ScheduleViewModel>();
                 services.AddTransient<SchedulePage>();
+                services.AddTransient<AttendanceViewModel>();
+                services.AddTransient<AttendancePage>();
                 services.AddTransient<ShellPage>();
                 services.AddTransient<ShellViewModel>();
 
