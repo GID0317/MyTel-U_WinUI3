@@ -1,0 +1,462 @@
+﻿<Page
+    x:Class="MyTelU_Launcher.Views.AttendancePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
+    xmlns:helpers="using:MyTelU_Launcher.Helpers"
+    xmlns:models="using:MyTelU_Launcher.Models"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:animations="using:CommunityToolkit.WinUI.Animations"
+    behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
+    NavigationCacheMode="Required"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="BadgeTextBrush"       Color="#1C1C1C"/>
+                    <SolidColorBrush x:Key="BadgeOkBrush"         Color="#4EC94E"/>
+                    <SolidColorBrush x:Key="BadgeWarningBrush"    Color="#FFD42E"/>
+                    <SolidColorBrush x:Key="BadgeAtRiskBrush"     Color="#FF6B6B"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="BadgeTextBrush"       Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="BadgeOkBrush"         Color="#1A7F1A"/>
+                    <SolidColorBrush x:Key="BadgeWarningBrush"    Color="#B07800"/>
+                    <SolidColorBrush x:Key="BadgeAtRiskBrush"     Color="#C42B1C"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <helpers:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+            <animations:ImplicitAnimationSet x:Name="ShowList">
+                <animations:OffsetAnimation EasingMode="EaseOut"
+                                            From="0,16,0" To="0"
+                                            Duration="0:0:0.35"/>
+                <animations:OpacityAnimation EasingMode="EaseOut"
+                                             From="0" To="1"
+                                             Duration="0:0:0.25"/>
+            </animations:ImplicitAnimationSet>
+            <animations:ImplicitAnimationSet x:Name="HideList">
+                <animations:OffsetAnimation EasingMode="EaseOut"
+                                            From="0" To="0,8,0"
+                                            Duration="0:0:0.15"/>
+                <animations:OpacityAnimation EasingMode="EaseOut"
+                                             From="1" To="0"
+                                             Duration="0:0:0.1"/>
+            </animations:ImplicitAnimationSet>
+
+            <!-- Drill-in/out for the login overlay -->
+            <animations:ImplicitAnimationSet x:Name="DrillInShow">
+                <animations:ScaleAnimation EasingMode="EaseOut" From="0.88,0.88,1" To="1,1,1" Duration="0:0:0.35"/>
+                <animations:OpacityAnimation EasingMode="EaseOut" From="0" To="1" Duration="0:0:0.25"/>
+            </animations:ImplicitAnimationSet>
+            <animations:ImplicitAnimationSet x:Name="DrillOutHide">
+                <animations:ScaleAnimation EasingMode="EaseIn" From="1,1,1" To="0.94,0.94,1" Duration="0:0:0.15"/>
+                <animations:OpacityAnimation EasingMode="EaseIn" From="1" To="0" Duration="0:0:0.12"/>
+            </animations:ImplicitAnimationSet>
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <!-- Root Grid -->
+    <Grid>
+        <!-- Background Layer -->
+        <Rectangle Fill="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                   Margin="-100,-100,-100,-100"/>
+
+        <!-- Main Content -->
+        <Grid x:Name="ContentArea" Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- â”€â”€â”€ Header card â”€â”€â”€ -->
+            <Border Grid.Row="0" Margin="0,0,0,12"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="12">
+                        <ComboBox x:Name="SemesterComboBox"
+                                  ItemsSource="{x:Bind ViewModel.AcademicYearOptions}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedAcademicYear, Mode=TwoWay}"
+                                  DisplayMemberPath="Text"
+                                  PlaceholderText="Semester"
+                                  Width="200"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button Command="{x:Bind ViewModel.RefreshAttendanceCommand}"
+                                IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}">
+                            <Grid MinWidth="80">
+                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                            Visibility="{x:Bind ViewModel.IsNotLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                    <FontIcon Glyph="&#xE72C;" FontSize="16"/>
+                                    <TextBlock Text="Refresh" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                              Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                              Width="16" Height="16"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Button>
+
+                        <Button Padding="7">
+                            <FontIcon Glyph="&#xE712;" FontSize="16"/>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutItem Text="More attendance information"
+                                                    Command="{x:Bind ViewModel.OpenAttendanceInBrowserCommand}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8A7;"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutItem Text="Sign out and clear data"
+                                                    Command="{x:Bind ViewModel.RequestClearSessionCommand}"
+                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xF3B1;"
+                                                      Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- â”€â”€â”€ Content area â”€â”€â”€ -->
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- InfoBars -->
+                <StackPanel Grid.Row="0">
+                    <Border Margin="0,0,0,10"
+                            Visibility="{x:Bind ViewModel.IsOffline, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <InfoBar Severity="Informational" IsClosable="False"
+                                 Title="Offline mode"
+                                 Message="{x:Bind ViewModel.CacheTimestampMessage, Mode=OneWay}"
+                                 IsOpen="{x:Bind ViewModel.IsOffline, Mode=OneWay}">
+                            <InfoBar.ActionButton>
+                                <Button Command="{x:Bind ViewModel.RefreshAttendanceCommand}"
+                                        IsEnabled="{x:Bind ViewModel.IsNotLoading, Mode=OneWay}"
+                                        CornerRadius="5"
+                                        HorizontalAlignment="Right">
+                                    <Grid MinWidth="54">
+                                        <TextBlock Text="Refresh"
+                                                   Visibility="{x:Bind ViewModel.IsNotLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                                      Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                                      Width="16" Height="16"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </InfoBar.ActionButton>
+                        </InfoBar>
+                    </Border>
+                    <Border Margin="0,0,0,10"
+                            Visibility="{x:Bind ViewModel.HasError, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <InfoBar Severity="Error"
+                                 Message="{x:Bind ViewModel.ErrorMessage, Mode=OneWay}"
+                                 IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Shared slot for loading / content / login -->
+                <Grid Grid.Row="1">
+
+                    <!-- Loading overlay: visible during any loading, non-blocking (IsHitTestVisible=False). -->
+                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          IsHitTestVisible="False"
+                          Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                            <ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}"
+                                          Width="48" Height="48" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Loading attendance…" FontSize="13" Opacity="0.6"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- ── Empty state ── -->
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Visibility="{x:Bind ViewModel.IsEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Spacing="24" HorizontalAlignment="Center">
+                            <Grid x:Name="MascotContainer" Width="180" Height="180"
+                                  HorizontalAlignment="Center" Loaded="MascotContainer_Loaded"/>
+                            <TextBlock Text="No attendance data found for this period!"
+                                       FontSize="18" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" Opacity="0.8"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- â”€â”€ Main content: course list â”€â”€ -->
+                    <Grid Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                          animations:Implicit.ShowAnimations="{StaticResource ShowList}"
+                          animations:Implicit.HideAnimations="{StaticResource HideList}">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Summary cards row -->
+                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Total Courses -->
+                            <Border Grid.Column="0" Margin="0,0,6,0" Padding="16,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="Courses" FontSize="12" Opacity="0.6"/>
+                                    <TextBlock Text="{x:Bind ViewModel.TotalCourses, Mode=OneWay}"
+                                               FontSize="28" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Total Attended -->
+                            <Border Grid.Column="1" Margin="6,0,6,0" Padding="16,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="Attended" FontSize="12" Opacity="0.6"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{x:Bind ViewModel.TotalAttended, Mode=OneWay}"
+                                                   FontSize="28" FontWeight="Bold"/>
+                                        <TextBlock Text="/" FontSize="20" Opacity="0.4" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
+                                        <TextBlock Text="{x:Bind ViewModel.TotalSessionsCount, Mode=OneWay}"
+                                                   FontSize="20" Opacity="0.5" VerticalAlignment="Bottom" Margin="0,0,0,3"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- At Risk -->
+                            <Border Grid.Column="2" Margin="6,0,6,0" Padding="16,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="At Risk (&lt;75%)" FontSize="12" Opacity="0.6"/>
+                                    <TextBlock Text="{x:Bind ViewModel.AtRiskCount, Mode=OneWay}"
+                                               FontSize="28" FontWeight="Bold"
+                                               Foreground="{ThemeResource BadgeAtRiskBrush}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Warning -->
+                            <Border Grid.Column="3" Margin="6,0,0,0" Padding="16,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="Warning (&lt;80%)" FontSize="12" Opacity="0.6"/>
+                                    <TextBlock Text="{x:Bind ViewModel.WarningCount, Mode=OneWay}"
+                                               FontSize="28" FontWeight="Bold"
+                                               Foreground="{ThemeResource BadgeWarningBrush}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Course attendance list -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsRepeater x:Name="CourseList"
+                                           ItemsSource="{x:Bind ViewModel.Courses, Mode=OneWay}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="2"/>
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="models:AttendanceCourseItem">
+                                        <controls:SettingsCard
+                                            IsClickEnabled="True"
+                                            Tag="{x:Bind}"
+                                            Click="CourseCard_Click">
+                                            <controls:SettingsCard.Header>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{x:Bind CourseCode}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="-" Opacity="0.4" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{x:Bind CourseName}" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </controls:SettingsCard.Header>
+                                            <controls:SettingsCard.Description>
+                                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE716;" FontSize="11" Opacity="0.6" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="{x:Bind ClassCode}" FontSize="12" Opacity="0.7" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <FontIcon Glyph="&#xE787;" FontSize="11" Opacity="0.6" VerticalAlignment="Center"/>
+                                                        <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center">
+                                                            <Run Text="{x:Bind Attended}"/><Run Text="/"/><Run Text="{x:Bind TotalSessions}"/>
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </controls:SettingsCard.Description>
+                                            <!-- Right side: badge + percentage -->
+                                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                <!-- Status badge -->
+                                                <Border Padding="8,3" CornerRadius="4"
+                                                        Background="{ThemeResource BadgeOkBrush}"
+                                                        Visibility="{x:Bind IsOk, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="OK" FontSize="10" FontWeight="Bold"
+                                                               Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                </Border>
+                                                <Border Padding="8,3" CornerRadius="4"
+                                                        Background="{ThemeResource BadgeWarningBrush}"
+                                                        Visibility="{x:Bind IsWarning, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="WARNING" FontSize="10" FontWeight="Bold"
+                                                               Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                </Border>
+                                                <Border Padding="8,3" CornerRadius="4"
+                                                        Background="{ThemeResource BadgeAtRiskBrush}"
+                                                        Visibility="{x:Bind IsAtRisk, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="AT RISK" FontSize="10" FontWeight="Bold"
+                                                               Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                </Border>
+                                                <!-- Percentage -->
+                                                <TextBlock Text="{x:Bind PercentageStr}" FontSize="16"
+                                                           VerticalAlignment="Center" Opacity="0.8"/>
+                                            </StackPanel>
+                                        </controls:SettingsCard>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </ScrollViewer>
+                    </Grid>
+
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- LOGIN OVERLAY: shown whenever not logged in -->
+        <Grid x:Name="LoginOverlay"
+              Visibility="{x:Bind ViewModel.NeedsLogin, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+              animations:Implicit.ShowAnimations="{StaticResource DrillInShow}"
+              animations:Implicit.HideAnimations="{StaticResource DrillOutHide}">
+
+            <!-- Backdrop -->
+            <Rectangle Fill="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                       Opacity="0.98"/>
+
+            <!-- Two-column layout -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Welcome content -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center"
+                            Margin="60,0,40,0" Spacing="0">
+
+                    <!-- Title -->
+                    <TextBlock Text="Let&#x2019;s track your attendance!"
+                               FontSize="34" FontWeight="Bold"
+                               TextWrapping="Wrap" Margin="0,0,0,14"/>
+
+                    <!-- Subtitle -->
+                    <TextBlock FontSize="14" Opacity="0.65" TextWrapping="Wrap"
+                               Margin="0,0,0,36" LineHeight="22">
+                        View your iGracias attendance records right here. See how many
+                        sessions you&#x2019;ve attended per course, drill into per-session details,
+                        and get instant warnings for courses at risk. Log in once and it stays synced.
+                    </TextBlock>
+
+                    <!-- Feature list -->
+                    <StackPanel Spacing="14" Margin="0,0,0,44" Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                            <Border Background="{ThemeResource SystemAccentColor}"
+                                    CornerRadius="6" Width="32" Height="32">
+                                <FontIcon Glyph="&#xE9D9;" FontSize="14" Foreground="White"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Attendance overview" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Session counts for every course at a glance" FontSize="12" Opacity="0.6"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                            <Border Background="{ThemeResource SystemAccentColor}"
+                                    CornerRadius="6" Width="32" Height="32">
+                                <FontIcon Glyph="&#xE8EC;" FontSize="14" Foreground="White"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Session detail" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Drill into each class for per-session records" FontSize="12" Opacity="0.6"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                            <Border Background="{ThemeResource SystemAccentColor}"
+                                    CornerRadius="6" Width="32" Height="32">
+                                <FontIcon Glyph="&#xEA39;" FontSize="14" Foreground="White"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="At-risk detection" FontWeight="SemiBold" FontSize="13"/>
+                                <TextBlock Text="Courses below 75% flagged automatically" FontSize="12" Opacity="0.6"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Action buttons -->
+                    <StackPanel Spacing="12">
+                        <Button Command="{x:Bind ViewModel.BeginLoginFromOnboardingCommand}"
+                                Style="{ThemeResource AccentButtonStyle}"
+                                FontSize="14" Padding="24,10">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <FontIcon Glyph="&#xE8A7;" FontSize="14"/>
+                                <TextBlock Text="Log in to iGracias"/>
+                            </StackPanel>
+                        </Button>
+                        <ProgressBar IsIndeterminate="True"
+                                     Visibility="{x:Bind ViewModel.IsBrowserLoginRunning, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                                     Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                </StackPanel>
+
+                <!-- Right: Mascot panel -->
+                <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      Margin="0,32,48,32" CornerRadius="20">
+
+                    <!-- Gradient background -->
+                    <Grid.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="{ThemeResource SystemAccentColor}" Offset="0.0"/>
+                            <GradientStop Color="Transparent" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Grid.Background>
+
+                    <!-- Mascot image -->
+                    <Image Source="ms-appx:///Assets/GalihKoper_Icon.png"
+                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                           Margin="16,32,16,0"
+                           MaxHeight="400"
+                           Stretch="Uniform"/>
+
+                </Grid>
+            </Grid>
+
+        </Grid>
+
+    </Grid>
+</Page>
