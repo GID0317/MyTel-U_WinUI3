@@ -9,6 +9,7 @@
     xmlns:models="using:MyTelU_Launcher.Models"
     behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
     NavigationCacheMode="Required"
+    Unloaded="Page_Unloaded"
     mc:Ignorable="d">
 
     <Page.Resources>

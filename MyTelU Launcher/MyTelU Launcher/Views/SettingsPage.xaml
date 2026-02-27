@@ -68,8 +68,7 @@
                         <controls:SettingsCard x:Name="CostumImageBGTxt" 
                                Header="Pick an image from directory">
                             <controls:SettingsCard.Description>
-                                <TextBlock IsTextSelectionEnabled="True"
-                                           Text="{x:Bind ViewModel.CustomImagePathDescription, Mode=OneWay}" />
+                                <TextBlock IsTextSelectionEnabled="True"                                       SelectionHighlightColor="{ThemeResource AccentFillColorDefaultBrush}"                                           Text="{x:Bind ViewModel.CustomImagePathDescription, Mode=OneWay}" />
                             </controls:SettingsCard.Description>
                             <Button x:Name="CostumImageBGBtn" 
                     Content="Select Image" 
@@ -135,6 +134,7 @@
                         <ui:ImageIcon Source="ms-appx:///Assets/Icon_App.png" />
                     </controls:SettingsExpander.HeaderIcon>
                     <TextBlock IsTextSelectionEnabled="True"
+                               SelectionHighlightColor="{ThemeResource AccentFillColorDefaultBrush}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="Version 3.0.2" />
                     <controls:SettingsExpander.Items>

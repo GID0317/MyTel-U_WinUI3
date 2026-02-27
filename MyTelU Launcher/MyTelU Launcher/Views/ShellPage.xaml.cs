@@ -128,24 +128,7 @@ namespace MyTelU_Launcher.Views
             }
         }
 
-        // Handle selection changes to implement custom navigation for "Atendance"
-        private void NavigationViewControl_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
-        {
-            if (args.SelectedItem is NavigationViewItem selectedItem)
-            {
-                // Check if the selected item is the "Atendance" item.
-                if (selectedItem == AttendanceNavItem)
-                {
-                    // Navigate to the web viewer using your custom method.
-                    NavigateToWebViewer("https://igracias.telkomuniversity.ac.id/presence/index.php?pageid=3942");
-                }
-            }
-        }
-
-        // Use the named NavigationFrame for navigation instead of the Page.Frame property.
-        private void NavigateToWebViewer(string url)
-        {
-            NavigationFrame.Navigate(typeof(WebViewerPage), url);
-        }
+        // Selection changes are now handled by the NavigationHelper.NavigateTo attached property
+        // on each NavigationViewItem — no custom routing needed for Attendance.
     }
 }
