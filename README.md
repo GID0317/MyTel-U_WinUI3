@@ -11,6 +11,12 @@
   <a href="https://github.com/GID0317/MyTel-U_WinUI3/releases">
     <img alt="Release" src="https://img.shields.io/github/v/release/GID0317/MyTel-U_WinUI3?logo=visualstudio&style=flat-square&color=1E9BFA">
   </a>
+  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3?ref=badge_shield&issueType=security">
+    <img alt="FOSSA Security Status" src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3.svg?type=shield&issueType=security" />
+  </a>
+  <a href="https://app.fossa.com/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3?ref=badge_shield&issueType=license">
+    <img alt="FOSSA License Status" src="https://app.fossa.com/api/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3.svg?type=shield&issueType=license" />
+  </a>
 </div>
 
 <div align="center">
