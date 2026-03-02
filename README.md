@@ -44,6 +44,7 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 
 # UI Aplication Overview
 ![UIOverviewBanner](https://github.com/user-attachments/assets/09021b24-957d-4035-9dc4-1bc825c87e0b)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3?ref=badge_shield)
 
 <table align="center">
   <tr>
@@ -58,3 +59,7 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 - `WinUIEX`
 - `DotNet`
 - `ColorThief`
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FGID0317%2FMyTel-U_WinUI3?ref=badge_large)
