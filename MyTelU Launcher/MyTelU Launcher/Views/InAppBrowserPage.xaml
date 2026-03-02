@@ -13,21 +13,26 @@
             <TextBlock x:Name="BrowserUIText" FontWeight="SemiBold" HorizontalAlignment="Center"/>
             <TextBox x:Name="BrowserUITextBox" Margin="160,0,125,0" Height="31" IsReadOnly="True"/>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Spacing="5" HorizontalAlignment="Left">
-                <Button x:Name="BrowserUIBtnBack" Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnBack_Click">
+                <Button x:Name="BrowserUIBtnBack" Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnBack_Click"
+                        ToolTipService.ToolTip="Go Back">
                     <FontIcon Glyph="&#xE72B;"/>
                 </Button>
-                <Button x:Name="BrowserUIBtnForward" Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnForward_Click">
+                <Button x:Name="BrowserUIBtnForward" Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnForward_Click"
+                        ToolTipService.ToolTip="Go Forward">
                     <FontIcon Glyph="&#xE72A;"/>
                 </Button>
-                <Button Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnReload_Click">
+                <Button Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnReload_Click"
+                        ToolTipService.ToolTip="Reload">
                     <FontIcon Glyph="&#xE72C;" FontWeight="ExtraBold"/>
                 </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0" Spacing="5" HorizontalAlignment="Right">
-                <Button Style="{StaticResource AccentButtonStyle}" Padding="7" Width="58" CornerRadius="10" Click="BrowserUIBtnOpenOnBrowser_Click">
+                <Button Style="{StaticResource AccentButtonStyle}" Padding="7" Width="58" CornerRadius="10" Click="BrowserUIBtnOpenOnBrowser_Click"
+                        ToolTipService.ToolTip="Open in Browser">
                     <FontIcon Glyph="&#xE8A7;"/>
                 </Button>
-                <Button Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnClose_Click">
+                <Button Style="{StaticResource AccentButtonStyle}" Padding="7" Width="45" CornerRadius="10" Click="BrowserUIBtnClose_Click"
+                        ToolTipService.ToolTip="Close">
                     <FontIcon Glyph="&#xE8BB;"/>
                 </Button>
             </StackPanel>

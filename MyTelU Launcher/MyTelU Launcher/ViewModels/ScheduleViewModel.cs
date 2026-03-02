@@ -351,6 +351,22 @@ public partial class ScheduleViewModel : ObservableRecipient,
     {
         if (_browserLoginService.IsRunning) return;
 
+        // Confirm before launching the browser so the user knows what to expect.
+        var confirm = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title             = "Get ready!",
+            Content           = "We'll open iGracias in a browser.\nPlease log in normally. After you sign in, the browser will close automatically and you're all set!",
+            PrimaryButtonText = "Got it",
+            CloseButtonText   = "Cancel",
+            DefaultButton     = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
+            XamlRoot          = App.MainWindow.Content.XamlRoot,
+        };
+
+        App.GetService<AccentColorService>()?.ApplyToContentDialog(confirm);
+
+        if (await confirm.ShowAsync() != Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+            return;
+
         IsBrowserLoginRunning = true;
         LoginWithBrowserCommand.NotifyCanExecuteChanged();
         try
@@ -439,6 +455,9 @@ public partial class ScheduleViewModel : ObservableRecipient,
                 var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
                 if (cached != null)
                 {
+                    // Re-check after async gap: a CancelLoad() call could have fired while we
+                    // were reading the cache file on the background thread.
+                    if (token.IsCancellationRequested) return;
                     IsOffline = !_scheduleService.IsNetworkAvailable();
                     PopulateScheduleData(cached);
                     // If offline, we are done. If online, user might want fresh data eventually, but typically we stop here unless forced refresh.

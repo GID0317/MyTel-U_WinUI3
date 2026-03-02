@@ -50,6 +50,10 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
         var defaultTools = GetDefaultTools();
         var defaultCommunityTools = GetDefaultCommunityTools();
 
+        // Unsubscribe existing event handlers if they exist to prevent memory leaks on reload
+        Tools.CollectionChanged -= Tools_CollectionChanged;
+        CommunityTools.CollectionChanged -= CommunityTools_CollectionChanged;
+
         // Clear existing lists to avoid duplication if called multiple times (e.g. during reset)
         Tools.Clear();
         CommunityTools.Clear();
@@ -117,16 +121,22 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
         SaveCommunityToolsAsync();
 
         // Subscribe to collection changes to save automatically when reordered
-        Tools.CollectionChanged += (s, e) => SaveToolsAsync();
-        CommunityTools.CollectionChanged += (s, e) => SaveCommunityToolsAsync();
+        Tools.CollectionChanged += Tools_CollectionChanged;
+        CommunityTools.CollectionChanged += CommunityTools_CollectionChanged;
     }
+
+    private void Tools_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => SaveToolsAsync();
+    
+    private void CommunityTools_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => SaveCommunityToolsAsync();
 
     private List<ToolItem> GetDefaultTools()
     {
         return new List<ToolItem>
         {
             new ToolItem { Name = "Lab Fisika Dasar", Icon = "\U0001F680", Url = "https://labfisdas-telu.com/", Category = "Tools" },
-            new ToolItem { Name = "SEA Lab", Icon = "💻", Url = "https://sealab-telu.com/", Category = "Tools" }
+            new ToolItem { Name = "SEA Lab", Icon = "💻", Url = "https://sealab-telu.com/", Category = "Tools" },
+            new ToolItem { Name = "Evconn Lab", Icon = "🛜", Url = "https://labevconn.com/", Category = "Tools" },
+            new ToolItem { Name = "SECULAB", Icon = "🔐", Url = "https://seculab-telu.cloud/", Category = "Tools" }
         };
     }
 

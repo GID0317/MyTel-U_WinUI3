@@ -202,7 +202,8 @@
                         </StackPanel>
                     </Grid>
 
-                    <Grid Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                    <Grid x:Name="CourseContentGrid"
+                          Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
                           animations:Implicit.ShowAnimations="{StaticResource ShowList}"
                           animations:Implicit.HideAnimations="{StaticResource HideList}">
 

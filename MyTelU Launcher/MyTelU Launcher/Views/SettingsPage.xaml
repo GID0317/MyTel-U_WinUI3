@@ -108,7 +108,7 @@
                 <controls:SettingsCard x:Name="UpdateSettingsCard"
                        Header="Update Check"
                        Margin="0,0,0,0"
-                       Description="Current version: 3.0.2">
+                       Description="Current version: 4.0.0">
                     <controls:SettingsCard.HeaderIcon>
                         <FontIcon Glyph="&#xE895;" />
                     </controls:SettingsCard.HeaderIcon>
@@ -136,7 +136,7 @@
                     <TextBlock IsTextSelectionEnabled="True"
                                SelectionHighlightColor="{ThemeResource AccentFillColorDefaultBrush}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Version 3.0.2" />
+                               Text="Version 4.0.0" />
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard Header="Send a Feedback, File a bug or contribute to the project">
                             <HyperlinkButton Content="Go to the page"

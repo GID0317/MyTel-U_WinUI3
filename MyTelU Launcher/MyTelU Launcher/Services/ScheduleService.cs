@@ -487,11 +487,15 @@ public class ScheduleService : IScheduleService, IDisposable
 
             // DETECT INVALID SESSION / SCRIPT REDIRECT
             // If the page is just a script redirect (length ~3-4KB, contains 'window.location'),
-            // the session is likely expired or invalid. Kill it so the user is prompted to login.
+            // the session is likely expired or invalid.
+            // NOTE: Do NOT call ClearSession() here — silently deleting cookies and the schedule
+            // cache in the background causes both Attendance and Schedule pages to lose their
+            // cached data and drop into the NeedsLogin state unexpectedly while the user is
+            // navigating around in offline/cache mode.  Just return empty; the ViewModels will
+            // handle the expired-session state properly the next time the user refreshes.
             if (html.Length < 5000 && (html.Contains("window.location=") || html.Contains("window.location =")))
             {
-                Log("Script redirect detected â€” session likely invalid. Clearing session.");
-                ClearSession();
+                Log("Script redirect detected — session likely expired. Returning empty academic years list.");
                 return new List<AcademicYearOption>();
             }
 

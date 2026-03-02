@@ -53,11 +53,46 @@ namespace MyTelU_Launcher.Views
                     0f);
             };
 
+            // Safety net: CommunityToolkit implicit show animations (ShowTransitions)
+            // use a Composition KeyFrameAnimation starting at opacity 0. On the first
+            // Collapsed→Visible transition of a newly created element the animation can
+            // complete without committing its final value, leaving the visual transparent.
+            CourseContentGrid.RegisterPropertyChangedCallback(
+                UIElement.VisibilityProperty,
+                (sender, dp) =>
+                {
+                    if (CourseContentGrid.Visibility == Visibility.Visible)
+                        _ = SnapContentOpacityAfterAnimationAsync();
+                });
+
             // Listen for direction changes to swap animations before each transition
             ViewModel.PropertyChanged += OnViewModelPropertyChanged;
 
             Loaded   += (_, _) => RegisterSessionExpiredHandler();
-            Unloaded += (_, _) => WeakReferenceMessenger.Default.Unregister<SessionExpiredMessage>(this);
+            Unloaded += (_, _) =>
+            {
+                WeakReferenceMessenger.Default.Unregister<SessionExpiredMessage>(this);
+                // The ViewModel is a singleton held by DI, so we must explicitly remove this
+                // handler otherwise each navigation creates a leaked page instance that is
+                // kept alive forever by the strong delegate reference on the VM.
+                ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            };
+        }
+
+        /// <summary>
+        /// Waits for the ShowTransitions animation to finish (350 ms + margin), then
+        /// force-sets the Composition visual's opacity to 1 and offset to zero.
+        /// When the animation played correctly this is a harmless no-op.
+        /// </summary>
+        private async Task SnapContentOpacityAfterAnimationAsync()
+        {
+            await Task.Delay(400);
+            if (CourseContentGrid.Visibility == Visibility.Visible)
+            {
+                var visual = ElementCompositionPreview.GetElementVisual(CourseContentGrid);
+                visual.Opacity = 1f;
+                visual.Offset  = System.Numerics.Vector3.Zero;
+            }
         }
 
         protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -69,14 +104,32 @@ namespace MyTelU_Launcher.Views
             if (ViewModel.IsLoading && ViewModel.Courses.Count > 0)
             {
                 ViewModel.CancelLoad();
-                return;
+                // Fall through to the composition reset below.
             }
 
-            // Re-trigger a load if we have a session but no data yet and nothing is running.
-            // This handles the case where the VM was created after SessionCookiesSavedMessage
-            // already fired (e.g., user logged in from the Attendance page before ever visiting here).
-            if (!ViewModel.IsLoading && ViewModel.Courses.Count == 0 && !ViewModel.NeedsLogin)
+            // When SessionCookiesSavedMessage fires while on another page, InitializeAsync runs
+            // off-screen. It toggles IsLoading true→false which collapses then re-shows the
+            // content grid, firing both HideTransitions and ShowTransitions implicit animations
+            // on an off-screen Composition tree. If the user navigates here before the
+            // animation finishes, the grid is caught at a partial opacity and stays frozen.
+            // Snap the composition visual to its final fully-visible state.
+            if (ViewModel.IsNotLoadingAndNotEmpty)
+            {
+                var visual = ElementCompositionPreview.GetElementVisual(CourseContentGrid);
+                visual.Opacity = 1f;
+                visual.Offset  = System.Numerics.Vector3.Zero;
+            }
+
+            // Only trigger a reload when there is genuinely nothing to show.
+            // Do NOT reload just because HasSavedSession is false while we already have
+            // courses rendered — FetchAcademicYearsAsync can run concurrently and may finish
+            // after the schedule cache was already served; forcing a reload in that situation
+            // clears the display and shows the login onboarding unexpectedly.
+            // Session-expiry will be surfaced to the user the next time they hit Refresh.
+            if (!ViewModel.IsLoading && !ViewModel.NeedsLogin && ViewModel.Courses.Count == 0)
+            {
                 _ = ViewModel.LoadScheduleAsync();
+            }
         }
 
         private void RegisterSessionExpiredHandler()

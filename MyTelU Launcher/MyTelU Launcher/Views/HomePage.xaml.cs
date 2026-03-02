@@ -19,7 +19,14 @@ namespace MyTelU_Launcher.Views
             ViewModel = App.GetService<OpenCommunityToolsViewModel>();
             this.InitializeComponent();
 
-            // Adapt title text color to background brightness
+            // Store the messenger reference to unregister safely in Unloaded
+            this.Loaded += Page_Loaded;
+            this.Unloaded += Page_Unloaded;
+        }
+
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Register here so we don't duplicate on navigation
             WeakReferenceMessenger.Default.Register<BackgroundBrightnessChangedMessage>(this, (r, m) =>
             {
                 DispatcherQueue.TryEnqueue(() =>
@@ -29,10 +36,14 @@ namespace MyTelU_Launcher.Views
                         : new SolidColorBrush(Colors.Black);
                 });
             });
+
+            // Initial trigger if we know the current state (if AccentColorService had a property for it)
+            // But we'll rely on the default text color or the next message.
         }
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
+            // Crucial: remove the reference to this page from the global messenger
             WeakReferenceMessenger.Default.Unregister<BackgroundBrightnessChangedMessage>(this);
         }
 
