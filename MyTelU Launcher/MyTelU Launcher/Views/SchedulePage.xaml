@@ -289,7 +289,8 @@
                         </Grid>
 
                         <!-- ── Content: hidden while loading OR empty, animates in after ── -->
-                        <Grid Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                        <Grid x:Name="CourseContentGrid"
+                              Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
                               animations:Implicit.ShowAnimations="{StaticResource ShowTransitions}"
                               animations:Implicit.HideAnimations="{StaticResource HideTransitions}">
 

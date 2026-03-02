@@ -31,6 +31,35 @@ public sealed partial class AttendancePage : Page
                 (float)(LoginOverlay.ActualHeight / 2),
                 0f);
         };
+
+        // Safety net: CommunityToolkit implicit show animations (ShowList) use a
+        // Composition KeyFrameAnimation that starts at opacity 0. On the very first
+        // Collapsed→Visible transition of a newly created element the animation can
+        // complete without committing its final value, leaving the visual transparent.
+        // After the animation duration (+buffer), snap the visual to fully opaque.
+        CourseContentGrid.RegisterPropertyChangedCallback(
+            UIElement.VisibilityProperty,
+            (sender, dp) =>
+            {
+                if (CourseContentGrid.Visibility == Visibility.Visible)
+                    _ = SnapContentOpacityAfterAnimationAsync();
+            });
+    }
+
+    /// <summary>
+    /// Waits for the ShowList animation to finish (350 ms + margin), then
+    /// force-sets the Composition visual's opacity to 1 and offset to zero.
+    /// When the animation played correctly this is a harmless no-op.
+    /// </summary>
+    private async Task SnapContentOpacityAfterAnimationAsync()
+    {
+        await Task.Delay(400);
+        if (CourseContentGrid.Visibility == Visibility.Visible)
+        {
+            var visual = ElementCompositionPreview.GetElementVisual(CourseContentGrid);
+            visual.Opacity = 1f;
+            visual.Offset  = Vector3.Zero;
+        }
     }
 
     protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
@@ -42,7 +71,21 @@ public sealed partial class AttendancePage : Page
         if (ViewModel.IsLoading && ViewModel.Courses.Count > 0)
         {
             ViewModel.CancelLoad();
-            return;
+            // Fall through to the composition reset below.
+        }
+
+        // When SessionCookiesSavedMessage fires while on another page, InitializeAsync runs
+        // off-screen. It toggles IsLoading true→false which collapses then re-shows the
+        // content grid, firing both the HideList and ShowList implicit animations on an
+        // off-screen Composition tree. If the user navigates here before the 0.25 s
+        // ShowList animation has finished, the grid is caught at a partial opacity and
+        // stays frozen there (the animation already ended). Snap the composition visual
+        // to its final fully-visible state to clear any leftover animated values.
+        if (ViewModel.IsNotLoadingAndNotEmpty)
+        {
+            var visual = ElementCompositionPreview.GetElementVisual(CourseContentGrid);
+            visual.Opacity = 1f;
+            visual.Offset  = Vector3.Zero;
         }
 
         // Re-trigger a load if we have a session but no data yet and nothing is running.

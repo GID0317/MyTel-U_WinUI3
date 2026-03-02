@@ -22,7 +22,7 @@
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
-    <AppxPackageDir>D:\data WinUI3 project\Export\</AppxPackageDir>
+    <AppxPackageDir>$(MSBuildThisFileDirectory)..\Packages\</AppxPackageDir>
     <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Never</AppxBundle>
@@ -30,6 +30,13 @@
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <CreateMSIXPackage>True</CreateMSIXPackage>
     <WindowsPackageType>MSIX</WindowsPackageType>
+  </PropertyGroup>
+
+  <!-- Store upload: disable local signing, MS will sign during submission -->
+  <PropertyGroup Condition="'$(UapAppxPackageBuildMode)'=='StoreUpload'">
+    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+    <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
+    <AppxBundle>Never</AppxBundle>
   </PropertyGroup>
   <!-- Debug|x64 configuration -->
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)'=='Debug|x64' ">
@@ -322,6 +329,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\WidgetIcon.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\TodayClass_Icon_Widget.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\UpcomingClass_Icon_Widget.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\WidgetTheme.xaml">

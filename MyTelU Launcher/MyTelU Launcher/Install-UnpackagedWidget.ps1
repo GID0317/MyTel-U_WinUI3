@@ -9,10 +9,17 @@ $ErrorActionPreference = "Stop"
 $projectRoot = $PSScriptRoot
 $manifestSource = Join-Path $projectRoot "Package.appxmanifest"
 
-# Path to the output directory
-# Adjust this if your output path structure is different
-# Based on your successful dir commands: bin\Debug\net10.0-windows10.0.26100.0\win-x64
-$outputPath = Join-Path $projectRoot "bin\$Configuration\net10.0-windows10.0.26100.0\$Platform"
+# Detect the actual TFM directory produced by the build (net9.0/net10.0 etc.)
+$debugBase = Join-Path $projectRoot "bin\x64\$Configuration"
+$tfmDir = Get-ChildItem $debugBase -Directory -ErrorAction SilentlyContinue |
+           Where-Object { $_.Name -match '^net\d' } |
+           Select-Object -First 1
+
+if ($null -eq $tfmDir) {
+    Write-Error "No build output found under $debugBase. Please build the project first (Configuration=$Configuration)."
+}
+
+$outputPath = Join-Path $tfmDir.FullName $Platform
 
 if (-not (Test-Path $outputPath)) {
     Write-Error "Output directory not found: $outputPath. Please build the project first."

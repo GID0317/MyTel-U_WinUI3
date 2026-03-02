@@ -123,7 +123,7 @@ public partial class App : Application
         {
             // Log error and use a fallback version.
             System.Diagnostics.Debug.WriteLine("Failed to get package version: " + ex.Message);
-            AppVersion = new Version(3, 0, 2, 0);
+            AppVersion = new Version(4, 0, 0, 0);
         }
 
         base.OnLaunched(args);
