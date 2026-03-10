@@ -154,9 +154,11 @@
                                                  ContentAlignment="Left">
                             <StackPanel Margin="-12,0,0,0" Orientation="Vertical">
                                 <TextBlock Text="Dependencies  references" Padding="10,5,0,5"/>
-                                <HyperlinkButton Content="Win App SDK 1.8" NavigateUri="https://github.com/microsoft/WindowsAppSDK"/>
-                                <HyperlinkButton Content="Win UI Library" NavigateUri="https://learn.microsoft.com/en-us/windows/apps/winui/winui3/"/>
-                                <HyperlinkButton Content="Windows Community Toolkit" NavigateUri="https://github.com/CommunityToolkit/Windows"/>
+                                    <HyperlinkButton Content="Windows App SDK 1.8.5 (Microsoft)" NavigateUri="https://github.com/microsoft/WindowsAppSDK"/>
+                                    <HyperlinkButton Content="Win UI Library (Microsoft)" NavigateUri="https://learn.microsoft.com/en-us/windows/apps/winui/winui3/"/>
+                                    <HyperlinkButton Content="Windows Community Toolkit (Microsoft)" NavigateUri="https://github.com/CommunityToolkit/Windows"/>
+                                <HyperlinkButton Content="ColorThief (CollapseLauncher)" NavigateUri="https://github.com/CollapseLauncher/ColorThief"/>
+                                    <HyperlinkButton Content="WinUIEx (dotMorten)" NavigateUri="https://github.com/dotMorten/WinUIEx"/>
                             </StackPanel>
                         </controls:SettingsCard>
                         <controls:SettingsCard Header="Disclaimer: This application is not affiliated with Telkom University by any means and is completely open-sourced.">

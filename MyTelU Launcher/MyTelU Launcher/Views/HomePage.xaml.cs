@@ -13,6 +13,8 @@ namespace MyTelU_Launcher.Views
 {
     public sealed partial class HomePage : Page
     {
+        private ToolsFlyoutContent? _toolsFlyoutContent;
+
         public OpenCommunityToolsViewModel ViewModel { get; }
         public HomePage()
         {
@@ -37,8 +39,16 @@ namespace MyTelU_Launcher.Views
                 });
             });
 
-            // Initial trigger if we know the current state (if AccentColorService had a property for it)
-            // But we'll rely on the default text color or the next message.
+            // Set initial text color based on current background brightness
+            var accentColorService = App.GetService<MyTelU_Launcher.Services.AccentColorService>();
+            if (accentColorService.LastBackgroundBrightness.HasValue)
+            {
+                // If average brightness is low, background is dark, so use white text
+                bool isDark = accentColorService.LastBackgroundBrightness.Value < 128;
+                ApplicationListTxtTitle.Foreground = isDark
+                    ? new SolidColorBrush(Colors.White)
+                    : new SolidColorBrush(Colors.Black);
+            }
         }
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
@@ -102,24 +112,87 @@ namespace MyTelU_Launcher.Views
             NavigateToWebViewer("https://satu.telkomuniversity.ac.id/auth/login");
         }
 
+        private void Simka_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://simka.telkomuniversity.ac.id/");
+        }
+
+        private void LAC_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://lac.telkomuniversity.ac.id/");
+        }
+
+        private void SMB_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://smb.telkomuniversity.ac.id/");
+        }
+
+        private void Merpati_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://merpati.telkomuniversity.ac.id/");
+        }
+
+        private void SuaraTelutizen_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://suaratelutizen.telkomuniversity.ac.id/");
+        }
+
+        private void PelaporanKodeEtik_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://tel-u.ac.id/pelaporanpelanggaran");
+        }
+
+        private void PengembanganKarakter_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://lms.telkomuniversity.ac.id/course/index.php?categoryid=217");
+        }
+
+        private void Konseling_Click(object sender, RoutedEventArgs e)
+        {
+            NavigateToWebViewer("https://linktr.ee/ditmawa_univtelkom");
+        }
+
         // Event handlers for the bottom buttons
         private void CommunityTool_Click(object sender, RoutedEventArgs e)
         {
             FlyoutBase.ShowAttachedFlyout((FrameworkElement)sender);
         }
 
+        private void CustomFlyout_Opening(object sender, object e)
+        {
+            if (_toolsFlyoutContent != null)
+                return;
+
+            _toolsFlyoutContent = new ToolsFlyoutContent();
+            _toolsFlyoutContent.ToolInvoked += ToolsFlyoutContent_ToolInvoked;
+            _toolsFlyoutContent.EditRequested += ToolsFlyoutContent_EditRequested;
+            CustomFlyout.Content = _toolsFlyoutContent;
+        }
+
+        private void CustomFlyout_Closed(object sender, object e)
+        {
+            if (_toolsFlyoutContent == null)
+                return;
+
+            _toolsFlyoutContent.ToolInvoked -= ToolsFlyoutContent_ToolInvoked;
+            _toolsFlyoutContent.EditRequested -= ToolsFlyoutContent_EditRequested;
+            CustomFlyout.Content = null;
+            _toolsFlyoutContent = null;
+        }
+
+        private void ToolsFlyoutContent_ToolInvoked(object? sender, string url)
+        {
+            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), url);
+        }
+
+        private async void ToolsFlyoutContent_EditRequested(object? sender, EventArgs e)
+        {
+            await ShowManageToolsDialogAsync();
+        }
+
         private async void EditToolsButton_Click(object sender, RoutedEventArgs e)
         {
-            // Close the flyout first
-            CustomFlyout.Hide();
-
-            // Show the manage tools dialog
-            var dialog = new ManageToolsDialog
-            {
-                XamlRoot = this.XamlRoot
-            };
-
-            await dialog.ShowAsync();
+            await ShowManageToolsDialogAsync();
         }
 
         private void Applicationlist_Toggle(object sender, RoutedEventArgs e)
@@ -148,6 +221,18 @@ namespace MyTelU_Launcher.Views
             {
                 ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), url);
             }
+        }
+
+        private async System.Threading.Tasks.Task ShowManageToolsDialogAsync()
+        {
+            CustomFlyout.Hide();
+
+            var dialog = new ManageToolsDialog
+            {
+                XamlRoot = this.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
 
         private void NavigateToWebViewer(string url)

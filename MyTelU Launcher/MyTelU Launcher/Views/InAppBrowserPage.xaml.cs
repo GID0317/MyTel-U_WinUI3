@@ -115,7 +115,21 @@ namespace MyTelU_Launcher.Views
 
         private void BrowserUIBtnClose_Click(object sender, RoutedEventArgs e)
         {
+            Cleanup();
             ShellPage.Current?.HideOverlay();
+        }
+
+        public void Cleanup()
+        {
+            ContentFrame.Navigating -= ContentFrame_Navigating;
+            ContentFrame.Navigated -= ContentFrame_Navigated;
+
+            if (ContentFrame.Content is WebViewerPage page)
+            {
+                page.Cleanup();
+            }
+
+            ContentFrame.Content = null;
         }
     }
 }

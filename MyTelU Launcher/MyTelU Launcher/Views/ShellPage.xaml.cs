@@ -49,8 +49,17 @@ namespace MyTelU_Launcher.Views
             KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu));
             KeyboardAccelerators.Add(BuildKeyboardAccelerator(VirtualKey.GoBack));
 
+            NavigationFrame.Navigated += NavigationFrame_Navigated;
+
             // Optional: Trigger the update check on page load.
             await ViewModel.CheckForUpdatesAsync();
+        }
+
+        private void NavigationFrame_Navigated(object sender, Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            ContentAcrylicLayer.Visibility = e.SourcePageType == typeof(HomePage)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -113,8 +122,13 @@ namespace MyTelU_Launcher.Views
         /// </summary>
         public void HideOverlay()
         {
+            if (OverlayFrame.Content is InAppBrowserPage browserPage)
+            {
+                browserPage.Cleanup();
+            }
+
             OverlayContainer.Visibility = Visibility.Collapsed;
-            // Optionally clear the overlay frame’s content.
+            OverlayFrame.BackStack.Clear();
             OverlayFrame.Content = null;
         }
 

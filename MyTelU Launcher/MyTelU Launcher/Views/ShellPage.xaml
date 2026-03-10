@@ -76,6 +76,11 @@
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEE6F;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItem x:Name="GradeNavItem" Content="Grades" helpers:NavigationHelper.NavigateTo="MyTelU_Launcher.ViewModels.GradeViewModel">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE9F9;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <!-- Main Content Area -->
@@ -86,6 +91,12 @@
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch"
                        Canvas.ZIndex="-1"/>
+
+                <!-- Acrylic layer: shown on non-Home pages to prevent flash on navigation -->
+                <Rectangle x:Name="ContentAcrylicLayer"
+                           Canvas.ZIndex="0"
+                           Fill="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+                           Visibility="Collapsed"/>
 
                 <InfoBar
                     x:Name="UpdateAvailableInfoBar"
