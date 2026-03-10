@@ -1,10 +1,10 @@
 # Privacy Policy for MyTel-U Launcher
 
-**Last updated: March 10, 2026**  
+**Last updated: February 28, 2026**
 **Developer: GID0317 DeNesis Team**
 
 ## Overview
-MyTel-U Launcher is an open-source desktop application for Windows 11 that provides quick access to Telkom University's academic web services. We are committed to protecting your privacy.
+MyTel‑U Launcher is an open-source desktop application for Windows 11 that provides quick access to Telkom University's academic web services. We are committed to protecting your privacy.
 
 ## Data We Do NOT Collect
 - We do not collect, store, or transmit any personal data to our servers.
@@ -13,20 +13,17 @@ MyTel-U Launcher is an open-source desktop application for Windows 11 that provi
 
 ## Data Stored Locally on Your Device
 The app stores the following data **only on your local device**:
-- **Username and password (optional persistent login)** stored locally in encrypted Windows secure storage to allow the app to authenticate with Telkom University services without requiring repeated sign-in.
-- **Session cookies** from Telkom University portals (stored in Windows encrypted local storage).
-- **App settings** (theme preference, layout options) stored in Windows app data.
-- **Cached schedule, attendance, and grade data** from university services, stored locally to support offline access.
+- **Session cookies** from Telkom University portals (stored in Windows encrypted local storage)
+- **App settings** (theme preference, layout options) stored in Windows app data
+- **Cached schedule/attendance data** from university APIs, stored locally for offline access
 
-All of this data remains on your device and is never transmitted to any external servers operated by the developer.
+This data never leaves your device and is only used to provide app functionality.
 
 ## University Portal Authentication
-When you log in to university services (such as iGracias, attendance, or academic portals), authentication occurs directly between **your device and Telkom University's servers**.
-
-The application does not intercept, collect, or transmit your credentials to any third-party services. If you enable persistent login, your credentials are stored **only on your device** using encrypted Windows secure storage and are used solely to authenticate requests between the application and Telkom University servers.
+When you log in to university services (iGracias, attendance, etc.), authentication is handled directly between your device and Telkom University's servers. The app does not intercept, store, or transmit your credentials beyond what the university's own web portal requires.
 
 ## Windows Widgets
-The app includes a Windows 11 Widget that displays your class schedule. Widget data is sourced only from locally cached schedule data stored on your device.
+The app includes a Windows 11 Widget that displays your class schedule. Widget data is sourced from locally cached data on your device only.
 
 ## Changes to This Policy
 Any updates to this privacy policy will be reflected in the app's GitHub repository.
