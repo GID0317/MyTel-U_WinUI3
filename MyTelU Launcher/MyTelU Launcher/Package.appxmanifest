@@ -15,7 +15,7 @@
   <Identity
     Name="DeNesisTeam.MyTelULauncher"
     Publisher="CN=DeNesis"
-    Version="4.0.0.0" />
+    Version="4.0.1.0" />
     
   <mp:PhoneIdentity PhoneProductId="d24d1284-7289-41dc-91e2-3ce23a83e406" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
     

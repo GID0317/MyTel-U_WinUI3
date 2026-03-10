@@ -14,11 +14,6 @@ public sealed partial class MainWindow : WindowEx
     {
         InitializeComponent();
 
-        if (RuntimeHelper.IsMSIX)
-        {
-            SystemBackdrop = new Microsoft.UI.Xaml.Media.MicaBackdrop();
-        }
-
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets/Icon_App.ico"));
         Content = null;
         Title = "AppDisplayName".GetLocalized();
