@@ -31,4 +31,6 @@ public interface IWebViewService
     void Reload();
 
     void UnregisterEvents();
+
+    void Cleanup();
 }

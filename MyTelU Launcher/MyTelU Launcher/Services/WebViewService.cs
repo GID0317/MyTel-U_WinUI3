@@ -46,5 +46,30 @@ public class WebViewService : IWebViewService
         }
     }
 
+    public void Cleanup()
+    {
+        if (_webView == null)
+        {
+            return;
+        }
+
+        _webView.NavigationCompleted -= OnWebViewNavigationCompleted;
+
+        try
+        {
+            _webView.CoreWebView2?.Stop();
+            _webView.Source = new Uri("about:blank");
+            _webView.Close();
+        }
+        catch
+        {
+            // Best-effort cleanup. WebView2 teardown can fail during shutdown/navigation races.
+        }
+        finally
+        {
+            _webView = null;
+        }
+    }
+
     private void OnWebViewNavigationCompleted(WebView2 sender, CoreWebView2NavigationCompletedEventArgs args) => NavigationCompleted?.Invoke(this, args.WebErrorStatus);
 }

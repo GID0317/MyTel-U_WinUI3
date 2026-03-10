@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.Web.WebView2.Core;
 using MyTelU_Launcher.ViewModels;
+using MyTelU_Launcher.Contracts.ViewModels;
 
 namespace MyTelU_Launcher.Views
 {
@@ -21,6 +22,22 @@ namespace MyTelU_Launcher.Views
         {
             base.OnNavigatedTo(e);
             ViewModel.OnNavigatedTo(e.Parameter);
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            Cleanup();
+            base.OnNavigatedFrom(e);
+        }
+
+        public void Cleanup()
+        {
+            if (ViewModel is INavigationAware navigationAware)
+            {
+                navigationAware.OnNavigatedFrom();
+            }
+
+            ViewModel.WebViewService.Cleanup();
         }
 
         /// <summary>Expose the WebView2 control publicly (used by InAppBrowserPage).</summary>

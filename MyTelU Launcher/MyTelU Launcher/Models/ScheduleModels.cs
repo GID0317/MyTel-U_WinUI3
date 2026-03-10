@@ -123,3 +123,17 @@ namespace MyTelU_Launcher.Models
         public bool   HasCourses { get; set; }
     }
 }
+
+namespace MyTelU_Launcher.Services
+{
+    /// <summary>Result of a session validation check against iGracias.</summary>
+    public enum SessionValidationResult
+    {
+        /// <summary>Session is active and valid.</summary>
+        Valid,
+        /// <summary>No session cookies, or the session has expired / been invalidated.</summary>
+        NoSession,
+        /// <summary>A network error occurred — could not reach iGracias at all.</summary>
+        NetworkError,
+    }
+}

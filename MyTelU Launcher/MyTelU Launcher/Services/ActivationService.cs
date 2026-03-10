@@ -25,28 +25,21 @@ public class ActivationService : IActivationService
 
     public async Task ActivateAsync(object activationArgs)
     {
-        // Execute tasks before activation.
         await InitializeAsync();
 
-        // Set the MainWindow Content.
         if (App.MainWindow.Content == null)
         {
             _shell = App.GetService<ShellPage>();
             App.MainWindow.Content = _shell ?? new Frame();
         }
 
-        // Apply the stored accent color NOW — the FrameworkElement exists but the window
-        // is not yet visible, so this is the last moment before frame-1 is painted.
-        // This eliminates the system-accent flash on startup.
+        // Apply the cached accent before the first frame to avoid the default accent flash.
         AccentColorService.ApplyCachedAccentEarly();
 
-        // Handle activation via ActivationHandlers.
         await HandleActivationAsync(activationArgs);
 
-        // Activate the MainWindow.
         App.MainWindow.Activate();
 
-        // Execute tasks after activation.
         await StartupAsync();
     }
 
@@ -74,9 +67,7 @@ public class ActivationService : IActivationService
     private async Task StartupAsync()
     {
         await _themeSelectorService.SetRequestedThemeAsync();
-        // Re-apply after theme change: SetRequestedThemeAsync can trigger WinUI to
-        // re-evaluate themed brushes from the XAML dictionaries, momentarily reverting
-        // to the system accent.  Forcing a re-apply here keeps the custom colour intact.
+        // Theme application can temporarily restore the system accent, so re-apply here.
         AccentColorService.ApplyCachedAccentEarly();
         await Task.CompletedTask;
     }

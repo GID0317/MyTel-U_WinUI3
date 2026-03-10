@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Animation;
 
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
@@ -67,7 +68,10 @@ public class NavigationViewService : INavigationViewService
 
             if (selectedItem?.GetValue(NavigationHelper.NavigateToProperty) is string pageKey)
             {
-                _navigationService.NavigateTo(pageKey);
+                var transitionInfo = pageKey == typeof(HomeViewModel).FullName
+                    ? (NavigationTransitionInfo)new DrillInNavigationTransitionInfo()
+                    : new EntranceNavigationTransitionInfo();
+                _navigationService.NavigateTo(pageKey, transitionInfo: transitionInfo);
             }
         }
     }

@@ -138,7 +138,7 @@ namespace MyTelU_Launcher.ViewModels
                     var file = await StorageFile.GetFileFromPathAsync(imagePath);
                     using (var stream = await file.OpenAsync(FileAccessMode.Read))
                     {
-                        bitmap = new BitmapImage();
+                        bitmap = new BitmapImage { DecodePixelWidth = 1920, DecodePixelType = DecodePixelType.Logical };
                         await bitmap.SetSourceAsync(stream);
                     }
                     
@@ -149,14 +149,16 @@ namespace MyTelU_Launcher.ViewModels
                 {
                     System.Diagnostics.Debug.WriteLine($"Error loading custom background image: {ex.Message}");
                     // Fallback to default if loading fails
-                    bitmap = new BitmapImage(new Uri("ms-appx:///Assets/Img_Background.png"));
+                    bitmap = new BitmapImage { DecodePixelWidth = 1920, DecodePixelType = DecodePixelType.Logical };
+                    bitmap.UriSource = new Uri("ms-appx:///Assets/Img_Background.png");
                     isCustomImage = false; 
                 }
             }
             else
             {
                 // Default background case
-                bitmap = new BitmapImage(new Uri("ms-appx:///Assets/Img_Background.png"));
+                bitmap = new BitmapImage { DecodePixelWidth = 1920, DecodePixelType = DecodePixelType.Logical };
+                bitmap.UriSource = new Uri("ms-appx:///Assets/Img_Background.png");
             }
 
             // Update the UI immediately
@@ -222,12 +224,10 @@ namespace MyTelU_Launcher.ViewModels
             }
 
             // Broadcast background brightness so subscribers (e.g. HomePage) can adapt text color.
-            if (_accentColorService.LastExtractedColor.HasValue)
+            if (_accentColorService.LastBackgroundBrightness.HasValue)
             {
-                var c = _accentColorService.LastExtractedColor.Value;
-                // Relative luminance (ITU-R BT.601)
-                double luminance = 0.299 * c.R + 0.587 * c.G + 0.114 * c.B;
-                bool isDark = luminance < 128;
+                // If average brightness is low, background is dark, so use white text
+                bool isDark = _accentColorService.LastBackgroundBrightness.Value < 128;
                 WeakReferenceMessenger.Default.Send(new BackgroundBrightnessChangedMessage(isDark));
             }
         }

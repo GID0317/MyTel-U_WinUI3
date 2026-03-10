@@ -121,7 +121,7 @@
     <value>MyTel-U Launcher</value>
   </data>
   <data name="AppDescription" xml:space="preserve">
-    <value>A native MyTelU Launcher for Desktop version of windows</value>
+    <value>An open-source community made desktop MyTel‑U Launcher using WinUI3 and fluent design</value>
   </data>
   <data name="Shell_Home.Content" xml:space="preserve">
     <value>Home</value>

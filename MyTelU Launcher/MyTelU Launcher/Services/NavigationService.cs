@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Navigation;
 
 using MyTelU_Launcher.Contracts.Services;
@@ -81,15 +82,22 @@ public class NavigationService : INavigationService
         return false;
     }
 
-    public bool NavigateTo(string pageKey, object? parameter = null, bool clearNavigation = false)
+    public bool NavigateTo(string pageKey, object? parameter = null, bool clearNavigation = false, NavigationTransitionInfo? transitionInfo = null)
     {
         var pageType = _pageService.GetPageType(pageKey);
 
-        if (_frame != null && (_frame.Content?.GetType() != pageType || (parameter != null && !parameter.Equals(_lastParameterUsed))))
+        // When a transitionInfo is provided (e.g. EntranceNavigationTransitionInfo from nav-item tap),
+        // always navigate so the frame-level transition plays every time, even when the page is already
+        // cached via NavigationCacheMode="Required". Without this the transition only fires on first visit.
+        bool differentPage = _frame?.Content?.GetType() != pageType;
+        bool differentParam = parameter != null && !parameter.Equals(_lastParameterUsed);
+        if (_frame != null && (differentPage || differentParam || transitionInfo != null))
         {
             _frame.Tag = clearNavigation;
             var vmBeforeNavigation = _frame.GetPageViewModel();
-            var navigated = _frame.Navigate(pageType, parameter);
+            var navigated = transitionInfo != null
+                ? _frame.Navigate(pageType, parameter, transitionInfo)
+                : _frame.Navigate(pageType, parameter);
             if (navigated)
             {
                 _lastParameterUsed = parameter;
