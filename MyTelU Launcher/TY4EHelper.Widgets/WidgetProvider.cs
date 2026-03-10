@@ -98,14 +98,8 @@ namespace TY4EHelper.Widgets
             // Pause high frequency updates
         }
 
-        // ── Asset path helper ─────────────────────────────────────────────────
-        // The Windows Widget Board renderer only loads HTTP/HTTPS image URLs and
-        // data URIs — ms-appx:/// and file:/// are NOT supported.
-        // The PNG is deployed next to this EXE via the widget .csproj Content item.
-        // We load it once from AppContext.BaseDirectory and cache the data URI.
-        // ── DEMO MODE ─────────────────────────────────────────────────────
-        // Set to true, rebuild & re-register to show fake data for screenshots.
-        // Set back to false before shipping.
+        // Widgets only accept HTTP/HTTPS URLs or data URIs for images, so these assets are cached as data URIs.
+        // Flip this on temporarily for screenshots.
         private const bool DEMO_MODE = false;
 
         private static ScheduleResponse GetDemoSchedule() => new ScheduleResponse
@@ -132,7 +126,7 @@ namespace TY4EHelper.Widgets
         private static string? _cachedGalihDataUri;
         private static string? _cachedGalihEmptyDataUri;
 
-        // In-memory schedule cache so pagination never hits the network
+        // Keep pagination local once a fresh widget payload has been fetched.
         private static ScheduleResponse? _liveScheduleCache;
         private static DateTime _liveScheduleCacheTime = DateTime.MinValue;
 
@@ -144,7 +138,6 @@ namespace TY4EHelper.Widgets
                 var assetPath = Path.Combine(AppContext.BaseDirectory, "GalihKoper_Widget.png");
                 if (!File.Exists(assetPath))
                 {
-                    // Debug: log where we looked
                     System.Diagnostics.Debug.WriteLine($"[Widget] GalihKoper_Icon.png not found at: {assetPath}");
                     _cachedGalihDataUri = "";
                     return "";
@@ -183,7 +176,6 @@ namespace TY4EHelper.Widgets
             return _cachedGalihEmptyDataUri ?? "";
         }
 
-        // ── Login check helper ────────────────────────────────────────────────
         private static bool HasSavedSession()
         {
             try
@@ -216,7 +208,6 @@ namespace TY4EHelper.Widgets
 
                 if (!_widgetPageIndices.ContainsKey(widgetId)) _widgetPageIndices[widgetId] = 0;
 
-                // ── 1. Not logged in yet → show login prompt immediately ──────
                 if (!DEMO_MODE && !HasSavedSession())
                 {
                     PushWidgetUpdate(widgetId, new
@@ -241,7 +232,6 @@ namespace TY4EHelper.Widgets
                     return;
                 }
 
-                // ── 2. Fetch live schedule, fall back to DPAPI cache ─────────
                 int currentPage = _widgetPageIndices[widgetId];
 
                 if (DEMO_MODE) { forceRefresh = false; _liveScheduleCache = GetDemoSchedule(); }
@@ -249,7 +239,6 @@ namespace TY4EHelper.Widgets
                 ScheduleResponse? schedule;
                 if (!forceRefresh && _liveScheduleCache != null)
                 {
-                    // Reuse in-memory cache for instant pagination
                     schedule = _liveScheduleCache;
                 }
                 else
@@ -265,7 +254,6 @@ namespace TY4EHelper.Widgets
                 var  allCourses = schedule?.Courses ?? new List<CourseItem>();
                 SortCourses(allCourses);
 
-                // ── 3. Build display depending on widget type ─────────────────
                 List<CourseItem> displayCourses;
                 string statusText;
                 string headerText = "My Schedule";
@@ -298,7 +286,6 @@ namespace TY4EHelper.Widgets
 
                     if (schedule == null)
                     {
-                        // Session expired AND no cache exists
                         displayCourses = new List<CourseItem>();
                         statusText     = "Session expired · open the app to refresh";
                         statusColor    = "Attention";
@@ -368,17 +355,14 @@ namespace TY4EHelper.Widgets
                 var startStr = parts[0].Trim();
                 var endStr = parts.Length > 1 ? parts[1].Trim() : "";
 
-                // Get times
                 DateTime startTime = DateTime.Today;
                 DateTime endTime = DateTime.Today;
                 
-                // Parse Start Time
-                // Assuming format like "08:30"
                 if (DateTime.TryParseExact(startStr, "HH:mm", null, System.Globalization.DateTimeStyles.None, out var sTime))
                 {
                     startTime = sTime;
                 }
-                else if (DateTime.TryParse(startStr, out sTime)) // Fallback
+                else if (DateTime.TryParse(startStr, out sTime))
                 {
                     startTime = sTime;
                 }
@@ -387,7 +371,6 @@ namespace TY4EHelper.Widgets
                     return ("", "Default");
                 }
 
-                // Parse End Time
                 if (!string.IsNullOrEmpty(endStr) && DateTime.TryParseExact(endStr, "HH:mm", null, System.Globalization.DateTimeStyles.None, out var eTime))
                 {
                     endTime = eTime;
@@ -398,25 +381,24 @@ namespace TY4EHelper.Widgets
                 }
                 else
                 {
-                    endTime = startTime.AddHours(2); // Default
+                    endTime = startTime.AddHours(2);
                 }
                 
-                // Adjust date to today
                 startTime = DateTime.Today.Add(startTime.TimeOfDay);
                 endTime = DateTime.Today.Add(endTime.TimeOfDay);
                 var now = DateTime.Now;
 
                 if (now >= startTime && now <= endTime)
                 {
-                    return ("ONGOING", "Attention"); // Attention = Red/Orange
+                    return ("ONGOING", "Attention");
                 }
                 else if (now > endTime)
                 {
-                    return ("FINISHED", "Default"); // Default (usually dim/grey if isSubtle=true)
+                    return ("FINISHED", "Default");
                 }
                 else
                 {
-                    return ("UPCOMING", "Good"); // Good = Green
+                    return ("UPCOMING", "Good");
                 }
             }
             catch { return ("", "Default"); }
@@ -430,7 +412,6 @@ namespace TY4EHelper.Widgets
                 int dayB = GetDayRank(b.Day);
                 if (dayA != dayB) return dayA.CompareTo(dayB);
 
-                // Simple string comparison for time (e.g., "08:30" < "10:30")
                 return string.Compare(a.Time, b.Time);
             });
         }
@@ -448,7 +429,7 @@ namespace TY4EHelper.Widgets
             if (day.Contains("SABTU") || day.Contains("SATURDAY")) return 6;
             if (day.Contains("MINGGU") || day.Contains("SUNDAY")) return 7;
             
-            return 99; // Unknown
+            return 99;
         }
 
         private static readonly string _appDataDir = Path.Combine(
@@ -459,19 +440,16 @@ namespace TY4EHelper.Widgets
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TY4EHelper", "schedule_cache.json");
 
-        // settings.json is plain JSON: { "studentId": "...", "yearCode": "...", "semesterCode": "..." }
         private static readonly string _settingsFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TY4EHelper", "settings.json");
 
-        // Must match CookieStore in the main app (entropy "MyTelU-iGracias-cookies-v1")
+        // Must stay aligned with CookieStore in the main app.
         private static readonly string _cookiesFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TY4EHelper", "cookies.json");
 
-        // ── DPAPI helpers (mirrors CookieStore / SecureFileStore in main app) ───
-
-        /// <summary>Decrypts the DPAPI-protected cookies.json.  Returns null when missing or bad.</summary>
+        /// <summary>Decrypts the widget cookie file, or returns null when missing or unreadable.</summary>
         private static string? LoadCookiesJson()
         {
             if (!File.Exists(_cookiesFile)) return null;
@@ -486,7 +464,7 @@ namespace TY4EHelper.Widgets
                 }
                 catch (CryptographicException)
                 {
-                    // Legacy plain-text file from old installs — try to parse directly
+                    // Older installs wrote plain JSON before DPAPI was added.
                     var text = Encoding.UTF8.GetString(bytes).Trim();
                     return text.StartsWith("{") ? text : null;
                 }
@@ -494,7 +472,7 @@ namespace TY4EHelper.Widgets
             catch { return null; }
         }
 
-        /// <summary>Decrypts the DPAPI-protected schedule_cache.json.  Returns null when missing or bad.</summary>
+        /// <summary>Decrypts a widget cache file, or returns null when missing or unreadable.</summary>
         private static string? LoadSecureFile(string path)
         {
             if (!File.Exists(path)) return null;
@@ -509,7 +487,7 @@ namespace TY4EHelper.Widgets
                 }
                 catch (CryptographicException)
                 {
-                    // Legacy plain-text file
+                    // Older installs wrote plain JSON before DPAPI was added.
                     var text = Encoding.UTF8.GetString(bytes).Trim();
                     return (text.StartsWith("{") || text.StartsWith("[")) ? text : null;
                 }
@@ -517,7 +495,7 @@ namespace TY4EHelper.Widgets
             catch { return null; }
         }
 
-        /// <summary>Encrypts and writes a JSON string using DPAPI (matches SecureFileStore).</summary>
+        /// <summary>Encrypts and writes a widget cache file with the same DPAPI scheme as the app.</summary>
         private static void SaveSecureFile(string path, string json)
         {
             try
@@ -532,8 +510,6 @@ namespace TY4EHelper.Widgets
             catch { /* best-effort */ }
         }
 
-        // ── Settings helpers ─────────────────────────────────────────────────
-
         private static Dictionary<string, string> LoadSettings()
         {
             try
@@ -545,11 +521,8 @@ namespace TY4EHelper.Widgets
             catch { return new(); }
         }
 
-        // ── Schedule fetch / cache ───────────────────────────────────────────
-
         private async Task<ScheduleResponse?> FetchScheduleAsync()
         {
-            // 1. Try live network fetch
             var result = await TryFetchFromServer();
             if (result != null)
             {
@@ -557,7 +530,6 @@ namespace TY4EHelper.Widgets
                 return result;
             }
 
-            // 2. Fall back to DPAPI-encrypted cache (works with app closed)
             return LoadCache();
         }
 
@@ -565,18 +537,16 @@ namespace TY4EHelper.Widgets
         {
             try
             {
-                // ── 1. Decrypt and parse cookies ─────────────────────────────
                 var cookiesJson = LoadCookiesJson();
                 if (cookiesJson == null) return null;
 
                 var cookiesDict = JsonSerializer.Deserialize<Dictionary<string, string>>(cookiesJson);
                 if (cookiesDict == null || !cookiesDict.ContainsKey("PHPSESSID")) return null;
 
-                // ── 2. Read dynamic student ID and academic year from settings ─
                 var settings = LoadSettings();
 
                 if (!settings.TryGetValue("studentId", out var studentId) || string.IsNullOrWhiteSpace(studentId))
-                    return null; // Not yet logged in / captured
+                    return null;
 
                 string yearCode, semCode;
                 if (settings.TryGetValue("yearCode", out var yr) && settings.TryGetValue("semesterCode", out var sm)
@@ -587,17 +557,14 @@ namespace TY4EHelper.Widgets
                 }
                 else
                 {
-                    // Fallback: compute current Indonesian academic semester
                     var now = DateTime.Now;
-                    // Semester 1 = Aug-Jan, Semester 2 = Feb-Jul
                     int year = now.Month >= 8 ? now.Year : now.Year - 1;
-                    yearCode = $"{year % 100}{(year + 1) % 100}"; // e.g. "2526"
+                    yearCode = $"{year % 100}{(year + 1) % 100}";
                     semCode  = now.Month is >= 2 and <= 7 ? "2" : "1";
                 }
 
                 string schoolYear = $"{yearCode}/{semCode}";
 
-                // ── 3. Set up HttpClient with cookies ────────────────────────
                 var cookieContainer = new CookieContainer();
                 var handler = new HttpClientHandler { CookieContainer = cookieContainer };
                 using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
@@ -609,7 +576,6 @@ namespace TY4EHelper.Widgets
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                 client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
-                // ── 4. Fetch schedule via JSON DataTables API (same as main app) ─
                 var parts = new List<string>
                 {
                     "act=viewStudentSchedule",
@@ -636,7 +602,6 @@ namespace TY4EHelper.Widgets
                 var body = await resp.Content.ReadAsStringAsync();
                 if (string.IsNullOrWhiteSpace(body) || body.Trim() is "0" or "" or "null") return null;
 
-                // ── 5. Parse JSON response ────────────────────────────────────
                 return ParseJsonSchedule(body, studentId, schoolYear);
             }
             catch (Exception ex)
@@ -655,7 +620,6 @@ namespace TY4EHelper.Widgets
                 if (!doc.RootElement.TryGetProperty("aaData", out var aaData)
                     || aaData.ValueKind == JsonValueKind.Null)
                 {
-                    // Empty schedule but valid response
                     return new ScheduleResponse { StudentId = studentId, FetchTime = DateTime.Now.ToString("o"), AcademicYear = schoolYear };
                 }
 
@@ -730,11 +694,8 @@ namespace TY4EHelper.Widgets
 
         private string GetAdaptiveCardTemplate()
         {
-            // NOTE: $when and $data must NEVER be on the same Container.
-            // $data shifts JSON context to the array item, so any $when on the
-            // same element also evaluates inside the item — top-level booleans
-            // like hasCourses are invisible there and always resolve to false.
-            // Fix: outer Container carries $when, inner Container carries $data.
+            // Keep $when on the outer container. Putting $when and $data on the same element
+            // makes the condition evaluate in the repeated item scope instead of the top-level payload.
             return @"{
     ""type"": ""AdaptiveCard"",
     ""$schema"": ""http://adaptivecards.io/schemas/adaptive-card.json"",

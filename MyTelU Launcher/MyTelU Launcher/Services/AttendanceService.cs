@@ -10,9 +10,7 @@ using MyTelU_Launcher.Models;
 namespace MyTelU_Launcher.Services;
 
 /// <summary>
-/// Service for fetching and caching attendance (presence / kehadiran) data
-/// directly from iGracias — no Python server required.
-/// Mirrors the logic in <c>Scedule/scripts/fetch_attendance.py</c>.
+/// Fetches attendance data directly from iGracias and keeps a local cache.
 /// </summary>
 public interface IAttendanceService
 {
@@ -43,14 +41,11 @@ public partial class AttendanceService : IAttendanceService, IDisposable
     private static string DetailCacheFile(int courseId)
         => Path.Combine(_appDataDir, $"attendance_detail_{courseId}.json");
 
-    // ── iGracias endpoints (same as Python) ──────────────────────────────────
     private const string PresenceUrl =
         "https://igracias.telkomuniversity.ac.id/presence/index.php?pageid=3942";
 
     private const string DetailUrl =
         "https://igracias.telkomuniversity.ac.id/libraries/ajax/ajax.presence.php";
-
-    // ── Public API ───────────────────────────────────────────────────────────
 
     public bool HasCachedAttendance => File.Exists(_cacheFile);
 
@@ -62,26 +57,21 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
         try
         {
-            // Resolve school year
             schoolYear ??= GetSavedSchoolYear();
 
             if (string.IsNullOrEmpty(schoolYear))
             {
-                // Try to get default from semester list
                 var semesters = await FetchAvailableSemestersAsync(ct);
                 var current = semesters.FirstOrDefault(s => s.IsSelected);
                 schoolYear = current?.Value ?? ComputeDefaultSchoolYear();
             }
 
-            // Fetch attendance HTML from iGracias
             var html = await FetchPresenceHtmlAsync(schoolYear, ct);
             if (html == null) return null;
 
-            // Parse
             var courses = ParsePresenceHtml(html);
             if (courses == null) return null;
 
-            // Build summary
             var totalAttended = courses.Sum(c => c.Attended);
             var totalSessions = courses.Where(c => c.TotalSessions.HasValue).Sum(c => c.TotalSessions!.Value);
             var below75 = courses.Where(c => c.Percentage < 75).ToList();
@@ -104,7 +94,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
                 }
             };
 
-            // Cache
             SaveCache(result);
             return result;
         }
@@ -166,7 +155,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
 
-            // The attendance page uses <select id="changeSemester">
             var select = doc.DocumentNode.SelectSingleNode("//select[@id='changeSemester']");
             if (select == null) return new();
 
@@ -202,8 +190,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         }
     }
 
-    // ── HTML fetching ────────────────────────────────────────────────────────
-
     private async Task<string?> FetchPresenceHtmlAsync(string schoolYear, CancellationToken ct)
     {
         try
@@ -223,7 +209,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
             var html = await resp.Content.ReadAsStringAsync(ct);
 
-            // Session expired check
             if (html.Length < 500 || resp.RequestMessage?.RequestUri?.AbsoluteUri.Contains("login", StringComparison.OrdinalIgnoreCase) == true)
             {
                 Debug.WriteLine("[AttendanceService] Session appears expired.");
@@ -238,8 +223,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             return null;
         }
     }
-
-    // ── HTML parsing (mirrors Python _parse_presence_html) ───────────────────
 
     private static List<AttendanceCourseItem>? ParsePresenceHtml(string html)
     {
@@ -268,7 +251,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             if (string.IsNullOrEmpty(courseCode) || string.IsNullOrEmpty(rawName))
                 continue;
 
-            // Extract class code from name: "NAMA MK (TK-47-03)"
             string? classCode = null;
             var courseName = rawName;
             var classMatch = ClassCodeRegex().Match(rawName);
@@ -278,7 +260,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
                 courseName = rawName[..classMatch.Index].Trim();
             }
 
-            // Numeric course ID from onclick='getPresence(15888,101032300012)'
             int? courseId = null;
             if (tds.Count >= 8)
             {
@@ -317,14 +298,11 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         return courses;
     }
 
-    // ── Detail HTML parsing (mirrors Python _parse_detail_html) ──────────────
-
     private static AttendanceCourseDetail ParseDetailHtml(string html)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        // Header: "<b>ACK3GAB3-ORGANISASI DAN ARSITEKTUR KOMPUTER-101032300012</b>"
         var courseCode = "";
         var courseName = "";
         var studentIdParsed = "";
@@ -345,7 +323,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             var rows = table.SelectNodes(".//tr");
             if (rows != null)
             {
-                // Skip header row
                 foreach (var row in rows.Skip(1))
                 {
                     var cells = row.SelectNodes("td")?.Select(td => td.InnerText.Trim()).ToList();
@@ -377,8 +354,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             Sessions = sessions,
         };
     }
-
-    // ── Cache ────────────────────────────────────────────────────────────────
 
     private void SaveCache(AttendanceResponse data)
     {
@@ -425,8 +400,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         catch { return null; }
     }
 
-    // ── Session / settings helpers (shared with ScheduleService) ─────────────
-
     private static bool HasSavedSession()
     {
         try
@@ -465,8 +438,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         catch { return null; }
     }
 
-    // ── HttpClient factory (mirrors ScheduleService pattern) ─────────────────
-
     private static HttpClient BuildHttpClient(bool ajax)
     {
         try
@@ -499,8 +470,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         }
     }
 
-    // ── Academic year helper ────────────────────────────────────────────────
-
     /// <summary>
     /// Computes the current academic semester string dynamically (e.g. "2526/2").
     /// Semester 1 = Aug–Jan, Semester 2 = Feb–Jul.
@@ -524,8 +493,6 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         }
         return $"{y1:D2}{y2:D2}/{sem}";
     }
-
-    // ── Compiled regexes ─────────────────────────────────────────────────────
 
     [GeneratedRegex(@"\(([^)]+)\)\s*$")]
     private static partial Regex ClassCodeRegex();

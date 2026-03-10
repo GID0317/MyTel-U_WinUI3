@@ -56,7 +56,6 @@ public sealed partial class OpenCommunityToolsPage : Page
         var accentService = App.GetService<MyTelU_Launcher.Services.AccentColorService>();
         accentService?.ApplyToContentDialog(dialog);
 
-        // Create the dialog content
         var scrollViewer = new ScrollViewer
         {
             Height = 500,
@@ -68,11 +67,9 @@ public sealed partial class OpenCommunityToolsPage : Page
             Spacing = 20
         };
 
-        // Tools Section
         var toolsSection = CreateEditableSection("Tools", ViewModel.Tools);
         mainStack.Children.Add(toolsSection);
 
-        // Community Tools Section
         var communityToolsSection = CreateEditableSection("Community Tools", ViewModel.CommunityTools);
         mainStack.Children.Add(communityToolsSection);
 
@@ -89,7 +86,6 @@ public sealed partial class OpenCommunityToolsPage : Page
             Spacing = 8
         };
 
-        // Section Title
         var titleBlock = new TextBlock
         {
             Text = title,
@@ -99,24 +95,20 @@ public sealed partial class OpenCommunityToolsPage : Page
         };
         section.Children.Add(titleBlock);
 
-        // Items List
         var itemsList = new ItemsControl
         {
             ItemsSource = collection
         };
 
-        // Define the item template
         var itemTemplate = new DataTemplate();
         itemsList.ItemTemplate = itemTemplate;
 
-        // Manually create items (since we can't use x:Bind in code-behind easily)
         foreach (var tool in collection)
         {
             var itemCard = CreateToolItemCard(tool, collection);
             section.Children.Add(itemCard);
         }
 
-        // Add Tool Button
         var addButton = new Button
         {
             Content = "Add Tool",
