@@ -24,7 +24,9 @@
                     VerticalAlignment="Center"
                     Visibility="{x:Bind ViewModel.IsLoading, Mode=OneWay}">
 			<ProgressRing IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
-			<TextBlock x:Uid="WebView_Loading" Foreground="Black" FontWeight="SemiBold"/>
+			<TextBlock x:Uid="WebView_Loading"
+			           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+			           FontWeight="SemiBold"/>
 		</StackPanel>
 
 		<!-- Error Grid -->

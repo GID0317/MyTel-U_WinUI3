@@ -1,22 +1,34 @@
-﻿using Newtonsoft.Json;
+﻿#nullable enable
+
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MyTelU_Launcher.Core.Helpers;
 
 public static class Json
 {
-    public static async Task<T> ToObjectAsync<T>(string value)
+    private static readonly JsonSerializerOptions Options = new()
     {
-        return await Task.Run<T>(() =>
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true
+    };
+
+    public static Task<T?> ToObjectAsync<T>(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
         {
-            return JsonConvert.DeserializeObject<T>(value);
-        });
+            return Task.FromResult<T?>(default);
+        }
+
+        return Task.FromResult(JsonSerializer.Deserialize<T>(value, Options));
     }
 
-    public static async Task<string> StringifyAsync(object value)
+    public static Task<string> StringifyAsync<T>(T value)
     {
-        return await Task.Run<string>(() =>
-        {
-            return JsonConvert.SerializeObject(value);
-        });
+        return Task.FromResult(JsonSerializer.Serialize(value, Options));
     }
 }

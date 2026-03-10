@@ -1,51 +1,52 @@
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Text.Json;
 using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using MyTelU_Launcher.Models;
 using HtmlAgilityPack;
 
 namespace MyTelU_Launcher.Services;
 
-/// <summary>
-/// Result of a session validation attempt — distinguishes a missing/invalid session
-/// from a transient network failure so the UI can show cached data when offline.
-/// </summary>
-public enum SessionValidationResult
-{
-    /// <summary>Cookies exist and the server confirmed the session is active.</summary>
-    Valid,
-    /// <summary>No cookies on disk, or the server returned a login page.</summary>
-    NoSession,
-    /// <summary>Network is unreachable or the request timed out.</summary>
-    NetworkError,
-}
-
 public interface IScheduleService
 {
-    /// <summary>Legacy stub — always true now (no server needed).</summary>
+    /// <summary>Compatibility member kept while callers still expect a server-backed service.</summary>
     bool IsServerRunning { get; }
-    /// <summary>Legacy stub — no-op now.</summary>
+    /// <summary>Compatibility member; schedule fetching now happens in-process.</summary>
     Task StartServerAsync();
-    /// <summary>Legacy stub — no-op now.</summary>
+    /// <summary>Compatibility member; schedule fetching now happens in-process.</summary>
     Task StopServerAsync();
-    Task<ScheduleResponse?> GetScheduleAsync(CancellationToken ct = default);
+
+    /// <summary>Try live fetch first, fall back to cache.</summary>
+    Task<ScheduleResponse?> GetScheduleAsync();
+    /// <summary>Try live fetch first, fall back to cache. Honours cancellation.</summary>
+    Task<ScheduleResponse?> GetScheduleAsync(CancellationToken ct);
+    /// <summary>Performs a live fetch only (no cache fallback). Honours cancellation.</summary>
+    Task<ScheduleResponse?> GetLiveScheduleAsync(CancellationToken ct);
+
+    /// <summary>Validates the current iGracias session.</summary>
     Task<SessionValidationResult> ValidateSessionAsync();
+
     Task<List<AcademicYearOption>> FetchAcademicYearsAsync();
     void SaveAcademicYear(string yearCode, string semesterCode);
-    /// <summary>Returns the saved yearCode and semesterCode from settings, or nulls if not saved.</summary>
-    (string? YearCode, string? SemesterCode) GetSavedAcademicYear();
-    /// <summary>Deletes saved cookies, clearing the iGracias session.</summary>
-    void ClearSession();
+
+    /// <summary>Returns the last saved academic year/semester codes, or (null,null) if none.</summary>
+    (string? yearCode, string? semCode) GetSavedAcademicYear();
+
     /// <summary>True when cookies.json exists and has a PHPSESSID.</summary>
     bool HasSavedSession { get; }
-    /// <summary>True when a schedule_cache.json exists on disk.</summary>
+
+    /// <summary>True when a schedule cache file exists on disk.</summary>
     bool HasCachedSchedule { get; }
-    /// <summary>Reads the cached schedule from disk without any network call. Returns null if no cache.</summary>
+
+    /// <summary>Reads the cached schedule from disk without any network call.</summary>
     ScheduleResponse? GetCachedSchedule();
-    /// <summary>Quick local check — true if at least one network interface is up.</summary>
+
+    /// <summary>Returns whether a default network interface is available.</summary>
     bool IsNetworkAvailable();
+
+    /// <summary>Deletes the session cookies, effectively signing out.</summary>
+    void ClearSession();
 }
 
 public class ScheduleService : IScheduleService, IDisposable
@@ -54,18 +55,16 @@ public class ScheduleService : IScheduleService, IDisposable
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "TY4EHelper");
 
+    private static readonly string _cookiesFile  = Path.Combine(_appDataDir, "cookies.json");
     private static readonly string _cacheFile    = Path.Combine(_appDataDir, "schedule_cache.json");
     private static readonly string _settingsFile = Path.Combine(_appDataDir, "settings.json");
 
     private readonly HttpClient _httpClient = new();
-    private readonly object _settingsLock = new();
 
-    // ── IScheduleService stubs (kept so HomeViewModel compiles without changes) ──
-    public bool IsServerRunning => true;   // No Python server required any more.
+    public bool IsServerRunning => true;
     public Task StartServerAsync() => Task.CompletedTask;
     public Task StopServerAsync()  => Task.CompletedTask;
 
-    // ── Session / cookie helpers ─────────────────────────────────────────────
     public bool HasSavedSession
     {
         get
@@ -81,66 +80,60 @@ public class ScheduleService : IScheduleService, IDisposable
         }
     }
 
-    public void ClearSession()
-    {
-        CookieStore.Clear();
-        try { if (File.Exists(_cacheFile)) File.Delete(_cacheFile); } catch { }
-        // Do NOT delete _settingsFile here — it stores the user's academic year
-        // preference which is independent of the session and must survive logouts/restarts.
-    }
-
-    public bool HasCachedSchedule => File.Exists(_cacheFile);
+    public bool HasCachedSchedule => SecureFileStore.Load(_cacheFile) != null;
 
     public ScheduleResponse? GetCachedSchedule() => LoadCache();
 
-    /// <summary>
-    /// Quick synchronous check using OS network interfaces — no HTTP required.
-    /// Returns false in airplane mode / no adapters / all adapters disconnected.
-    /// </summary>
-    public bool IsNetworkAvailable() => NetworkInterface.GetIsNetworkAvailable();
+    public bool IsNetworkAvailable() =>
+        NetworkInterface.GetIsNetworkAvailable();
+
+    public void ClearSession()
+    {
+        try { if (File.Exists(_cookiesFile)) File.Delete(_cookiesFile); } catch { }
+    }
+
+    public (string? yearCode, string? semCode) GetSavedAcademicYear()
+    {
+        var s = LoadSettings();
+        s.TryGetValue("yearCode",      out var yr);
+        s.TryGetValue("semesterCode",  out var sm);
+        return (yr, sm);
+    }
 
     /// <summary>
-    /// Validates the session by fetching the /schedule page and checking for the
-    /// academic-year dropdown — the same technique as the Python validate_session.py.
-    /// Returns false immediately if no cookies are saved.
+    /// Checks whether the registration page still renders a real logged-in schedule view.
     /// </summary>
     public async Task<SessionValidationResult> ValidateSessionAsync()
     {
         if (!HasSavedSession) return SessionValidationResult.NoSession;
         try
         {
-            // Use page client (no X-Requested-With) so the server returns the full HTML page.
+            // The registration page only returns the full markup when the AJAX header is absent.
             using var client = BuildPageHttpClient();
             var resp = await client.GetAsync("https://igracias.telkomuniversity.ac.id/registration/?pageid=17985");
             if (!resp.IsSuccessStatusCode) return SessionValidationResult.NoSession;
 
-            var html = await resp.Content.ReadAsStringAsync();
+            var html  = await resp.Content.ReadAsStringAsync();
             var lower = html.ToLowerInvariant();
 
-            // Login detected?
             if (lower.Contains("name=\"username\"") && lower.Contains("name=\"password\""))
                 return SessionValidationResult.NoSession;
 
-            // Logged in indicators
-            if (html.Contains("name=\"schoolYear\"") || 
-                lower.Contains("logout") || 
+            if (html.Contains("name=\"schoolYear\"") ||
+                lower.Contains("logout") ||
                 lower.Contains("sign out"))
                 return SessionValidationResult.Valid;
 
-            // If we fetched successfully and it's not a login form, assume OK.
             if (!lower.Contains("login")) return SessionValidationResult.Valid;
 
             return SessionValidationResult.NoSession;
         }
-        catch (HttpRequestException ex)
+        catch (HttpRequestException)
         {
-            // Network unreachable / DNS failure / timeout
-            Debug.WriteLine($"[ScheduleService] ValidateSession network error (offline?): {ex.Message}");
             return SessionValidationResult.NetworkError;
         }
-        catch (TaskCanceledException ex)
+        catch (TaskCanceledException)
         {
-            Debug.WriteLine($"[ScheduleService] ValidateSession timeout: {ex.Message}");
             return SessionValidationResult.NetworkError;
         }
         catch (Exception ex)
@@ -150,44 +143,39 @@ public class ScheduleService : IScheduleService, IDisposable
         }
     }
 
-    // ── Schedule fetch / cache ───────────────────────────────────────────────
-    public async Task<ScheduleResponse?> GetScheduleAsync(CancellationToken ct = default)
+    public Task<ScheduleResponse?> GetScheduleAsync() =>
+        GetScheduleAsync(CancellationToken.None);
+
+    public async Task<ScheduleResponse?> GetScheduleAsync(CancellationToken ct)
     {
-        // 1. Try live fetch
         var live = await TryFetchLive(ct);
         if (live != null)
         {
             SaveCache(live);
             return live;
         }
-
-        // 2. Fall back to last cached data
-        var cached = LoadCache();
-        
-        // Only return cache if it matches the current settings (or if we can't determine current settings)
-        // Check local settings
-        var settings = LoadSettings();
-        if (settings.TryGetValue("yearCode", out var yr) && settings.TryGetValue("semesterCode", out var sm))
-        {
-            var expectedYear = $"{yr}/{sm}";
-            if (cached != null && cached.AcademicYear != expectedYear)
-            {
-                // Cache mismatch - better to show error/empty than wrong data
-                return null;
-            }
-        }
-        
-        return cached;
+        if (ct.IsCancellationRequested) return null;
+        return LoadCache();
     }
 
-    private async Task<ScheduleResponse?> TryFetchLive(CancellationToken ct)
+    public async Task<ScheduleResponse?> GetLiveScheduleAsync(CancellationToken ct)
+    {
+        var live = await TryFetchLive(ct);
+        if (live != null) SaveCache(live);
+        return live;
+    }
+
+    private async Task<ScheduleResponse?> TryFetchLive(CancellationToken ct = default)
     {
         if (!HasSavedSession) return null;
         try
         {
+            ct.ThrowIfCancellationRequested();
             var settings  = LoadSettings();
             if (!settings.TryGetValue("studentId", out var studentId) || string.IsNullOrWhiteSpace(studentId))
-                return null; // Student ID not yet captured — cannot fetch without it
+            {
+                return null;
+            }
 
             string yearCode, semCode;
             if (settings.TryGetValue("yearCode", out var yr) && settings.TryGetValue("semesterCode", out var sm))
@@ -205,33 +193,26 @@ public class ScheduleService : IScheduleService, IDisposable
                     semCode  = current.SemesterCode;
                     settings["yearCode"]      = yearCode;
                     settings["semesterCode"]  = semCode;
-                    SaveSettings(settings); // This uses lock now, safe.
+                    SaveSettings(settings);
                 }
-                else { (yearCode, semCode) = ComputeDefaultAcademicYear(); }
+                else { yearCode = "2526"; semCode = "2"; }
             }
 
             string schoolYear = $"{yearCode}/{semCode}";
             using var client  = BuildHttpClient();
 
-            // ── SOURCE 1: JSON DataTables list (primary) ─────────────────────
+            // The DataTables response has the fields shown in the UI.
             var courses = await FetchScheduleListAsync(client, studentId, schoolYear, ct);
             if (courses == null) return null;
 
-            // ── SOURCE 2: HTML grid (supplementary – conflict detection only) ─
-            var conflictCodes = new HashSet<string>();
-            if (courses.Count > 0)
-            {
-               conflictCodes = await FetchConflictCodesAsync(client, studentId, yearCode, semCode, ct);
-            }
+            // The HTML grid is only used to mark conflict highlights.
+            var conflictCodes = courses.Count > 0
+                ? await FetchConflictCodesAsync(client, studentId, yearCode, semCode, ct)
+                : new HashSet<string>();
 
-            // ── MERGE: apply conflict flags ───────────────────────────────────
             foreach (var c in courses)
                 c.HasConflict = conflictCodes.Contains(c.CourseCode ?? "");
 
-            // Check cancellation before processing large dataset
-            if (ct.IsCancellationRequested) return null;
-
-            // ── BUILD timetable index ─────────────────────────────────────────
             var timetable = new Dictionary<string, object>();
             foreach (var c in courses)
             {
@@ -274,7 +255,7 @@ public class ScheduleService : IScheduleService, IDisposable
     /// Calls act=viewStudentSchedule (DataTables JSON) — primary course source.
     /// Column layout: [0]=Day [1]=TimeStart [2]=Room [3]=Code [4]=Name [5]=Lecturer [6]=Class [7]=TimeEnd [8]=Status
     /// </summary>
-    private async Task<List<CourseItem>?> FetchScheduleListAsync(HttpClient client, string studentId, string schoolYear, CancellationToken ct)
+    private async Task<List<CourseItem>?> FetchScheduleListAsync(HttpClient client, string studentId, string schoolYear, CancellationToken ct = default)
     {
         var parts = new List<string>
         {
@@ -304,21 +285,7 @@ public class ScheduleService : IScheduleService, IDisposable
             return null;
 
         using var doc = JsonDocument.Parse(body);
-        
-        // If "aaData" is missing or null, treat as empty schedule rather than failure
-        // Some backends return aaData:null or omit it when empty.
-        JsonElement aaData;
-        if (!doc.RootElement.TryGetProperty("aaData", out aaData) || aaData.ValueKind == JsonValueKind.Null)
-        {
-            // success, just no data
-            return new List<CourseItem>();
-        }
-
-        if (aaData.ValueKind != JsonValueKind.Array)
-        {
-             // Not an array - likely an error or unexpected format
-             return null;
-        }
+        if (!doc.RootElement.TryGetProperty("aaData", out var aaData)) return null;
 
         var courses = new List<CourseItem>();
         foreach (var row in aaData.EnumerateArray())
@@ -351,7 +318,7 @@ public class ScheduleService : IScheduleService, IDisposable
     /// Calls act=previewSchedule (HTML grid) and returns all course codes that
     /// appear inside a yellow-background (#FFFF00) div — indicating a conflict.
     /// </summary>
-    private async Task<HashSet<string>> FetchConflictCodesAsync(HttpClient client, string studentId, string yearCode, string semCode, CancellationToken ct)
+    private async Task<HashSet<string>> FetchConflictCodesAsync(HttpClient client, string studentId, string yearCode, string semCode, CancellationToken ct = default)
     {
         var conflicts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
@@ -394,6 +361,7 @@ public class ScheduleService : IScheduleService, IDisposable
     {
         try
         {
+            Directory.CreateDirectory(_appDataDir);
             SecureFileStore.Save(_cacheFile, JsonSerializer.Serialize(schedule));
         }
         catch (Exception ex)
@@ -407,7 +375,8 @@ public class ScheduleService : IScheduleService, IDisposable
         try
         {
             var json = SecureFileStore.Load(_cacheFile);
-            return json == null ? null : JsonSerializer.Deserialize<ScheduleResponse>(json);
+            if (json == null) return null;
+            return JsonSerializer.Deserialize<ScheduleResponse>(json);
         }
         catch { return null; }
     }
@@ -415,29 +384,23 @@ public class ScheduleService : IScheduleService, IDisposable
     // ── Settings helpers ─────────────────────────────────────────────────────
     private Dictionary<string, string> LoadSettings()
     {
-        lock (_settingsLock)
+        try
         {
-            try
-            {
-                if (!File.Exists(_settingsFile)) return new Dictionary<string, string>();
-                var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_settingsFile));
-                return d ?? new Dictionary<string, string>();
-            }
-            catch { return new Dictionary<string, string>(); }
+            if (!File.Exists(_settingsFile)) return new Dictionary<string, string>();
+            var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_settingsFile));
+            return d ?? new Dictionary<string, string>();
         }
+        catch { return new Dictionary<string, string>(); }
     }
 
     private void SaveSettings(Dictionary<string, string> settings)
     {
-        lock (_settingsLock)
+        try
         {
-            try
-            {
-                Directory.CreateDirectory(_appDataDir);
-                File.WriteAllText(_settingsFile, JsonSerializer.Serialize(settings));
-            }
-            catch { }
+            Directory.CreateDirectory(_appDataDir);
+            File.WriteAllText(_settingsFile, JsonSerializer.Serialize(settings));
         }
+        catch { }
     }
 
     public void SaveAcademicYear(string yearCode, string semesterCode)
@@ -448,25 +411,17 @@ public class ScheduleService : IScheduleService, IDisposable
         SaveSettings(settings);
     }
 
-    public (string? YearCode, string? SemesterCode) GetSavedAcademicYear()
-    {
-        var settings = LoadSettings();
-        var yr = settings.TryGetValue("yearCode",      out var y) ? y : null;
-        var sm = settings.TryGetValue("semesterCode",  out var s) ? s : null;
-        return (yr, sm);
-    }
-
     public async Task<List<AcademicYearOption>> FetchAcademicYearsAsync()
     {
 #if DEBUG
         var logFile = Path.Combine(_appDataDir, "academic_years_debug.log");
-        // Rotate log if > 100 KB
+        // Keep the debug log small enough to inspect without manual cleanup.
         try { if (File.Exists(logFile) && new FileInfo(logFile).Length > 100_000) File.Delete(logFile); } catch { }
         void Log(string msg) {
             try { File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] {msg}\n"); } catch { }
         }
 #else
-        void Log(string msg) { } // no-op in Release
+        void Log(string msg) { }
 #endif
 
         Log($"=== FetchAcademicYearsAsync called. HasSavedSession={HasSavedSession} ===");
@@ -474,8 +429,7 @@ public class ScheduleService : IScheduleService, IDisposable
         try
         {
             Log("Fetching page with BuildPageHttpClient...");
-            // Must use page client (no X-Requested-With) — the AJAX header causes the server
-            // to return a partial response that does not include the schoolYear <select>.
+            // The registration page only returns the dropdown when the AJAX header is absent.
             using var client = BuildPageHttpClient();
             var url = "https://igracias.telkomuniversity.ac.id/registration/?pageid=17985";
             var resp = await client.GetAsync(url);
@@ -485,14 +439,7 @@ public class ScheduleService : IScheduleService, IDisposable
             var html = await resp.Content.ReadAsStringAsync();
             Log($"Response length: {html.Length} chars");
 
-            // DETECT INVALID SESSION / SCRIPT REDIRECT
-            // If the page is just a script redirect (length ~3-4KB, contains 'window.location'),
-            // the session is likely expired or invalid.
-            // NOTE: Do NOT call ClearSession() here — silently deleting cookies and the schedule
-            // cache in the background causes both Attendance and Schedule pages to lose their
-            // cached data and drop into the NeedsLogin state unexpectedly while the user is
-            // navigating around in offline/cache mode.  Just return empty; the ViewModels will
-            // handle the expired-session state properly the next time the user refreshes.
+            // A short script-redirect page means the saved session is no longer usable.
             if (html.Length < 5000 && (html.Contains("window.location=") || html.Contains("window.location =")))
             {
                 Log("Script redirect detected — session likely expired. Returning empty academic years list.");
@@ -543,8 +490,8 @@ public class ScheduleService : IScheduleService, IDisposable
                     }
                 }
             }
-            // ── Gap-fill: iGracias may omit the 1st/2nd semester of the oldest year ──
-            // Mirror the same probe logic used in the Python fetch_academic_years.py.
+
+            // Older years sometimes come back with missing semester entries, so probe them directly.
             if (options.Count > 0)
             {
                 var semesterNames = new Dictionary<string, string>
@@ -560,8 +507,8 @@ public class ScheduleService : IScheduleService, IDisposable
 
                 if (validYearCodes.Count > 0)
                 {
-                    var oldestYear    = validYearCodes.Min()!;
-                    var yearLabel     = $"20{oldestYear[..2]}/20{oldestYear[2..]}";
+                    var oldestYear     = validYearCodes.Min()!;
+                    var yearLabel      = $"20{oldestYear[..2]}/20{oldestYear[2..]}";
                     var existingValues = new HashSet<string>(options.Select(o => o.Value));
 
                     var patches = new List<AcademicYearOption>();
@@ -570,7 +517,6 @@ public class ScheduleService : IScheduleService, IDisposable
                         var val = $"{oldestYear}/{smCode}";
                         if (existingValues.Contains(val)) continue;
 
-                        // Probe the server — only add if it returns a real schedule page (>10 KB)
                         try
                         {
                             var probeUrl = $"https://igracias.telkomuniversity.ac.id/registration/?pageid=17985&sch={oldestYear}&sm={smCode}";
@@ -603,39 +549,31 @@ public class ScheduleService : IScheduleService, IDisposable
 
                     if (patches.Count > 0)
                     {
-                        options.InsertRange(0, patches);
-                        Log($"  Gap-fill: prepended {patches.Count} missing semester(s).");
+                        var insertIdx = options.FindIndex(o => o.YearCode == oldestYear);
+                        if (insertIdx >= 0)
+                            options.InsertRange(insertIdx, patches.OrderBy(p => p.SemesterCode));
+                        else
+                            options.AddRange(patches.OrderBy(p => p.SemesterCode));
+                        Log($"  Gap-fill: inserted {patches.Count} patch(es) for {oldestYear}");
                     }
                 }
             }
 
-            Log($"Returning {options.Count} options.");
+            Log($"Returning {options.Count} option(s).");
             return options;
         }
         catch (Exception ex)
         {
+            Log($"Exception: {ex.Message}");
             Debug.WriteLine($"[ScheduleService] FetchAcademicYears error: {ex.Message}");
-#if DEBUG
-            try { File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] EXCEPTION: {ex}\n"); } catch { }
-#endif
             return new List<AcademicYearOption>();
         }
     }
 
-    // ── HttpClient factory ───────────────────────────────────────────────────
-
     /// <summary>
-    /// Client for AJAX/DataTables endpoints — sends X-Requested-With: XMLHttpRequest.
+    /// Builds an HttpClient with AJAX headers for DataTables / AJAX endpoints.
     /// </summary>
-    private HttpClient BuildHttpClient() => BuildCookieClient(ajaxMode: true);
-
-    /// <summary>
-    /// Client for full HTML page requests (login check, academic-year dropdown).
-    /// Does NOT send X-Requested-With so the server returns the complete page.
-    /// </summary>
-    private HttpClient BuildPageHttpClient() => BuildCookieClient(ajaxMode: false);
-
-    private HttpClient BuildCookieClient(bool ajaxMode)
+    private HttpClient BuildHttpClient()
     {
         try
         {
@@ -648,17 +586,14 @@ public class ScheduleService : IScheduleService, IDisposable
             foreach (var kvp in cookiesDict)
                 jar.Add(baseUri, new Cookie(kvp.Key, kvp.Value));
 
-            var handler = new HttpClientHandler { CookieContainer = jar, AllowAutoRedirect = true };
+            var handler = new HttpClientHandler { CookieContainer = jar };
             var client  = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
             client.DefaultRequestHeaders.Add("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            client.DefaultRequestHeaders.Add("Accept", ajaxMode
-                ? "text/html, */*; q=0.01"
-                : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            client.DefaultRequestHeaders.Add("Accept", "text/html, */*; q=0.01");
             client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
             client.DefaultRequestHeaders.Add("Referer", "https://igracias.telkomuniversity.ac.id/");
-            if (ajaxMode)
-                client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+            client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
             return client;
         }
         catch
@@ -668,27 +603,37 @@ public class ScheduleService : IScheduleService, IDisposable
     }
 
     /// <summary>
-    /// Computes the current academic year and semester code dynamically.
-    /// Semester 1 = Aug–Jan, Semester 2 = Feb–Jul.
+    /// Builds an HttpClient for fetching full HTML pages (no AJAX headers).
+    /// The X-Requested-With header must be absent so the server returns the full page
+    /// including the schoolYear &lt;select&gt; dropdown.
     /// </summary>
-    private static (string yearCode, string semCode) ComputeDefaultAcademicYear()
+    private HttpClient BuildPageHttpClient()
     {
-        var now = DateTime.Now;
-        int y1, y2;
-        string sem;
-        if (now.Month >= 8)
+        try
         {
-            y1 = now.Year % 100;
-            y2 = (now.Year + 1) % 100;
-            sem = "1";
+            var cookiesJson = CookieStore.Load() ?? "{}";
+            var cookiesDict = JsonSerializer.Deserialize<Dictionary<string, string>>(cookiesJson)
+                              ?? new Dictionary<string, string>();
+
+            var jar     = new CookieContainer();
+            var baseUri = new Uri("https://igracias.telkomuniversity.ac.id");
+            foreach (var kvp in cookiesDict)
+                jar.Add(baseUri, new Cookie(kvp.Key, kvp.Value));
+
+            var handler = new HttpClientHandler { CookieContainer = jar };
+            var client  = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+            client.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            client.DefaultRequestHeaders.Add("Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+            client.DefaultRequestHeaders.Add("Referer", "https://igracias.telkomuniversity.ac.id/");
+            return client;
         }
-        else
+        catch
         {
-            y1 = (now.Year - 1) % 100;
-            y2 = now.Year % 100;
-            sem = "2";
+            return new HttpClient();
         }
-        return ($"{y1:D2}{y2:D2}", sem);
     }
 
     public void Dispose() => _httpClient.Dispose();

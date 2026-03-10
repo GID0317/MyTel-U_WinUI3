@@ -23,25 +23,36 @@ public class AccentColorService
     private bool _isApplying = false;
     private DateTime _lastRefreshTime = DateTime.MinValue;
 
-    // Static cache so ApplyCachedAccentEarly() can be called before DI is ready
+    // Early startup applies the last accent before DI and the main window exist.
     private static Color s_cachedColor;
     private static bool s_hasCachedColor = false;
 
-    /// <summary>
-    /// The dominant color most recently extracted from the background image.
-    /// Can be used by other components to determine background brightness.
-    /// </summary>
+    /// <summary>Raised after accent resources are rewritten.</summary>
+    public static event EventHandler? AccentColorsUpdated;
+
+    /// <summary>The dominant color most recently extracted from the background image.</summary>
     public Color? LastExtractedColor { get; private set; }
 
-    // Sets a resource in the flat dict AND in every theme dictionary so WinUI picks it up
+    /// <summary>The average brightness of the last processed background image, from 0 to 255.</summary>
+    public double? LastBackgroundBrightness { get; private set; }
+
+    // Sharing one brush instance across multiple resource slots can crash WinUI on theme changes.
+    private static object CloneBrushIfNeeded(object value)
+    {
+        if (value is SolidColorBrush scb)
+            return new SolidColorBrush(scb.Color) { Opacity = scb.Opacity };
+        return value;
+    }
+
+    // Write to both the root dictionary and theme dictionaries so template lookups stay in sync.
     private static void SetResource(ResourceDictionary resources, string key, object value)
     {
-        resources[key] = value;
+        resources[key] = CloneBrushIfNeeded(value);
         foreach (var themeKey in new[] { "Default", "Light", "Dark", "HighContrast" })
         {
             if (resources.ThemeDictionaries.TryGetValue(themeKey, out var themeObj)
                 && themeObj is ResourceDictionary themeDict)
-                themeDict[key] = value;
+                themeDict[key] = CloneBrushIfNeeded(value);
         }
     }
 
@@ -55,38 +66,50 @@ public class AccentColorService
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
             System.Diagnostics.Debug.WriteLine("No valid image path provided, using system accent");
+            var currentTheme = _themeSelectorService.Theme;
+            LastBackgroundBrightness = currentTheme == ElementTheme.Light ? 200.0 : 50.0;
             return GetSystemAccentColor();
         }
 
         try
         {
-            // Log detailed image info
             var fileInfo = new FileInfo(imagePath);
             System.Diagnostics.Debug.WriteLine($"===== COLOR EXTRACTION FROM IMAGE =====");
             System.Diagnostics.Debug.WriteLine($"Image Path: {imagePath}");
             
             var quantizedColor = await Task.Run(async () =>
             {
-                // Create a copy of the helper bitmap to avoid locking issues
-                // LoadImageAsync handles GDI+ and WinRT/WIC fallback (WEBP support)
                 using var bitmap = await LoadImageAsync(imagePath);
                 
                 System.Diagnostics.Debug.WriteLine($"Image Dimensions: {bitmap.Width}x{bitmap.Height} pixels");
                 
-                // Use quality=1 for best color extraction (analyzes all pixels)
-                // If the dominant color is white/black (which is often the background), we might want to ignore it 
-                // to get the actual accent color.
+                long totalBrightness = 0;
+                int pixelCount = 0;
+                int sampleStep = Math.Max(1, bitmap.Width / 100);
+                
+                for (int y = 0; y < bitmap.Height; y += sampleStep)
+                {
+                    for (int x = 0; x < bitmap.Width; x += sampleStep)
+                    {
+                        var pixel = bitmap.GetPixel(x, y);
+                        double luminance = 0.299 * pixel.R + 0.587 * pixel.G + 0.114 * pixel.B;
+                        totalBrightness += (long)luminance;
+                        pixelCount++;
+                    }
+                }
+                
+                double avgBrightness = pixelCount > 0 ? (double)totalBrightness / pixelCount : 128;
+                LastBackgroundBrightness = avgBrightness;
+                System.Diagnostics.Debug.WriteLine($"Average Background Brightness: {avgBrightness:F2}");
+                
                 var result = ColorThief.GetColor(bitmap, quality: 1, ignoreWhite: true);
-                
-                // Fallback if ignoreWhite caused issues or returned empty (though GetColor usually returns *something*)
-                // If the color is too close to white or black, we might want to try again or pick a palette
-                
+
                 return result;
             });
 
             var baseColor = Color.FromArgb(255, quantizedColor.Color.R, quantizedColor.Color.G, quantizedColor.Color.B);
             
-            // Boost saturation by 1.2x like Collapse Launcher does - makes colors more vibrant
+            // Slightly boost saturation so muted wallpapers still produce a usable accent.
             var saturatedColor = SetSaturation(baseColor, 1.2);
             
             System.Diagnostics.Debug.WriteLine($"Color Transformation:");
@@ -101,6 +124,8 @@ public class AccentColorService
         {
             System.Diagnostics.Debug.WriteLine($"Color extraction failed: {ex.Message}");
             System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            var currentTheme = _themeSelectorService.Theme;
+            LastBackgroundBrightness = currentTheme == ElementTheme.Light ? 200.0 : 50.0;
         }
 
         var fallback = GetSystemAccentColor();
@@ -119,12 +144,7 @@ public class AccentColorService
         var resources = Application.Current?.Resources;
         if (resources == null) return;
 
-        // Lightweight brush application – no FrameworkElement / theme-toggle required
-        // so this is safe even before the Window is created.
         var color = s_cachedColor;
-        var brush        = new SolidColorBrush(color);
-        var hoverBrush   = new SolidColorBrush(color) { Opacity = 0.9 };
-        var pressedBrush = new SolidColorBrush(color) { Opacity = 0.8 };
 
         string[] keys = {
             "AccentFillColorDefaultBrush", "AccentFillColorSecondaryBrush",
@@ -132,17 +152,18 @@ public class AccentColorService
             "AccentButtonBorderBrush",
             "SystemControlHighlightAccentBrush", "SystemControlForegroundAccentBrush",
             "SystemControlBackgroundAccentBrush",
-            "SegmentedItemSelectedBackgroundThemeBrush",
-            "SegmentedItemSelectedBackgroundPointerOverThemeBrush",
-            "SegmentedItemSelectedBackgroundPressedThemeBrush",
+            "SegmentedPillBackground",
+            "SegmentedPillBackgroundPointerOver",
+            "SegmentedPillBackgroundPressed",
         };
 
         foreach (var key in keys)
         {
+            var freshBrush = new SolidColorBrush(color);
             if (resources.ContainsKey(key))
-                resources[key] = brush;
+                resources[key] = freshBrush;
             else
-                resources.Add(key, brush);
+                resources.Add(key, freshBrush);
         }
 
         System.Diagnostics.Debug.WriteLine($"[AccentColorService] ApplyCachedAccentEarly applied R={color.R},G={color.G},B={color.B}");
@@ -155,7 +176,6 @@ public class AccentColorService
         _lastAppliedColor = color;
         _hasAppliedColor = true;
 
-        // Keep static cache in sync so ApplyCachedAccentEarly() always has the latest color
         s_cachedColor = color;
         s_hasCachedColor = true;
 
@@ -171,13 +191,11 @@ public class AccentColorService
                 if (App.MainWindow?.Content is not FrameworkElement rootElement)
                     return;
 
-                // Subscribe to theme changes on first apply so accent re-applies on theme switch
                 if (!_themeChangeSubscribed)
                 {
                     _themeChangeSubscribed = true;
                     rootElement.ActualThemeChanged += (sender, _) =>
                     {
-                        // Ignore the artificial toggle we fire for refresh — only react to real theme changes
                         if (_hasAppliedColor && (DateTime.Now - _lastRefreshTime).TotalMilliseconds > 1000)
                         {
                             System.Diagnostics.Debug.WriteLine($"Theme changed to {sender.ActualTheme}, re-applying accent color");
@@ -188,11 +206,10 @@ public class AccentColorService
                 
                 var resources = Application.Current.Resources;
 
-                // Detect current theme
                 var isLightTheme = rootElement.ActualTheme == ElementTheme.Light;
                 System.Diagnostics.Debug.WriteLine($"Applying accent for {rootElement.ActualTheme} theme");
 
-                // Core color resources — write into theme dicts so WinUI can't override them
+                // Keep these in the theme dictionaries so WinUI templates do not revert to the system accent.
                 SetResource(resources, "SystemAccentColor", color);
                 SetResource(resources, "SystemAccentColorLight1", LightenColor(color, 0.2f));
                 SetResource(resources, "SystemAccentColorLight2", LightenColor(color, 0.4f));
@@ -201,13 +218,9 @@ public class AccentColorService
                 SetResource(resources, "SystemAccentColorDark2",  DarkenColor(color, 0.4f));
                 SetResource(resources, "SystemAccentColorDark3",  DarkenColor(color, 0.6f));
 
-                // Create theme-appropriate brush variants
                 SolidColorBrush accentBrush, accentHoverBrush, accentPressedBrush, accentDisabledBrush;
                 if (isLightTheme)
                 {
-                    // Light theme: base color needs to be dark enough to contrast with white background
-                    // Ensure lightness is at most 0.45 (allowing colors like brownish #765b43 which is ~0.36 lightness)
-                    // Previously overly aggressive at 0.15
                     var baseDarkened = EnsureLightness(color, 0.45, false);
                     accentBrush       = new SolidColorBrush(baseDarkened);
                     accentHoverBrush  = new SolidColorBrush(GetDarkColor(baseDarkened, 0.1));
@@ -216,8 +229,6 @@ public class AccentColorService
                 }
                 else
                 {
-                    // Dark theme: base color needs to be light enough to contrast with dark background
-                    // Ensure lightness is at least 0.6 (similar to Collapse Launcher's #728ecb)
                     var baseLightened = EnsureLightness(color, 0.6, true);
                     accentBrush       = new SolidColorBrush(baseLightened);
                     accentHoverBrush  = new SolidColorBrush(GetLightColor(baseLightened, 0.1));
@@ -225,16 +236,13 @@ public class AccentColorService
                     accentDisabledBrush= new SolidColorBrush(GetDarkColor(baseLightened, 0.3));
                 }
 
-                // Primary fill
                 SetResource(resources, "AccentFillColorDefaultBrush",  accentBrush);
                 SetResource(resources, "AccentFillColorSecondaryBrush",accentHoverBrush);
                 SetResource(resources, "AccentFillColorTertiaryBrush", accentPressedBrush);
                 SetResource(resources, "AccentFillColorDisabledBrush", accentDisabledBrush);
 
-                // Determine text color based on theme (dark text for dark theme buttons, white text for light theme buttons)
                 var buttonTextBrush = isLightTheme ? new SolidColorBrush(Colors.White) : new SolidColorBrush(Colors.Black);
 
-                // Buttons
                 SetResource(resources, "AccentButtonBackground",             accentBrush);
                 SetResource(resources, "AccentButtonBackgroundPointerOver",  accentHoverBrush);
                 SetResource(resources, "AccentButtonBackgroundPressed",      accentPressedBrush);
@@ -247,7 +255,6 @@ public class AccentColorService
                 SetResource(resources, "AccentButtonBorderBrushPointerOver", accentHoverBrush);
                 SetResource(resources, "AccentButtonBorderBrushPressed",     accentPressedBrush);
 
-                // CheckBox
                 var checkGlyphBrush = isLightTheme ? new SolidColorBrush(Colors.White) : new SolidColorBrush(Colors.Black);
                 SetResource(resources, "CheckBoxCheckGlyphForegroundChecked",              checkGlyphBrush);
                 SetResource(resources, "CheckBoxCheckGlyphForegroundCheckedPointerOver",   checkGlyphBrush);
@@ -259,7 +266,6 @@ public class AccentColorService
                 SetResource(resources, "CheckBoxCheckBackgroundStrokeCheckedPointerOver",  accentHoverBrush);
                 SetResource(resources, "CheckBoxCheckBackgroundStrokeCheckedPressed",      accentPressedBrush);
 
-                // ToggleSwitch
                 SetResource(resources, "ToggleSwitchFillOn",              accentBrush);
                 SetResource(resources, "ToggleSwitchFillOnPointerOver",   accentHoverBrush);
                 SetResource(resources, "ToggleSwitchFillOnPressed",       accentPressedBrush);
@@ -270,7 +276,6 @@ public class AccentColorService
                 SetResource(resources, "ToggleSwitchKnobFillOnPointerOver",checkGlyphBrush);
                 SetResource(resources, "ToggleSwitchKnobFillOnPressed",   checkGlyphBrush);
 
-                // Slider
                 SetResource(resources, "SliderTrackValueFill",            accentBrush);
                 SetResource(resources, "SliderTrackValueFillPointerOver", accentHoverBrush);
                 SetResource(resources, "SliderTrackValueFillPressed",     accentPressedBrush);
@@ -278,11 +283,9 @@ public class AccentColorService
                 SetResource(resources, "SliderThumbBackgroundPointerOver",accentHoverBrush);
                 SetResource(resources, "SliderThumbBackgroundPressed",    accentPressedBrush);
 
-                // TextBox
-                // SetResource(resources, "TextControlBorderBrushFocused",   accentBrush); // Disabled to keep default focus visual
+                // Leave the default focus border alone so focus visuals stay readable.
                 SetResource(resources, "TextControlSelectionHighlightColor", color);
 
-                // ComboBox selection pill (vertical indicator bar)
                 SetResource(resources, "ComboBoxItemPillFillBrush",                   accentBrush);
                 SetResource(resources, "ComboBoxItemPillFillBrushPointerOver",        accentHoverBrush);
                 SetResource(resources, "ComboBoxItemPillFillBrushPressed",            accentPressedBrush);
@@ -291,12 +294,10 @@ public class AccentColorService
                 SetResource(resources, "ComboBoxItemPillFillBrushSelectedPointerOver",accentHoverBrush);
                 SetResource(resources, "ComboBoxItemPillFillBrushSelectedPressed",    accentPressedBrush);
                 
-                // Fallbacks for older WinUI versions or different control templates
                 SetResource(resources, "ComboBoxItemBorderBrushChecked",              accentBrush);
                 SetResource(resources, "ComboBoxItemBorderBrushCheckedPointerOver",   accentHoverBrush);
                 SetResource(resources, "ComboBoxItemBorderBrushCheckedPressed",       accentPressedBrush);
                 
-                // WinUI 3 specific ComboBox selection indicator keys
                 SetResource(resources, "ComboBoxItemSelectedPointerOverBackground",   accentBrush);
                 SetResource(resources, "ComboBoxItemSelectedPressedBackground",       accentPressedBrush);
                 SetResource(resources, "ComboBoxItemSelectedBackground",              accentBrush);
@@ -304,55 +305,31 @@ public class AccentColorService
                 SetResource(resources, "ComboBoxItemRevealBorderBrushSelectedPointerOver", accentHoverBrush);
                 SetResource(resources, "ComboBoxItemRevealBorderBrushSelectedPressed", accentPressedBrush);
 
-                // NavigationView selection pill
                 SetResource(resources, "NavigationViewSelectionIndicatorForeground",  accentBrush);
 
-                // ListView selection indicator
                 SetResource(resources, "ListViewItemSelectionIndicatorBrush",         accentBrush);
                 SetResource(resources, "ListViewItemSelectionIndicatorPointerOverBrush", accentHoverBrush);
                 SetResource(resources, "ListViewItemSelectionIndicatorPressedBrush",  accentPressedBrush);
 
-                // Segmented Control (Community Toolkit)
-                SetResource(resources, "SegmentedItemSelectedBackgroundThemeBrush",            accentBrush);
-                SetResource(resources, "SegmentedItemSelectedBackgroundPointerOverThemeBrush", accentHoverBrush);
-                SetResource(resources, "SegmentedItemSelectedBackgroundPressedThemeBrush",     accentPressedBrush);
-                SetResource(resources, "SegmentedItemSelectedForegroundThemeBrush",            buttonTextBrush);
-                SetResource(resources, "SegmentedItemSelectedForegroundPointerOverThemeBrush", buttonTextBrush);
-                SetResource(resources, "SegmentedItemSelectedForegroundPressedThemeBrush",     buttonTextBrush);
-                
-                // Segmented Control - Additional keys for newer toolkit versions or specific styles
-                // Some versions use these keys for the "pill" indicator
-                SetResource(resources, "SegmentedItemSelectionIndicatorBrush",                 accentBrush);
-                SetResource(resources, "SegmentedItemSelectionIndicatorPointerOverBrush",      accentHoverBrush);
-                SetResource(resources, "SegmentedItemSelectionIndicatorPressedBrush",          accentPressedBrush);
-                SetResource(resources, "SegmentedItemSelectionIndicatorDisabledBrush",         accentDisabledBrush);
-                
-                // For Dark Mode specifically, ensures contrast isn't lost if the control ignores the above
-                if (!isLightTheme)
-                {
-                    // Dark theme specific overrides if needed
-                    SetResource(resources, "SegmentedItemForegroundSelected", buttonTextBrush);
-                    SetResource(resources, "SegmentedItemForegroundSelectedPointerOver", buttonTextBrush);
-                    SetResource(resources, "SegmentedItemForegroundSelectedPressed", buttonTextBrush);
-                }
+                // Segmented applies the same resources locally because its VSM storyboards cache brushes.
+                SetResource(resources, "SegmentedPillBackground",            accentBrush);
+                SetResource(resources, "SegmentedPillBackgroundPointerOver", accentHoverBrush);
+                SetResource(resources, "SegmentedPillBackgroundPressed",     accentPressedBrush);
+                SetResource(resources, "SegmentedPillBackgroundDisabled",    accentDisabledBrush);
 
-                // Progress controls
                 SetResource(resources, "ProgressRingForegroundThemeBrush",    accentBrush);
                 SetResource(resources, "ProgressBarForeground",               accentBrush);
                 SetResource(resources, "ProgressBarIndeterminateForeground",  accentBrush);
 
-                // Hyperlinks — must be in theme dict to override WinUI defaults
                 SetResource(resources, "HyperlinkForeground",            accentBrush);
                 SetResource(resources, "HyperlinkForegroundPointerOver", accentHoverBrush);
                 SetResource(resources, "HyperlinkForegroundPressed",     accentPressedBrush);
                 
-                // HyperlinkButton
                 SetResource(resources, "HyperlinkButtonForeground",             accentBrush);
                 SetResource(resources, "HyperlinkButtonForegroundPointerOver",  accentHoverBrush);
                 SetResource(resources, "HyperlinkButtonForegroundPressed",      accentPressedBrush);
                 SetResource(resources, "HyperlinkButtonForegroundDisabled",     accentDisabledBrush);
 
-                // System control highlight brushes (used internally by many controls)
                 SetResource(resources, "SystemControlHighlightAccentBrush",    accentBrush);
                 SetResource(resources, "SystemControlForegroundAccentBrush",   accentBrush);
                 SetResource(resources, "SystemControlHighlightAltAccentBrush", accentHoverBrush);
@@ -368,14 +345,17 @@ public class AccentColorService
 
                 System.Diagnostics.Debug.WriteLine($"Applied accent color: R={color.R}, G={color.G}, B={color.B} for {(isLightTheme ? "LIGHT" : "DARK")} theme");
 
-                // Refresh controls by briefly toggling theme (guarded by timestamp so ActualThemeChanged won't loop)
                 _lastRefreshTime = DateTime.Now;
                 var currentTheme = rootElement.RequestedTheme;
                 
-                // Force a full cycle to ensure all bindings update
                 rootElement.RequestedTheme = ElementTheme.Dark;
                 rootElement.RequestedTheme = ElementTheme.Light;
                 rootElement.RequestedTheme = currentTheme;
+                
+                _lastAppliedColor = color;
+                _hasAppliedColor = true;
+                
+                AccentColorsUpdated?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
@@ -390,7 +370,6 @@ public class AccentColorService
 
     private void RefreshTheme()
     {
-        // Deprecated - now done inline in ApplyAccentColor
     }
 
     public async Task UpdateAccentFromImageAsync(string imagePath)
@@ -409,7 +388,6 @@ public class AccentColorService
         }
         catch
         {
-            // Fallback to a default blue
             return Color.FromArgb(255, 0, 120, 215);
         }
     }
@@ -430,10 +408,8 @@ public class AccentColorService
         return Color.FromArgb(color.A, r, g, b);
     }
 
-    // Collapse Launcher's color manipulation methods
     private Color SetSaturation(Color color, double saturation)
     {
-        // Convert RGB to HSL
         double r = color.R / 255.0;
         double g = color.G / 255.0;
         double b = color.B / 255.0;
@@ -458,10 +434,8 @@ public class AccentColorService
             h /= 6.0;
         }
 
-        // Apply saturation multiplier
         s = Math.Min(1.0, s * saturation);
 
-        // Convert HSL back to RGB
         return HslToRgb(h, s, l, color.A);
     }
 
@@ -469,7 +443,6 @@ public class AccentColorService
     {
         if (dialog == null) return;
 
-        // Force the dialog to use the current app theme
         if (_themeSelectorService != null)
         {
             dialog.RequestedTheme = _themeSelectorService.Theme;
@@ -477,7 +450,7 @@ public class AccentColorService
 
         var resources = Application.Current.Resources;
         
-        // Apply accent button resources directly to the dialog to bypass popup caching issues
+        // Popups can hold stale resources, so copy the current accent set onto the dialog itself.
         string[] keys = {
             "AccentButtonBackground",
             "AccentButtonBackgroundPointerOver",
@@ -513,9 +486,38 @@ public class AccentColorService
         }
     }
 
+    public void ApplyToSegmented(CommunityToolkit.WinUI.Controls.Segmented segmented)
+    {
+        if (segmented == null) return;
+
+        var resources = Application.Current.Resources;
+        
+        // The segmented pill needs local resources because its VSM storyboards cache brush instances.
+        string[] keys = {
+            "SegmentedPillBackground",
+            "SegmentedPillBackgroundPointerOver",
+            "SegmentedPillBackgroundPressed",
+            "SegmentedPillBackgroundDisabled"
+        };
+
+        foreach (var key in keys)
+        {
+            if (resources.TryGetValue(key, out var brush))
+            {
+                segmented.Resources[key] = brush;
+            }
+        }
+        
+        var selected = segmented.SelectedItem;
+        if (selected != null)
+        {
+            segmented.SelectedItem = null;
+            segmented.SelectedItem = selected;
+        }
+    }
+
     private Color EnsureLightness(Color color, double targetLightness, bool isDarkTheme)
     {
-        // Get HSL values
         double r = color.R / 255.0;
         double g = color.G / 255.0;
         double b = color.B / 255.0;
@@ -540,15 +542,12 @@ public class AccentColorService
             h /= 6.0;
         }
 
-        // Adjust lightness
         if (isDarkTheme)
         {
-            // For dark theme, ensure the color is light enough
             l = Math.Max(l, targetLightness);
         }
         else
         {
-            // For light theme, ensure the color is dark enough
             l = Math.Min(l, targetLightness);
         }
 
@@ -557,7 +556,6 @@ public class AccentColorService
 
     private Color GetLightColor(Color color, double amount)
     {
-        // Get HSL values
         double r = color.R / 255.0;
         double g = color.G / 255.0;
         double b = color.B / 255.0;
@@ -582,7 +580,6 @@ public class AccentColorService
             h /= 6.0;
         }
 
-        // Increase lightness
         l = Math.Min(1.0, l + amount);
 
         return HslToRgb(h, s, l, color.A);
@@ -590,7 +587,6 @@ public class AccentColorService
 
     private Color GetDarkColor(Color color, double amount)
     {
-        // Get HSL values
         double r = color.R / 255.0;
         double g = color.G / 255.0;
         double b = color.B / 255.0;
@@ -615,7 +611,6 @@ public class AccentColorService
             h /= 6.0;
         }
 
-        // Decrease lightness
         l = Math.Max(0.0, l - amount);
 
         return HslToRgb(h, s, l, color.A);
@@ -627,7 +622,7 @@ public class AccentColorService
 
         if (s == 0)
         {
-            r = g = b = l; // Achromatic
+            r = g = b = l;
         }
         else
         {
@@ -655,19 +650,15 @@ public class AccentColorService
     {
         try
         {
-            // Attempt 1: Standard GDI+ Bitmap (fastest for BMP/PNG/JPG)
-            // We read to memory first to avoid file locking issues
+            // Read into memory first so the file is not left locked.
             var bytes = await File.ReadAllBytesAsync(path);
             using var ms = new MemoryStream(bytes);
             
-            // This constructor throws ArgumentException if the format is invalid (e.g. WEBP on older GDI+)
-            // We clone it to detach from the stream so we can dispose the stream
             using var tempBitmap = new Drawing.Bitmap(ms);
             return new Drawing.Bitmap(tempBitmap);
         }
         catch (Exception ex) when (ex is ArgumentException || ex is System.Runtime.InteropServices.ExternalException)
         {
-            // Attempt 2: WinRT WIC Decoder (supports WEBP, HEIF, etc. on Windows 10/11)
             System.Diagnostics.Debug.WriteLine($"GDI+ load failed for {path} ({ex.Message}). Trying WinRT fallback...");
             
             try
@@ -676,7 +667,6 @@ public class AccentColorService
                 using var stream = await file.OpenAsync(FileAccessMode.Read);
                 var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
                 
-                // Get pixels as BGRA8 (standard 32-bit format)
                 var transform = new Windows.Graphics.Imaging.BitmapTransform();
                 var pixelData = await decoder.GetPixelDataAsync(
                     Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
@@ -694,7 +684,6 @@ public class AccentColorService
                 var bounds = new Drawing.Rectangle(0, 0, width, height);
                 var mapData = bitmap.LockBits(bounds, Drawing.Imaging.ImageLockMode.WriteOnly, bitmap.PixelFormat);
                 
-                // Use row-by-row copy if stride doesn't match width * 4 (rare for 32bpp but possible)
                 var stride = mapData.Stride;
                 var rowBytes = width * 4;
                 
@@ -718,7 +707,7 @@ public class AccentColorService
             catch (Exception ex2)
             {
                 System.Diagnostics.Debug.WriteLine($"WinRT fallback also failed: {ex2.Message}");
-                throw; // Rethrow original or fallback error? Probably original context matters more but both failed.
+                throw;
             }
         }
     }

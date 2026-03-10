@@ -10,7 +10,8 @@ using MyTelU_Launcher.Services;
 namespace MyTelU_Launcher.ViewModels;
 
 public partial class ScheduleViewModel : ObservableRecipient,
-    IRecipient<SessionCookiesSavedMessage>
+    IRecipient<SessionCookiesSavedMessage>,
+    IRecipient<BrowserLoginStateMessage>
 {
     private static readonly Dictionary<string, int> DayOrder = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -26,7 +27,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     private readonly IScheduleService      _scheduleService;
     private readonly IBrowserLoginService  _browserLoginService;
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanLoginWithBrowser))]
     private async Task BeginLoginFromOnboardingAsync() => await LoginWithBrowserAsync();
 
     [ObservableProperty]
@@ -83,7 +84,32 @@ public partial class ScheduleViewModel : ObservableRecipient,
         IsOffline ? $"Viewing cached schedule, last synced {CacheTimestamp}." : string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LoginWithBrowserCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BeginLoginFromOnboardingCommand))]
     private bool _isBrowserLoginRunning;
+
+    [ObservableProperty]
+    private bool _isReconnecting;
+
+    partial void OnIsReconnectingChanged(bool value)
+        => OnPropertyChanged(nameof(LoadingStatusText));
+
+    /// <summary>Text shown inside the loading overlay. Changes to "Reconnecting…" during silent login.</summary>
+    public string LoadingStatusText => _isReconnecting ? "Reconnecting…" : "Loading schedule…";
+
+    /// <summary>True while a silent re-login + live fetch run in the background after serving cached data.</summary>
+    [ObservableProperty]
+    private bool _isBackgroundRefreshing;
+
+    partial void OnIsBackgroundRefreshingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsRefreshing));
+        OnPropertyChanged(nameof(IsNotRefreshing));
+    }
+
+    /// <summary>True when any refresh is happening — full load OR background reconnect. Bind refresh buttons to this.</summary>
+    public bool IsRefreshing    => IsLoading || IsBackgroundRefreshing;
+    public bool IsNotRefreshing => !IsRefreshing;
 
     [ObservableProperty]
     private bool _isListLayout = true;
@@ -124,7 +150,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
         var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
         {
              Title = "Confirm Sign Out",
-             Content = "Are you sure you want to sign out and clear your schedule data?",
+             Content = "Are you sure you want to sign out and clear your academic data?",
              PrimaryButtonText = "Sign out",
              CloseButtonText = "Cancel",
              DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Primary,
@@ -145,6 +171,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     private async Task ClearSessionAsync()
     {
         _scheduleService.ClearSession();
+        _browserLoginService.ClearCredentials();
         // Reset state and reload (will show needs-login)
         await LoadScheduleAsync();
     }
@@ -196,12 +223,13 @@ public partial class ScheduleViewModel : ObservableRecipient,
         OnPropertyChanged(nameof(CacheTimestamp));
         OnPropertyChanged(nameof(CacheTimestampMessage));
     }
-    // Hook IsLoading changes too
     partial void OnIsLoadingChanged(bool value)
     {
         OnPropertyChanged(nameof(IsNotLoading));
         OnPropertyChanged(nameof(IsNotLoadingAndNotEmpty));
         OnPropertyChanged(nameof(IsInitialLoading));
+        OnPropertyChanged(nameof(IsRefreshing));
+        OnPropertyChanged(nameof(IsNotRefreshing));
     }
 
     /// <summary>
@@ -219,6 +247,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     {
         if (_suppressAcademicYearChange || value == null) return;
         _scheduleService.SaveAcademicYear(value.YearCode, value.SemesterCode);
+        FeatureFlowLogger.Write("Schedule", $"academic-year selected: {value.Value} | {value.Text}");
 
         _bypassCacheOnNextLoad = true;
         await LoadScheduleAsync();
@@ -294,6 +323,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
             _suppressAcademicYearChange = true;
             SelectedAcademicYear = toSelect;
             _suppressAcademicYearChange = false;
+            FeatureFlowLogger.Write("Schedule", $"academic-years resolved: selected={toSelect.Value} | {toSelect.Text}, options={options.Count}");
 #if DEBUG
             try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] SelectedAcademicYear set to '{toSelect.Text}'\n"); } catch { }
 #endif
@@ -329,8 +359,9 @@ public partial class ScheduleViewModel : ObservableRecipient,
         _scheduleService     = scheduleService;
         _browserLoginService = browserLoginService;
 
-        WeakReferenceMessenger.Default.Register(this);
-        // Chain sequentially: populate the dropdown first, then load the schedule.
+        WeakReferenceMessenger.Default.RegisterAll(this);
+        // Seed state in case login was already started before this VM was constructed.
+        IsBrowserLoginRunning = _browserLoginService.IsRunning;
         // Running both concurrently against the same session can cause one to fail.
         _ = InitializeAsync();
     }
@@ -369,10 +400,12 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
         IsBrowserLoginRunning = true;
         LoginWithBrowserCommand.NotifyCanExecuteChanged();
+        WeakReferenceMessenger.Default.Send(new BrowserLoginStateMessage(true));
         try
         {
             // Launches Edge, waits for login, captures cookies, fires SessionCookiesSavedMessage.
-            await _browserLoginService.StartLoginAsync();
+            var ok = await _browserLoginService.StartLoginAsync();
+            _ = ok; // login triggers SessionCookiesSavedMessage on success
         }
         catch (Exception ex)
         {
@@ -383,6 +416,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
         {
             IsBrowserLoginRunning = false;
             LoginWithBrowserCommand.NotifyCanExecuteChanged();
+            WeakReferenceMessenger.Default.Send(new BrowserLoginStateMessage(false));
         }
     }
 
@@ -395,6 +429,13 @@ public partial class ScheduleViewModel : ObservableRecipient,
     }
 
     private bool CanLoginWithBrowser() => !IsBrowserLoginRunning;
+
+    public void Receive(BrowserLoginStateMessage message)
+    {
+        // Mirror login-in-progress state broadcast from whichever VM initiated the login.
+        IsBrowserLoginRunning = message.Value;
+        LoginWithBrowserCommand.NotifyCanExecuteChanged();
+    }
 
     private CancellationTokenSource? _loadCts;
 
@@ -417,6 +458,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     public async Task LoadScheduleAsync()
     {
         // Cancel any pending load (e.g. user switched academic year while loading)
+        FeatureFlowLogger.Write("Schedule", $"load start: selected={SelectedAcademicYear?.Value ?? "(null)"}, bypass={_bypassCacheOnNextLoad}, online={_scheduleService.IsNetworkAvailable()}");
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
@@ -434,45 +476,105 @@ public partial class ScheduleViewModel : ObservableRecipient,
             bool bypass = _bypassCacheOnNextLoad;
             _bypassCacheOnNextLoad = false;
 
-            // ── 1. No session → show login immediately (do NOT serve stale cache) ──
-            // Run on background thread — CookieStore.Load() hits PasswordVault (synchronous crypto).
+            // ── 1. No session → try silent login, then show login screen ──
             bool hasSavedSession = await Task.Run(() => _scheduleService.HasSavedSession);
             if (!hasSavedSession)
             {
                 if (token.IsCancellationRequested) return;
-                ClearDisplayedScheduleData();
-                NeedsLogin = true;
-                return;
-            }
 
-            // ── 2. Serve from cache immediately (no network needed) ─────────────────
-            // Only if not bypassed and we have cache.
-            // Note: If user bypassed cache (refresh), we skip this.
-            if (!bypass && _scheduleService.HasCachedSchedule)
-            {
-                if (token.IsCancellationRequested) return;
-                // Run on background thread — SecureFileStore.Load() calls ProtectedData.Unprotect.
-                var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
-                if (cached != null)
+                if (_scheduleService.IsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
                 {
-                    // Re-check after async gap: a CancelLoad() call could have fired while we
-                    // were reading the cache file on the background thread.
+                    if (_scheduleService.HasCachedSchedule)
+                    {
+                        // Show cached data immediately, reconnect silently in the background.
+                        var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
+                        if (cached != null && !token.IsCancellationRequested)
+                        {
+                            IsLoading = false;
+                            PopulateScheduleData(cached);
+                            FeatureFlowLogger.Write("Schedule", "served cached schedule, starting background reconnect");
+                            _ = BackgroundReconnectScheduleAsync(token);
+                            return;
+                        }
+                    }
+
+                    IsReconnecting = true;
+                    var ok = await _browserLoginService.TrySilentLoginAsync(token);
+                    IsReconnecting = false;
                     if (token.IsCancellationRequested) return;
-                    IsOffline = !_scheduleService.IsNetworkAvailable();
-                    PopulateScheduleData(cached);
-                    // If offline, we are done. If online, user might want fresh data eventually, but typically we stop here unless forced refresh.
-                    return;   
+
+                    if (!ok)
+                    {
+                        ClearDisplayedScheduleData();
+                        NeedsLogin = true;
+                        FeatureFlowLogger.Write("Schedule", "silent login failed: showing NeedsLogin");
+                        return;
+                    }
+                    FeatureFlowLogger.Write("Schedule", "silent login succeeded: continuing with live fetch");
+                    bypass = true;
+                }
+                else
+                {
+                    // If credentials are gone but the device is still online, go straight to login.
+                    if (!_scheduleService.IsNetworkAvailable() && _scheduleService.HasCachedSchedule)
+                    {
+                        var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
+                        if (cached != null)
+                        {
+                            if (token.IsCancellationRequested) return;
+                            IsOffline = true;
+                            PopulateScheduleData(cached);
+                            FeatureFlowLogger.Write("Schedule", "offline with cache: showing cached schedule");
+                            return;
+                        }
+                    }
+                    ClearDisplayedScheduleData();
+                    NeedsLogin = true;
+                    return;
                 }
             }
 
-            // ── 3. No cache (or bypassed): need live fetch ─────────────────────
+            if (!bypass && _scheduleService.HasCachedSchedule)
+            {
+                if (token.IsCancellationRequested) return;
+                // DPAPI decrypt runs synchronously, so keep it off the UI thread.
+                var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
+                if (cached != null)
+                {
+                    if (token.IsCancellationRequested) return;
+                    PopulateScheduleData(cached);
+                    if (_scheduleService.IsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
+                        _ = BackgroundValidateAndRefreshScheduleAsync(token);
+                    else
+                        IsOffline = !_scheduleService.IsNetworkAvailable();
+                    return;
+                }
+            }
 
             var sessionStatus = await _scheduleService.ValidateSessionAsync();
             if (token.IsCancellationRequested) return;
 
             if (sessionStatus == SessionValidationResult.NoSession)
             {
-                // If we have cached content, keep showing it and let the View prompt the user.
+                if (_scheduleService.IsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
+                {
+                    IsReconnecting = true;
+                    var ok = await _browserLoginService.TrySilentLoginAsync(token);
+                    IsReconnecting = false;
+                    if (token.IsCancellationRequested) return;
+
+                    if (ok)
+                    {
+                        var refreshed = await _scheduleService.GetScheduleAsync(token);
+                        if (token.IsCancellationRequested) return;
+                        if (refreshed != null)
+                        {
+                            PopulateScheduleData(refreshed);
+                            return;
+                        }
+                    }
+                }
+
                 if (_scheduleService.HasCachedSchedule)
                 {
                     var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
@@ -481,10 +583,10 @@ public partial class ScheduleViewModel : ObservableRecipient,
                         IsOffline = true;
                         PopulateScheduleData(cached);
                         WeakReferenceMessenger.Default.Send(new SessionExpiredMessage());
+                        FeatureFlowLogger.Write("Schedule", "session expired: fell back to cached schedule");
                         return;
                     }
                 }
-                // No cache — nothing to show, must relog.
                 ClearDisplayedScheduleData();
                 NeedsLogin = true;
                 return;
@@ -499,6 +601,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
                     {
                         IsOffline = true;
                         PopulateScheduleData(cached);
+                        FeatureFlowLogger.Write("Schedule", "network error: fell back to cached schedule");
                         return;
                     }
                 }
@@ -512,19 +615,21 @@ public partial class ScheduleViewModel : ObservableRecipient,
             if (token.IsCancellationRequested) return;
 
             if (schedule != null)
+            {
                 PopulateScheduleData(schedule);
+                FeatureFlowLogger.Write("Schedule", $"live fetch success: selected={SelectedAcademicYear?.Value ?? "(all)"}, courses={schedule.Courses.Count}");
+            }
             else
             {
-                // If cancelled inside service (returning null), catch it here
                 if (token.IsCancellationRequested) return;
                 
                 HasError = true;
                 ErrorMessage = "Could not load schedule data. Try refreshing.";
+                FeatureFlowLogger.Write("Schedule", "live fetch failed: no cache available");
             }
         }
         catch (OperationCanceledException)
         {
-            // Ignore cancellation
         }
         catch (Exception ex)
         {
@@ -533,7 +638,6 @@ public partial class ScheduleViewModel : ObservableRecipient,
         }
         finally
         {
-            // Only clear IsLoading if this is the active CTS
             if (!token.IsCancellationRequested)
                 IsLoading = false;
         }
@@ -545,12 +649,132 @@ public partial class ScheduleViewModel : ObservableRecipient,
     [RelayCommand]
     private async Task RefreshScheduleAsync()
     {
+        FeatureFlowLogger.Write("Schedule", $"refresh start: selected={SelectedAcademicYear?.Value ?? "(null)"}");
         _bypassCacheOnNextLoad = true;
         await LoadScheduleAsync();
 
-        // Always refresh the dropdown — offline path collapses it to the cached entry.
         if (!NeedsLogin)
             _ = LoadAcademicYearsAsync();
+    }
+
+    /// <summary>Refreshes cached schedule data in the background after the page has already rendered.</summary>
+    private async Task BackgroundReconnectScheduleAsync(CancellationToken token)
+    {
+        IsBackgroundRefreshing = true;
+        FeatureFlowLogger.Write("Schedule", "background reconnect start");
+        try
+        {
+            var ok = await _browserLoginService.TrySilentLoginAsync(token);
+            if (!ok || token.IsCancellationRequested)
+            {
+                if (!token.IsCancellationRequested)
+                {
+                    if (_scheduleService.IsNetworkAvailable())
+                        NeedsLogin = true;   // online but auth failed — prompt relog
+                    else
+                        IsOffline = true;    // actually offline
+                }
+                FeatureFlowLogger.Write("Schedule", "background reconnect failed");
+                return;
+            }
+
+            var live = await _scheduleService.GetScheduleAsync(token);
+            if (live != null && !token.IsCancellationRequested)
+            {
+                PopulateScheduleData(live);
+                FeatureFlowLogger.Write("Schedule", "background reconnect success");
+            }
+        }
+        catch (OperationCanceledException) { /* ignore */ }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BackgroundReconnect] Schedule: {ex.Message}");
+            if (!token.IsCancellationRequested) IsOffline = true;
+        }
+        finally
+        {
+            IsBackgroundRefreshing = false;
+        }
+    }
+
+    /// <summary>Refreshes cached schedule data in the background when saved cookies might be stale.</summary>
+    private async Task BackgroundValidateAndRefreshScheduleAsync(CancellationToken token)
+    {
+        IsBackgroundRefreshing = true;
+        FeatureFlowLogger.Write("Schedule", "background validate start");
+        try
+        {
+#if DEBUG
+            var _bgLogFile = System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData),
+                "TY4EHelper", "silent_login.log");
+            void BgLog(string msg)
+            {
+                try { System.IO.File.AppendAllText(_bgLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [BGValidate] {msg}\n"); } catch { }
+            }
+            BgLog("=== BackgroundValidateAndRefreshScheduleAsync started ===");
+#endif
+            var sessionStatus = await _scheduleService.ValidateSessionAsync();
+            if (token.IsCancellationRequested) return;
+#if DEBUG
+            BgLog($"ValidateSessionAsync returned {sessionStatus}");
+#endif
+            if (sessionStatus == SessionValidationResult.NetworkError)
+            {
+                IsOffline = true;
+                FeatureFlowLogger.Write("Schedule", "background validate: network error");
+                return;
+            }
+
+            if (sessionStatus == SessionValidationResult.NoSession)
+            {
+                if (!_browserLoginService.HasSavedCredentials)
+                {
+#if DEBUG
+                    BgLog("No saved credentials — showing NeedsLogin");
+#endif
+                    NeedsLogin = true;
+                    FeatureFlowLogger.Write("Schedule", "background validate: no saved credentials");
+                    return;
+                }
+#if DEBUG
+                BgLog("Session expired — starting silent login");
+#endif
+                var ok = await _browserLoginService.TrySilentLoginAsync(token);
+                if (!ok || token.IsCancellationRequested)
+                {
+                    if (!token.IsCancellationRequested)
+                    {
+                        if (_scheduleService.IsNetworkAvailable())
+                            NeedsLogin = true;
+                        else
+                            IsOffline = true;
+                    }
+                    return;
+                }
+                FeatureFlowLogger.Write("Schedule", "background validate: relogin succeeded");
+            }
+
+            var live = await _scheduleService.GetScheduleAsync(token);
+#if DEBUG
+            BgLog($"GetLiveScheduleAsync returned {(live == null ? "null" : "data")}");
+#endif
+            if (live != null && !token.IsCancellationRequested)
+            {
+                PopulateScheduleData(live);
+                FeatureFlowLogger.Write("Schedule", "background validate success");
+            }
+        }
+        catch (OperationCanceledException) { /* ignore */ }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BackgroundValidate] Schedule: {ex.Message}");
+            if (!token.IsCancellationRequested) IsOffline = true;
+        }
+        finally
+        {
+            IsBackgroundRefreshing = false;
+        }
     }
 
     /// <summary>Populates all VM collections from a <see cref="ScheduleResponse"/>.</summary>
@@ -581,9 +805,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
             .ThenBy(c => c.Time)
             .ToList();
 
-        // ── Compute today's course status badges ────────────────────────
-        // Badges are only meaningful for the current academic year; past years
-        // have all courses permanently "finished" from the calendar perspective.
+            // Badges only make sense for the active academic year.
         bool isCurrentAcademicYear = SelectedAcademicYear?.IsSelected == true;
         var nowTime = DateTime.Now.TimeOfDay;
         DayOrder.TryGetValue(DateTime.Now.DayOfWeek.ToString(), out var todayOrderIdx);
@@ -662,7 +884,6 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     private void EnsureAcademicYearFallbackFromSchedule(ScheduleResponse schedule)
     {
-        // If options already exist, keep them.
         if (AcademicYearOptions.Count > 0) return;
 
         var academicYear = schedule.AcademicYear?.Trim();
@@ -679,10 +900,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
             SemesterCode = parts[1],
             IsSelected = true
         };
-
-        AcademicYearOptions.Add(fallback);
-        _suppressAcademicYearChange = true;
-        SelectedAcademicYear = fallback;
+            /// <summary>Refreshes cached schedule data in the background when saved cookies might be stale.</summary>
         _suppressAcademicYearChange = false;
     }
 
@@ -726,49 +944,54 @@ public partial class ScheduleViewModel : ObservableRecipient,
         _suppressDayChange = false;
     }
 
-    // ── Timetable helpers ─────────────────────────────────────────────────
-
-    // 180 px per hour — must match the header cell width in XAML
+    // Must stay in sync with the header cell width in SchedulePage.xaml.
     private const double HourWidth = 180.0;
 
     private async Task RebuildSelectedDayViewAsync()
     {
-        // Play hide animation (120 ms matches HideTransitions duration)
         IsTimetableContentVisible = false;
         await Task.Delay(120);
 
         TimetableTimeHeaders.Clear();
         TimetableCourseRows.Clear();
 
-        if (string.IsNullOrEmpty(SelectedDay) || !_allSorted.Any()) return;
-
-        var dayCourses = _allSorted
-            .Where(c => string.Equals(c.Day, SelectedDay, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(c => c.TimeStart)
-            .ToList();
-
-        if (!dayCourses.Any()) return;
-
-        var slots = BuildHourSlots(dayCourses);
-        foreach (var s in slots) TimetableTimeHeaders.Add(s.Label);
-
-        var minStart = slots.First().Start;
-
-        foreach (var course in dayCourses)
+        // Always restore visibility even when the selected day has no courses.
+        try
         {
-            var start = TryParseTime(course.TimeStart) ?? minStart;
-            var end   = TryParseTime(course.TimeEnd)   ?? start.Add(TimeSpan.FromHours(1));
+            if (string.IsNullOrEmpty(SelectedDay) || !_allSorted.Any()) return;
 
-            TimetableCourseRows.Add(new TimetableCourseRow
+            var dayCourses = _allSorted
+                .Where(c => string.Equals(c.Day, SelectedDay, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(c => c.TimeStart)
+                .ToList();
+
+            if (!dayCourses.Any()) return;
+
+            var slots = BuildHourSlots(dayCourses);
+            if (!slots.Any()) return; // time parsing failed for all courses in this day
+
+            foreach (var s in slots) TimetableTimeHeaders.Add(s.Label);
+
+            var minStart = slots.First().Start;
+
+            foreach (var course in dayCourses)
             {
-                Course     = course,
-                LeftOffset = (start - minStart).TotalHours * HourWidth,
-                CardWidth  = Math.Max((end - start).TotalHours * HourWidth, HourWidth),
-            });
-        }
+                var start = TryParseTime(course.TimeStart) ?? minStart;
+                var end   = TryParseTime(course.TimeEnd)   ?? start.Add(TimeSpan.FromHours(1));
 
-        // Play show animation
-        IsTimetableContentVisible = true;
+                TimetableCourseRows.Add(new TimetableCourseRow
+                {
+                    Course     = course,
+                    LeftOffset = (start - minStart).TotalHours * HourWidth,
+                    CardWidth  = Math.Max((end - start).TotalHours * HourWidth, HourWidth),
+                });
+            }
+        }
+        finally
+        {
+            // Play show animation (runs regardless of whether rows were added)
+            IsTimetableContentVisible = true;
+        }
     }
 
     private record HourSlot(string Label, TimeSpan Start, TimeSpan End);

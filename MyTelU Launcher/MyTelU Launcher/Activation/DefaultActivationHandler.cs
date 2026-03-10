@@ -1,4 +1,5 @@
 ﻿using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media.Animation;
 
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.ViewModels;
@@ -22,7 +23,7 @@ public class DefaultActivationHandler : ActivationHandler<LaunchActivatedEventAr
 
     protected async override Task HandleInternalAsync(LaunchActivatedEventArgs args)
     {
-        _navigationService.NavigateTo(typeof(HomeViewModel).FullName!, args.Arguments);
+        _navigationService.NavigateTo(typeof(HomeViewModel).FullName!, args.Arguments, transitionInfo: new DrillInNavigationTransitionInfo());
 
         await Task.CompletedTask;
     }

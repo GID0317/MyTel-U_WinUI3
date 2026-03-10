@@ -13,6 +13,20 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
     private const string ToolsSettingsKey = "SavedTools";
     private const string CommunityToolsSettingsKey = "SavedCommunityTools";
     private const string DeletedToolsSettingsKey = "DeletedDefaultTools";
+    private static readonly IReadOnlyList<ToolItem> DefaultTools =
+    [
+        new ToolItem { Name = "SEE Lab", Icon = "🤖", Url = "https://see.labs.telkomuniversity.ac.id/home", Category = "Tools" },
+        new ToolItem { Name = "Lab Fisika Dasar", Icon = "🚀", Url = "https://labfisdas-telu.com/", Category = "Tools" },
+        new ToolItem { Name = "SEA Lab", Icon = "💻", Url = "https://sealab-telu.com/", Category = "Tools" },
+        new ToolItem { Name = "Evconn Lab", Icon = "🛜", Url = "https://labevconn.com/", Category = "Tools" },
+        new ToolItem { Name = "SECULAB", Icon = "🔐", Url = "https://seculab-telu.cloud/", Category = "Tools" },
+        new ToolItem { Name = "KEPOKAPE", Icon = "👷", Url = "https://kepokape.id/", Category = "Tools" }
+    ];
+    private static readonly IReadOnlyList<ToolItem> DefaultCommunityTools =
+    [
+        new ToolItem { Name = "Jeey college files", Icon = "😂", Url = "https://ac.jeyy.xyz/files/", Category = "Community" },
+        new ToolItem { Name = "Regresi Linear", Icon = "🧮", Url = "https://regresi.msatrio.com/", Category = "Community" }
+    ];
 
     public ObservableCollection<ToolItem> Tools { get; } = new();
     public ObservableCollection<ToolItem> CommunityTools { get; } = new();
@@ -44,11 +58,10 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
     {
         var savedTools = await _localSettingsService.ReadSettingAsync<List<ToolItem>>(ToolsSettingsKey);
         var savedCommunityTools = await _localSettingsService.ReadSettingAsync<List<ToolItem>>(CommunityToolsSettingsKey);
-        var deletedTools = await _localSettingsService.ReadSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? new List<string>();
-
-        // Load default tools lists (what should be there)
-        var defaultTools = GetDefaultTools();
-        var defaultCommunityTools = GetDefaultCommunityTools();
+        var deletedTools = await _localSettingsService.ReadSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? [];
+        var deletedToolsSet = new HashSet<string>(deletedTools, StringComparer.OrdinalIgnoreCase);
+        var hasToolChanges = false;
+        var hasCommunityToolChanges = false;
 
         // Unsubscribe existing event handlers if they exist to prevent memory leaks on reload
         Tools.CollectionChanged -= Tools_CollectionChanged;
@@ -60,6 +73,8 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
 
         if (savedTools != null && savedTools.Count > 0)
         {
+            var savedToolUrls = new HashSet<string>(savedTools.Select(tool => tool.Url), StringComparer.OrdinalIgnoreCase);
+
             // Add existing saved tools
             foreach (var tool in savedTools)
             {
@@ -67,11 +82,21 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
             }
 
             // Check for any NEW default tools that aren't in the saved list AND haven't been deleted
-            foreach (var defTool in defaultTools)
+            for (int defIndex = 0; defIndex < DefaultTools.Count; defIndex++)
             {
-                if (!Tools.Any(t => t.Url == defTool.Url) && !deletedTools.Contains(defTool.Url))
+                var defTool = DefaultTools[defIndex];
+                if (!savedToolUrls.Contains(defTool.Url) && !deletedToolsSet.Contains(defTool.Url))
                 {
-                    Tools.Add(defTool);
+                    // Insert at correct position based on defaultTools order
+                    int insertAt = 0;
+                    for (int i = 0; i < defIndex; i++)
+                    {
+                        if (savedToolUrls.Contains(DefaultTools[i].Url))
+                            insertAt++;
+                    }
+                    Tools.Insert(insertAt, defTool);
+                    savedToolUrls.Add(defTool.Url);
+                    hasToolChanges = true;
                 }
             }
         }
@@ -80,9 +105,9 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
             // First run or no saved tools
             // Load defaults unless they were explicitly deleted (edge case where user deletes all but data cleared?)
             // Actually, if savedTools is null/empty, we should respect deletedTools if present (unlikely on fresh install, but possible on clear)
-            foreach (var tool in defaultTools)
+            foreach (var tool in DefaultTools)
             {
-                if (!deletedTools.Contains(tool.Url))
+                if (!deletedToolsSet.Contains(tool.Url))
                 {
                     Tools.Add(tool);
                 }
@@ -91,34 +116,44 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
 
         if (savedCommunityTools != null && savedCommunityTools.Count > 0)
         {
+            var savedCommunityToolUrls = new HashSet<string>(savedCommunityTools.Select(tool => tool.Url), StringComparer.OrdinalIgnoreCase);
+
             foreach (var tool in savedCommunityTools)
             {
                 CommunityTools.Add(tool);
             }
 
             // Check for any NEW community tools that aren't in the saved list AND haven't been deleted
-            foreach (var defTool in defaultCommunityTools)
+            foreach (var defTool in DefaultCommunityTools)
             {
-                if (!CommunityTools.Any(t => t.Url == defTool.Url) && !deletedTools.Contains(defTool.Url))
+                if (!savedCommunityToolUrls.Contains(defTool.Url) && !deletedToolsSet.Contains(defTool.Url))
                 {
                     CommunityTools.Add(defTool);
+                    savedCommunityToolUrls.Add(defTool.Url);
+                    hasCommunityToolChanges = true;
                 }
             }
         }
         else
         {
-            foreach (var tool in defaultCommunityTools)
+            foreach (var tool in DefaultCommunityTools)
             {
-                if (!deletedTools.Contains(tool.Url))
+                if (!deletedToolsSet.Contains(tool.Url))
                 {
                     CommunityTools.Add(tool);
                 }
             }
         }
 
-        // Save immediately to persist any new defaults added
-        SaveToolsAsync();
-        SaveCommunityToolsAsync();
+        if (hasToolChanges)
+        {
+            SaveToolsAsync();
+        }
+
+        if (hasCommunityToolChanges)
+        {
+            SaveCommunityToolsAsync();
+        }
 
         // Subscribe to collection changes to save automatically when reordered
         Tools.CollectionChanged += Tools_CollectionChanged;
@@ -128,26 +163,6 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
     private void Tools_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => SaveToolsAsync();
     
     private void CommunityTools_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => SaveCommunityToolsAsync();
-
-    private List<ToolItem> GetDefaultTools()
-    {
-        return new List<ToolItem>
-        {
-            new ToolItem { Name = "Lab Fisika Dasar", Icon = "\U0001F680", Url = "https://labfisdas-telu.com/", Category = "Tools" },
-            new ToolItem { Name = "SEA Lab", Icon = "💻", Url = "https://sealab-telu.com/", Category = "Tools" },
-            new ToolItem { Name = "Evconn Lab", Icon = "🛜", Url = "https://labevconn.com/", Category = "Tools" },
-            new ToolItem { Name = "SECULAB", Icon = "🔐", Url = "https://seculab-telu.cloud/", Category = "Tools" }
-        };
-    }
-
-    private List<ToolItem> GetDefaultCommunityTools()
-    {
-        return new List<ToolItem>
-        {
-            new ToolItem { Name = "Jeey college files", Icon = "😂", Url = "https://ac.jeyy.xyz/files/", Category = "Community" },
-            new ToolItem { Name = "Regresi Linear", Icon = "🧮", Url = "https://regresi.msatrio.com/", Category = "Community" }
-        };
-    }
 
     private async void SaveToolsAsync()
     {
@@ -182,10 +197,7 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
         collection.Remove(tool);
 
         // Check if the removed tool was a default one
-        var defaultTools = GetDefaultTools();
-        var defaultCommunityTools = GetDefaultCommunityTools();
-
-        bool isDefault = defaultTools.Any(t => t.Url == tool.Url) || defaultCommunityTools.Any(t => t.Url == tool.Url);
+        bool isDefault = DefaultTools.Any(t => t.Url == tool.Url) || DefaultCommunityTools.Any(t => t.Url == tool.Url);
 
         if (isDefault)
         {
@@ -210,6 +222,60 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
         }
     }
 
+    public async Task UpdateToolAsync(ToolItem originalTool, ToolItem updatedTool)
+    {
+        var originalCollection = Tools.Contains(originalTool) ? Tools : CommunityTools.Contains(originalTool) ? CommunityTools : null;
+        if (originalCollection == null)
+        {
+            return;
+        }
+
+        var targetCollection = updatedTool.Category == "Tools" ? Tools : CommunityTools;
+        var originalIndex = originalCollection.IndexOf(originalTool);
+
+        var shouldMarkOriginalDefaultAsDeleted = IsDefaultTool(originalTool) &&
+            (!string.Equals(originalTool.Url, updatedTool.Url, StringComparison.OrdinalIgnoreCase) ||
+             !string.Equals(originalTool.Category, updatedTool.Category, StringComparison.OrdinalIgnoreCase));
+
+        if (shouldMarkOriginalDefaultAsDeleted)
+        {
+            await EnsureDeletedDefaultToolAsync(originalTool.Url);
+        }
+
+        if (ReferenceEquals(originalCollection, targetCollection))
+        {
+            if (originalIndex >= 0)
+            {
+                originalCollection[originalIndex] = updatedTool;
+            }
+            return;
+        }
+
+        if (originalIndex >= 0)
+        {
+            originalCollection.RemoveAt(originalIndex);
+        }
+
+        targetCollection.Add(updatedTool);
+    }
+
+    public void DuplicateTool(ToolItem tool, ObservableCollection<ToolItem> collection)
+    {
+        var index = collection.IndexOf(tool);
+        if (index < 0)
+        {
+            return;
+        }
+
+        collection.Insert(index + 1, new ToolItem
+        {
+            Name = tool.Name,
+            Icon = tool.Icon,
+            Url = tool.Url,
+            Category = tool.Category
+        });
+    }
+
     public bool CanMoveUp(ToolItem tool, ObservableCollection<ToolItem> collection)
     {
         var index = collection.IndexOf(tool);
@@ -220,5 +286,22 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
     {
         var index = collection.IndexOf(tool);
         return index >= 0 && index < collection.Count - 1;
+    }
+
+    private static bool IsDefaultTool(ToolItem tool)
+    {
+        return DefaultTools.Any(t => t.Url == tool.Url) || DefaultCommunityTools.Any(t => t.Url == tool.Url);
+    }
+
+    private async Task EnsureDeletedDefaultToolAsync(string toolUrl)
+    {
+        var deletedTools = await _localSettingsService.ReadSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? [];
+        if (deletedTools.Contains(toolUrl))
+        {
+            return;
+        }
+
+        deletedTools.Add(toolUrl);
+        await _localSettingsService.SaveSettingAsync(DeletedToolsSettingsKey, deletedTools);
     }
 }

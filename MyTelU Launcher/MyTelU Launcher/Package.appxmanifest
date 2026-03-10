@@ -14,8 +14,8 @@
 
   <Identity
     Name="DeNesisTeam.MyTelULauncher"
-    Publisher="CN=94FC41BE-2F4E-4493-88D7-175602DEF3B1"
-    Version="4.0.0.0" />
+    Publisher="CN=DeNesis"
+    Version="4.0.1.0" />
     
   <mp:PhoneIdentity PhoneProductId="d24d1284-7289-41dc-91e2-3ce23a83e406" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
     
@@ -23,12 +23,10 @@
     <DisplayName>MyTel‑U Launcher</DisplayName>
     <PublisherDisplayName>DeNesis Team</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
-    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
   </Properties>
 
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
   </Dependencies>
 
   <Resources>

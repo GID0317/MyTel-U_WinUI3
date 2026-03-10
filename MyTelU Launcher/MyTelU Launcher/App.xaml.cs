@@ -93,6 +93,9 @@ public partial class App : Application
                 services.AddTransient<SchedulePage>();
                 services.AddTransient<AttendanceViewModel>();
                 services.AddTransient<AttendancePage>();
+                services.AddSingleton<IGradeService, GradeService>();
+                services.AddTransient<GradeViewModel>();
+                services.AddTransient<GradePage>();
                 services.AddTransient<ShellPage>();
                 services.AddTransient<ShellViewModel>();
 
@@ -101,14 +104,29 @@ public partial class App : Application
             })
             .Build();
 
-        App.GetService<IAppNotificationService>().Initialize();
+        try
+        {
+            App.GetService<IAppNotificationService>().Initialize();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[App] AppNotificationService.Initialize failed: {ex}");
+        }
         UnhandledException += App_UnhandledException;
     }
 
     private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        // TODO: Log and handle exceptions as appropriate.
-        System.Diagnostics.Debug.WriteLine($"Unhandled exception: {e.Exception}");
+        e.Handled = true;
+        var msg = $"[{DateTime.Now:u}] Unhandled exception: {e.Exception}";
+        System.Diagnostics.Debug.WriteLine(msg);
+        try
+        {
+            var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TY4EHelper");
+            Directory.CreateDirectory(logDir);
+            File.AppendAllText(Path.Combine(logDir, "crash.log"), msg + Environment.NewLine);
+        }
+        catch { }
     }
 
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
