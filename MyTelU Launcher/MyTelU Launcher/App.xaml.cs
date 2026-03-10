@@ -58,20 +58,10 @@ public partial class App : Application
                 services.AddTransient<ActivationHandler<LaunchActivatedEventArgs>, DefaultActivationHandler>();
 
                 // Other Activation Handlers
-                if (RuntimeHelper.IsMSIX)
-                {
-                    services.AddTransient<IActivationHandler, AppNotificationActivationHandler>();
-                }
+                services.AddTransient<IActivationHandler, AppNotificationActivationHandler>();
 
                 // Services
-                if (RuntimeHelper.IsMSIX)
-                {
-                    services.AddSingleton<IAppNotificationService, AppNotificationService>();
-                }
-                else
-                {
-                    services.AddSingleton<IAppNotificationService, NoOpAppNotificationService>();
-                }
+                services.AddSingleton<IAppNotificationService, AppNotificationService>();
                 services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
                 services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
                 services.AddSingleton<AccentColorService>();
@@ -116,10 +106,7 @@ public partial class App : Application
 
         try
         {
-            if (RuntimeHelper.IsMSIX)
-            {
-                App.GetService<IAppNotificationService>().Initialize();
-            }
+            App.GetService<IAppNotificationService>().Initialize();
         }
         catch (Exception ex)
         {

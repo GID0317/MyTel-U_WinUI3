@@ -373,7 +373,7 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Right: Mascot panel -->
+                <!-- Right: Accent panel -->
                 <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                       Margin="0,32,48,32" CornerRadius="20">
                     <Grid.Background>
@@ -382,12 +382,13 @@
                             <GradientStop Color="Transparent" Offset="1.0"/>
                         </LinearGradientBrush>
                     </Grid.Background>
-
-                    <Image Source="ms-appx:///Assets/GalihKoper_Icon.png"
-                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                           Margin="16,32,16,0"
-                           MaxHeight="400"
-                           Stretch="Uniform"/>
+                    <FontIcon Glyph="&#xE9D9;" FontSize="120" Opacity="0.18"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Foreground="White"/>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                        <TextBlock Text="A" FontSize="96" FontWeight="Black"
+                                   HorizontalAlignment="Center" Foreground="White" Opacity="0.25"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Grid>
