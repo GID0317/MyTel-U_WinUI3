@@ -1,4 +1,5 @@
 using System;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using MyTelU_Launcher.Models;
 using MyTelU_Launcher.ViewModels;
@@ -75,16 +76,7 @@ public sealed partial class ManageToolsDialog : ContentDialog
 
     private void RemoveButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        ToolItem? tool = null;
-        
-        if (sender is Button button)
-        {
-            tool = button.Tag as ToolItem;
-        }
-        else if (sender is MenuFlyoutItem menuItem)
-        {
-            tool = menuItem.Tag as ToolItem;
-        }
+        var tool = GetToolFromSender(sender);
         
         if (tool != null)
         {
@@ -100,20 +92,69 @@ public sealed partial class ManageToolsDialog : ContentDialog
         }
     }
 
+    private async void EditButton_Click(object sender, RoutedEventArgs e)
+    {
+        var tool = GetToolFromSender(sender);
+        if (tool == null)
+        {
+            return;
+        }
+
+        Hide();
+
+        var category = ViewModel.Tools.Contains(tool) ? "Tools" : "Community Tools";
+        var updatedTool = await ShowToolEditorDialogAsync("Edit Tool", "Save", tool, category);
+
+        if (updatedTool != null)
+        {
+            await ViewModel.UpdateToolAsync(tool, updatedTool);
+        }
+
+        await ShowAsync();
+    }
+
+    private void DuplicateButton_Click(object sender, RoutedEventArgs e)
+    {
+        var tool = GetToolFromSender(sender);
+        if (tool == null)
+        {
+            return;
+        }
+
+        if (ViewModel.Tools.Contains(tool))
+        {
+            ViewModel.DuplicateTool(tool, ViewModel.Tools);
+        }
+        else if (ViewModel.CommunityTools.Contains(tool))
+        {
+            ViewModel.DuplicateTool(tool, ViewModel.CommunityTools);
+        }
+    }
+
     private void MenuFlyout_Opening(object sender, object e)
     {
-        if (sender is MenuFlyout flyout && flyout.Items.Count >= 2)
+        if (sender is MenuFlyout flyout)
         {
-            // Get the move up and move down items (first two items in the flyout)
-            var moveUpItem = flyout.Items[0] as MenuFlyoutItem;
-            var moveDownItem = flyout.Items[1] as MenuFlyoutItem;
+            var moveUpItem = flyout.Items
+                .OfType<MenuFlyoutItem>()
+                .FirstOrDefault(item => string.Equals(item.Text, "Move up", StringComparison.Ordinal));
+            var moveDownItem = flyout.Items
+                .OfType<MenuFlyoutItem>()
+                .FirstOrDefault(item => string.Equals(item.Text, "Move down", StringComparison.Ordinal));
+            var tool = flyout.Items
+                .OfType<MenuFlyoutItem>()
+                .Select(item => item.Tag as ToolItem)
+                .FirstOrDefault(item => item != null);
 
-            if (moveUpItem?.Tag is ToolItem tool)
+            if (tool != null)
             {
-                // Determine which collection this tool belongs to
                 if (ViewModel.Tools.Contains(tool))
                 {
-                    moveUpItem.IsEnabled = ViewModel.CanMoveUp(tool, ViewModel.Tools);
+                    if (moveUpItem != null)
+                    {
+                        moveUpItem.IsEnabled = ViewModel.CanMoveUp(tool, ViewModel.Tools);
+                    }
+
                     if (moveDownItem != null)
                     {
                         moveDownItem.IsEnabled = ViewModel.CanMoveDown(tool, ViewModel.Tools);
@@ -121,7 +162,11 @@ public sealed partial class ManageToolsDialog : ContentDialog
                 }
                 else if (ViewModel.CommunityTools.Contains(tool))
                 {
-                    moveUpItem.IsEnabled = ViewModel.CanMoveUp(tool, ViewModel.CommunityTools);
+                    if (moveUpItem != null)
+                    {
+                        moveUpItem.IsEnabled = ViewModel.CanMoveUp(tool, ViewModel.CommunityTools);
+                    }
+
                     if (moveDownItem != null)
                     {
                         moveDownItem.IsEnabled = ViewModel.CanMoveDown(tool, ViewModel.CommunityTools);
@@ -139,18 +184,46 @@ public sealed partial class ManageToolsDialog : ContentDialog
         // Close this dialog temporarily
         sender.Hide();
 
-        var addDialog = new ContentDialog
+        var newTool = await ShowToolEditorDialogAsync("Add New Tool", "Add", null, "Tools");
+
+        if (newTool != null)
         {
-            Title = "Add New Tool",
-            PrimaryButtonText = "Add",
+            ViewModel.AddTool(newTool, newTool.Category);
+        }
+
+        // Reopen this same dialog
+        await sender.ShowAsync();
+    }
+
+    private ToolItem? GetToolFromSender(object sender)
+    {
+        if (sender is Button button)
+        {
+            return button.Tag as ToolItem;
+        }
+
+        if (sender is MenuFlyoutItem menuItem)
+        {
+            return menuItem.Tag as ToolItem;
+        }
+
+        return null;
+    }
+
+    private async Task<ToolItem?> ShowToolEditorDialogAsync(string title, string primaryButtonText, ToolItem? existingTool, string defaultCategory)
+    {
+        var editorDialog = new ContentDialog
+        {
+            Title = title,
+            PrimaryButtonText = primaryButtonText,
             CloseButtonText = "Cancel",
             DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = this.XamlRoot
+            IsPrimaryButtonEnabled = false,
+            XamlRoot = XamlRoot
         };
 
-        // Apply dynamic accent colors to fix ContentDialog button hover states
         var accentService = App.GetService<MyTelU_Launcher.Services.AccentColorService>();
-        accentService?.ApplyToContentDialog(addDialog);
+        accentService?.ApplyToContentDialog(editorDialog);
 
         var stack = new StackPanel { Spacing = 12 };
 
@@ -158,24 +231,26 @@ public sealed partial class ManageToolsDialog : ContentDialog
         {
             Header = "Category",
             PlaceholderText = "Select category",
-            HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Stretch
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
         categoryCombo.Items.Add("Tools");
         categoryCombo.Items.Add("Community Tools");
-        categoryCombo.SelectedIndex = 0;
+        categoryCombo.SelectedItem = defaultCategory;
         stack.Children.Add(categoryCombo);
 
         var nameBox = new TextBox
         {
             Header = "Tool Name",
-            PlaceholderText = "Enter tool name"
+            PlaceholderText = "Enter tool name",
+            Text = existingTool?.Name ?? string.Empty
         };
         stack.Children.Add(nameBox);
 
         var urlBox = new TextBox
         {
             Header = "URL",
-            PlaceholderText = "https://example.com"
+            PlaceholderText = "https://example.com",
+            Text = existingTool?.Url ?? string.Empty
         };
         stack.Children.Add(urlBox);
 
@@ -183,28 +258,35 @@ public sealed partial class ManageToolsDialog : ContentDialog
         {
             Header = "Icon (Emoji)",
             PlaceholderText = "🔥",
-            Text = "🔥"
+            Text = string.IsNullOrWhiteSpace(existingTool?.Icon) ? "🔥" : existingTool.Icon
         };
         stack.Children.Add(iconBox);
 
-        addDialog.Content = stack;
+        editorDialog.Content = stack;
 
-        var result = await addDialog.ShowAsync();
-
-        if (result == ContentDialogResult.Primary && !string.IsNullOrWhiteSpace(nameBox.Text))
+        void UpdatePrimaryButtonState(object? _, object __)
         {
-            var newTool = new ToolItem
-            {
-                Name = nameBox.Text,
-                Url = urlBox.Text,
-                Icon = iconBox.Text,
-                Category = categoryCombo.SelectedItem?.ToString() ?? "Tools"
-            };
-
-            ViewModel.AddTool(newTool, newTool.Category);
+            editorDialog.IsPrimaryButtonEnabled =
+                !string.IsNullOrWhiteSpace(nameBox.Text) &&
+                !string.IsNullOrWhiteSpace(urlBox.Text);
         }
 
-        // Reopen this same dialog
-        await sender.ShowAsync();
+        nameBox.TextChanged += UpdatePrimaryButtonState;
+        urlBox.TextChanged += UpdatePrimaryButtonState;
+        UpdatePrimaryButtonState(null, EventArgs.Empty);
+
+        var result = await editorDialog.ShowAsync();
+        if (result != ContentDialogResult.Primary)
+        {
+            return null;
+        }
+
+        return new ToolItem
+        {
+            Name = nameBox.Text.Trim(),
+            Url = urlBox.Text.Trim(),
+            Icon = string.IsNullOrWhiteSpace(iconBox.Text) ? "🔥" : iconBox.Text.Trim(),
+            Category = categoryCombo.SelectedItem?.ToString() == "Community Tools" ? "Community" : "Tools"
+        };
     }
 }

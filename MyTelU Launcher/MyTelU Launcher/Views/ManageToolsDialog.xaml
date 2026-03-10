@@ -62,6 +62,21 @@
                                       HorizontalAlignment="Stretch">
                                     <Grid.ContextFlyout>
                                         <MenuFlyout Opening="MenuFlyout_Opening">
+                                            <MenuFlyoutItem Text="Edit"
+                                                            Click="EditButton_Click"
+                                                            Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE70F;"/>
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Duplicate"
+                                                            Click="DuplicateButton_Click"
+                                                            Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE8C8;"/>
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutSeparator/>
                                             <MenuFlyoutItem Text="Move up"
                                                             Click="MoveUpButton_Click"
                                                             Tag="{x:Bind}">
@@ -134,6 +149,21 @@
                                         </Button.Content>
                                         <Button.Flyout>
                                             <MenuFlyout Placement="Bottom" Opening="MenuFlyout_Opening">
+                                                <MenuFlyoutItem Text="Edit"
+                                                                Click="EditButton_Click"
+                                                                Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE70F;"/>
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Duplicate"
+                                                                Click="DuplicateButton_Click"
+                                                                Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE8C8;"/>
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator/>
                                                 <MenuFlyoutItem x:Name="ToolsMoveUpItem"
                                                                 Text="Move up"
                                                                 Click="MoveUpButton_Click"
@@ -203,6 +233,21 @@
                                       HorizontalAlignment="Stretch">
                                     <Grid.ContextFlyout>
                                         <MenuFlyout Opening="MenuFlyout_Opening">
+                                            <MenuFlyoutItem Text="Edit"
+                                                            Click="EditButton_Click"
+                                                            Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE70F;"/>
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutItem Text="Duplicate"
+                                                            Click="DuplicateButton_Click"
+                                                            Tag="{x:Bind}">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xE8C8;"/>
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                            <MenuFlyoutSeparator/>
                                             <MenuFlyoutItem Text="Move up"
                                                             Click="MoveUpButton_Click"
                                                             Tag="{x:Bind}">
@@ -275,6 +320,21 @@
                                         </Button.Content>
                                         <Button.Flyout>
                                             <MenuFlyout Placement="Bottom" Opening="MenuFlyout_Opening">
+                                                <MenuFlyoutItem Text="Edit"
+                                                                Click="EditButton_Click"
+                                                                Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE70F;"/>
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutItem Text="Duplicate"
+                                                                Click="DuplicateButton_Click"
+                                                                Tag="{x:Bind}">
+                                                    <MenuFlyoutItem.Icon>
+                                                        <FontIcon Glyph="&#xE8C8;"/>
+                                                    </MenuFlyoutItem.Icon>
+                                                </MenuFlyoutItem>
+                                                <MenuFlyoutSeparator/>
                                                 <MenuFlyoutItem x:Name="CommunityToolsMoveUpItem"
                                                                 Text="Move up"
                                                                 Click="MoveUpButton_Click"
