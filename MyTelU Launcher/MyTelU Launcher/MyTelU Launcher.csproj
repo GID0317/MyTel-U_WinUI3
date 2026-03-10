@@ -26,7 +26,6 @@
     <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Never</AppxBundle>
-    <PackageCertificateThumbprint>F8B01DAE7217FC4B18AB39F720B742178355EFC6</PackageCertificateThumbprint>
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <CreateMSIXPackage>True</CreateMSIXPackage>
     <WindowsPackageType>MSIX</WindowsPackageType>
@@ -53,6 +52,12 @@
     <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
+    <SelfContained>false</SelfContained>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
+    <GenerateTestArtifacts>false</GenerateTestArtifacts>
+    <SatelliteResourceLanguages>en-US;id-ID</SatelliteResourceLanguages>
+    <PlaywrightPlatform>win-x64</PlaywrightPlatform>
     <!-- If you have a publish profile for x64, you can reference it here -->
     <PublishProfile>Properties\PublishProfiles\win-x64.pubxml</PublishProfile>
   </PropertyGroup>
@@ -85,7 +90,7 @@
   <!-- Build TY4EHelper.Widgets as a fully independent project before packaging -->
   <Target Name="BuildWidgetProject" BeforeTargets="BeforeBuild">
     <Message Text="Building TY4EHelper.Widgets..." Importance="high" />
-    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\TY4EHelper.Widgets.csproj&quot; -r win-x64 -c $(Configuration) --no-restore" ContinueOnError="true" ConsoleToMSBuild="true">
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\TY4EHelper.Widgets.csproj&quot; -r win-x64 -c $(Configuration) /p:Platform=$(Platform) --no-restore" ContinueOnError="false" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="_WidgetBuildOutput" />
     </Exec>
     <Message Text="$(_WidgetBuildOutput)" Importance="low" />
@@ -101,6 +106,7 @@
       </Content>
     </ItemGroup>
   </Target>
+
   <ItemGroup>
     <!-- All your asset content items remain unchanged -->
     <Content Update="Assets\GalihKoper_Icon.png">
