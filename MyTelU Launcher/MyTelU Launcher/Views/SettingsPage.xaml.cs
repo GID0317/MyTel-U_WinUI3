@@ -76,7 +76,6 @@ namespace MyTelU_Launcher.Views
                 System.Diagnostics.Debug.WriteLine("Starting update check from settings page...");
                 using (var client = new HttpClient())
                 {
-                    // Use the raw URL to fetch the version string.
                     var url = "https://raw.githubusercontent.com/GID0317/MyTel-U_WinUI3/main/UpdateHelper/Versions.config";
                     System.Diagnostics.Debug.WriteLine($"Fetching update info from: {url}");
                     var response = await client.GetAsync(url);
@@ -86,10 +85,8 @@ namespace MyTelU_Launcher.Views
                         string remoteVersionString = content.Trim();
                         System.Diagnostics.Debug.WriteLine($"Remote version string: {remoteVersionString}");
 
-                        // Create a Version object from the remote version string.
                         Version remoteVersion = new Version(remoteVersionString);
 
-                        // Use the stored package version from App.
                         Version localVersion = App.AppVersion;
                         System.Diagnostics.Debug.WriteLine($"Local version: {localVersion}");
                         System.Diagnostics.Debug.WriteLine($"Remote version: {remoteVersion}");

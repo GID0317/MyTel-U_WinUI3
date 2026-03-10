@@ -1,5 +1,0 @@
-MainPackage=D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\bin\x64\Release\net9.0-windows10.0.26100.0\win-x64\MyTelU Launcher_3.0.2.0_x64.msix
-ResourcePack=D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\bin\x64\Release\net9.0-windows10.0.26100.0\win-x64\MyTelU Launcher_3.0.2.0_scale-100.msix
-ResourcePack=D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\bin\x64\Release\net9.0-windows10.0.26100.0\win-x64\MyTelU Launcher_3.0.2.0_scale-125.msix
-ResourcePack=D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\bin\x64\Release\net9.0-windows10.0.26100.0\win-x64\MyTelU Launcher_3.0.2.0_scale-150.msix
-ResourcePack=D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\bin\x64\Release\net9.0-windows10.0.26100.0\win-x64\MyTelU Launcher_3.0.2.0_scale-400.msix

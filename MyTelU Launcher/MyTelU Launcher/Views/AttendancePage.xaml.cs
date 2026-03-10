@@ -113,10 +113,8 @@ public sealed partial class AttendancePage : Page
         dialog.SetCourse(course);
         dialog.ShowLoading();
 
-        // Show dialog immediately (user sees spinner while data loads)
         var showTask = dialog.ShowAsync();
 
-        // Fetch in parallel
         var detail = await ViewModel.LoadCourseDetailAsync(course);
         dialog.SetDetail(detail);
 
