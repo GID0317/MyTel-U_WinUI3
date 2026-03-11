@@ -83,7 +83,7 @@
                                   SelectedItem="{x:Bind ViewModel.SelectedPeriod, Mode=TwoWay}"
                                   DisplayMemberPath="Label"
                                   PlaceholderText="Select academic year"
-                                  ToolTipService.ToolTip="Select academic year and semester"
+                                  ToolTipService.ToolTip="Select academic year"
                                   Width="200"/>
                         <!-- Refresh button -->
                         <Button Padding="7"
