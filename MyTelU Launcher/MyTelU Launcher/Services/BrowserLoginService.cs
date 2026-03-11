@@ -17,9 +17,7 @@ public interface IBrowserLoginService
 
 public class BrowserLoginService : IBrowserLoginService
 {
-    private static readonly string _appDataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TY4EHelper");
+    private static readonly string _appDataDir = AppDataStore.DirectoryPath;
 
     private static readonly string _settingsFile = Path.Combine(_appDataDir, "settings.json");
 
@@ -458,9 +456,7 @@ public class BrowserLoginService : IBrowserLoginService
         Debug.WriteLine($"[SilentLogin] {msg}");
         try
         {
-            var logFile = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TY4EHelper", "silent_login.log");
+            var logFile = AppDataStore.GetFilePath("silent_login.log");
             Directory.CreateDirectory(Path.GetDirectoryName(logFile)!);
             // Rotate if > 200 KB
             if (File.Exists(logFile) && new FileInfo(logFile).Length > 200_000)

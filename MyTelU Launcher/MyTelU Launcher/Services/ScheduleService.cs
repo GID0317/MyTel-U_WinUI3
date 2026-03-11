@@ -45,15 +45,13 @@ public interface IScheduleService
     /// <summary>Returns whether a default network interface is available.</summary>
     bool IsNetworkAvailable();
 
-    /// <summary>Deletes the session cookies, effectively signing out.</summary>
+    /// <summary>Clears the locally stored session and cached academic data for the current user.</summary>
     void ClearSession();
 }
 
 public class ScheduleService : IScheduleService, IDisposable
 {
-    private static readonly string _appDataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TY4EHelper");
+    private static readonly string _appDataDir = AppDataStore.DirectoryPath;
 
     private static readonly string _cookiesFile  = Path.Combine(_appDataDir, "cookies.json");
     private static readonly string _cacheFile    = Path.Combine(_appDataDir, "schedule_cache.json");
@@ -89,7 +87,7 @@ public class ScheduleService : IScheduleService, IDisposable
 
     public void ClearSession()
     {
-        try { if (File.Exists(_cookiesFile)) File.Delete(_cookiesFile); } catch { }
+        AppDataStore.ClearAll();
     }
 
     public (string? yearCode, string? semCode) GetSavedAcademicYear()

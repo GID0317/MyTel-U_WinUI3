@@ -10,9 +10,9 @@ Relaunch Template Studio to modify the project by right-clicking on the project 
 
 ## Publishing
 
-For projects with MSIX packaging, right-click on the application project and select `Package and Publish -> Create App Packages...` to create an MSIX package.
+Use the MSIX packaging flow for all distributable builds of this project.
 
-For projects without MSIX packaging, follow the [deployment guide](https://docs.microsoft.com/windows/apps/windows-app-sdk/deploy-unpackaged-apps) or add the `Self-Contained` Feature to enable xcopy deployment.
+Unpackaged and sparse-widget deployment are no longer supported in this repo. Build or export the package from the application project with `Package and Publish -> Create App Packages...`, or use the existing MSIX build pipeline.
 
 ## CI Pipelines
 

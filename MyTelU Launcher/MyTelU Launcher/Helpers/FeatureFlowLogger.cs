@@ -1,15 +1,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using MyTelU_Launcher.Services;
 
 namespace MyTelU_Launcher.Helpers;
 
 public static class FeatureFlowLogger
 {
-    private static readonly string LogFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TY4EHelper",
-        "feature_flow.log");
+    private static readonly string LogFile = AppDataStore.GetFilePath("feature_flow.log");
 
     public static void Write(string area, string message)
     {

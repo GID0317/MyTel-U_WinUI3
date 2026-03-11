@@ -513,9 +513,10 @@ public partial class AttendanceViewModel : ObservableRecipient,
             var live = await _attendanceService.GetAttendanceAsync(schoolYear, token);
             if (token.IsCancellationRequested) return;
 
-    /// <summary>Refreshes cached attendance in the background when saved cookies might be stale.</summary>
+            if (live != null)
             {
                 PopulateData(live);
+                IsOffline = false;
                 FeatureFlowLogger.Write("Attendance", $"background validate success without relogin: selected={schoolYear ?? "(all)"}");
                 return;
             }
@@ -550,7 +551,12 @@ public partial class AttendanceViewModel : ObservableRecipient,
             if (live != null && !token.IsCancellationRequested)
             {
                 PopulateData(live);
+                IsOffline = false;
                 FeatureFlowLogger.Write("Attendance", $"background validate success after relogin: selected={schoolYear ?? "(all)"}");
+            }
+            else if (!token.IsCancellationRequested && Courses.Count > 0)
+            {
+                IsOffline = true;
             }
         }
         catch (OperationCanceledException) { /* ignore */ }

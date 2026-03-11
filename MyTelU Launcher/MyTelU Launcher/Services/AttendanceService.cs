@@ -32,9 +32,7 @@ public interface IAttendanceService
 
 public partial class AttendanceService : IAttendanceService, IDisposable
 {
-    private static readonly string _appDataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TY4EHelper");
+    private static readonly string _appDataDir = AppDataStore.DirectoryPath;
 
     private static readonly string _cacheFile = Path.Combine(_appDataDir, "attendance_cache.json");
 

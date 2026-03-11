@@ -17,6 +17,13 @@
     <WindowsPackageType>None</WindowsPackageType>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)'=='Release|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="Microsoft.WindowsAppSDK" />
@@ -25,7 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pre-resized (120x120) icons deployed next to the widget EXE for data-URI embedding -->
     <Content Include="GalihKoper_Widget.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

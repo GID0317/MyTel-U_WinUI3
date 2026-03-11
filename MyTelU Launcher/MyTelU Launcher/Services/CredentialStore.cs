@@ -12,9 +12,7 @@ namespace MyTelU_Launcher.Services;
 /// </summary>
 internal static class CredentialStore
 {
-    private static readonly string _path = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TY4EHelper", "credentials.dat");
+    private static readonly string _path = AppDataStore.GetFilePath("credentials.dat");
 
     private static readonly byte[] s_entropy = "MyTelU-iGracias-creds-v1"u8.ToArray();
 

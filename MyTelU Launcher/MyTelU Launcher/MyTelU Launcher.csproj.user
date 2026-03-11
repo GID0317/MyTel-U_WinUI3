@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ActiveDebugProfile>MyTelU Launcher (Unpackaged)</ActiveDebugProfile>
-    <Source>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</Source>
-    <SmallTileSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</SmallTileSource>
-    <MediumTileSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</MediumTileSource>
-    <WideTileSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</WideTileSource>
-    <LargeTileSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</LargeTileSource>
-    <AppIconSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</AppIconSource>
-    <SplashScreenSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</SplashScreenSource>
-    <PackageLogoSource>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</PackageLogoSource>
-    <_LastSelectedProfileId>D:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Properties\PublishProfiles\win-x64.pubxml</_LastSelectedProfileId>
+    <ActiveDebugProfile>MyTelU Launcher (Package)</ActiveDebugProfile>
+    <Source>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</Source>
+    <SmallTileSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</SmallTileSource>
+    <MediumTileSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</MediumTileSource>
+    <WideTileSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</WideTileSource>
+    <LargeTileSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</LargeTileSource>
+    <AppIconSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</AppIconSource>
+    <SplashScreenSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</SplashScreenSource>
+    <PackageLogoSource>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Assets\Icon_App.png</PackageLogoSource>
+    <_LastSelectedProfileId>T:\data WinUI3 project\MyTelU Launcher\MyTelU Launcher\Properties\PublishProfiles\win-x64.pubxml</_LastSelectedProfileId>
     <UapAppxPackageBuildMode>SideloadOnly</UapAppxPackageBuildMode>
     <AppxShowAllApps>False</AppxShowAllApps>
     <AppxBuildConfigurationSelection>x64</AppxBuildConfigurationSelection>

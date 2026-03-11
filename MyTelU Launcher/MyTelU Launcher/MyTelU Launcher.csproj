@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Global properties and defaults -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
@@ -7,7 +6,6 @@
     <RootNamespace>MyTelU_Launcher</RootNamespace>
     <ApplicationIcon>Icon_App.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- The typical configurations and platforms we want -->
     <Configurations>Debug;Release</Configurations>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
@@ -16,6 +14,7 @@
     <Nullable>enable</Nullable>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <UseRidGraph>true</UseRidGraph>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
@@ -26,19 +25,18 @@
     <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Never</AppxBundle>
-    <PackageCertificateThumbprint>F8B01DAE7217FC4B18AB39F720B742178355EFC6</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>AADF453190D779D8F286974BACFFC864D8B5ADD3</PackageCertificateThumbprint>
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <CreateMSIXPackage>True</CreateMSIXPackage>
     <WindowsPackageType>MSIX</WindowsPackageType>
   </PropertyGroup>
 
-  <!-- Store upload: disable local signing, MS will sign during submission -->
   <PropertyGroup Condition="'$(UapAppxPackageBuildMode)'=='StoreUpload'">
     <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
     <AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
     <AppxBundle>Never</AppxBundle>
   </PropertyGroup>
-  <!-- Debug|x64 configuration -->
+
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)'=='Debug|x64' ">
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -46,22 +44,36 @@
     <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
   </PropertyGroup>
-  <!-- Release|x64 configuration -->
+
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)'=='Release|x64' ">
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
-    <!-- If you have a publish profile for x64, you can reference it here -->
+    <SelfContained>false</SelfContained>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <WidgetSelfContained>true</WidgetSelfContained>
+    <WidgetWindowsAppSDKSelfContained>true</WidgetWindowsAppSDKSelfContained>
+    <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
+    <GenerateTestArtifacts>false</GenerateTestArtifacts>
+    <PlaywrightPlatform>win-x64</PlaywrightPlatform>
     <PublishProfile>Properties\PublishProfiles\win-x64.pubxml</PublishProfile>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <WidgetSelfContained Condition="'$(WidgetSelfContained)'==''">$(SelfContained)</WidgetSelfContained>
+    <WidgetWindowsAppSDKSelfContained Condition="'$(WidgetWindowsAppSDKSelfContained)'==''">$(WindowsAppSDKSelfContained)</WidgetWindowsAppSDKSelfContained>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="Icon_App.ico" />
   </ItemGroup>
+
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" />
@@ -77,15 +89,15 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="WinUIEx" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\MyTelU Launcher.Core\MyTelU Launcher.Core.csproj" />
     <ProjectReference Include="..\ColorThief\ColorThief\ColorThief.csproj" />
   </ItemGroup>
 
-  <!-- Build TY4EHelper.Widgets as a fully independent project before packaging -->
   <Target Name="BuildWidgetProject" BeforeTargets="BeforeBuild">
     <Message Text="Building TY4EHelper.Widgets..." Importance="high" />
-    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\TY4EHelper.Widgets.csproj&quot; -r win-x64 -c $(Configuration) --no-restore" ContinueOnError="true" ConsoleToMSBuild="true">
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\TY4EHelper.Widgets.csproj&quot; -r win-x64 -c $(Configuration) /p:Platform=$(Platform) /p:SelfContained=$(WidgetSelfContained) /p:WindowsAppSDKSelfContained=$(WidgetWindowsAppSDKSelfContained) --no-restore" ContinueOnError="false" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="_WidgetBuildOutput" />
     </Exec>
     <Message Text="$(_WidgetBuildOutput)" Importance="low" />
@@ -93,7 +105,7 @@
 
   <Target Name="CollectWidgetFiles" BeforeTargets="AssignTargetPaths;GetPackageFiles">
     <ItemGroup>
-      <_WidgetFiles Include="$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\bin\$(Configuration)\net10.0-windows10.0.19041.0\win-x64\**\*.*" />
+      <_WidgetFiles Include="$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\bin\$(Platform)\$(Configuration)\net10.0-windows10.0.19041.0\win-x64\**\*.*" />
       <Content Include="@(_WidgetFiles)">
         <Link>TY4EHelper.Widgets\%(RecursiveDir)%(Filename)%(Extension)</Link>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -101,272 +113,105 @@
       </Content>
     </ItemGroup>
   </Target>
+
   <ItemGroup>
-    <!-- All your asset content items remain unchanged -->
-    <Content Update="Assets\GalihKoper_Icon.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\HK4E.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Icon_App.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Icon_App.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Icon_App_backup.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Icon_App_Flat.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Icon_App_Wide.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Background.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_BackgroundStartUp.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Campuslive.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Celoe.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_IGracias.jpg">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_OpenLibrary.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_satuTelU.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Sirama.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Situ %28Small%29.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Situ.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_TOSS.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_TucTuc.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Default.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_LAC.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_Merpati.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_ServiceDesk.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_SMB.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Img_Logo_SuaraTelUtizen.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\LargeTile.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\LargeTile.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\LargeTile.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\LargeTile.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\LargeTile.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\LockScreenLogo.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SmallTile.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SmallTile.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SmallTile.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SmallTile.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SmallTile.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SplashScreen.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SplashScreen.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SplashScreen.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SplashScreen.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\SplashScreen.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square150x150Logo.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square150x150Logo.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square150x150Logo.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square150x150Logo.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square150x150Logo.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-16.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-24.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-32.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-48.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-16.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-256.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-32.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-48.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Galih_EmptyScedule_Icon.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.targetsize-16.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.targetsize-24.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.targetsize-24_altform-unplated.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.targetsize-256.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.targetsize-32.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Square44x44Logo.targetsize-48.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\store2.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\StoreLogo.backup.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\StoreLogo.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\StoreLogo.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\StoreLogo.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\StoreLogo.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\StoreLogo.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\ttd.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Wide310x150Logo.scale-100.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Wide310x150Logo.scale-125.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Wide310x150Logo.scale-150.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Wide310x150Logo.scale-200.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\Wide310x150Logo.scale-400.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Assets\WindowIcon.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Assets\WidgetIcon.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Assets\TodayClass_Icon_Widget.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Assets\UpcomingClass_Icon_Widget.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Assets\WidgetTheme.xaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Content Update="Assets\GalihKoper_Icon.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\HK4E.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Icon_App.ico"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Icon_App.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Icon_App_backup.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Icon_App_Flat.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Icon_App_Wide.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Background.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_BackgroundStartUp.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Campuslive.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Celoe.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_IGracias.jpg"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_OpenLibrary.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_satuTelU.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Sirama.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Situ %28Small%29.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Situ.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_TOSS.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_TucTuc.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Default.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_LAC.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_Merpati.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_ServiceDesk.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_SMB.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Img_Logo_SuaraTelUtizen.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\LargeTile.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\LargeTile.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\LargeTile.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\LargeTile.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\LargeTile.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\LockScreenLogo.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SmallTile.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SmallTile.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SmallTile.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SmallTile.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SmallTile.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SplashScreen.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SplashScreen.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SplashScreen.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SplashScreen.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\SplashScreen.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square150x150Logo.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square150x150Logo.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square150x150Logo.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square150x150Logo.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square150x150Logo.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-16.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-24.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-256.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-32.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-lightunplated_targetsize-48.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-16.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-256.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-32.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.altform-unplated_targetsize-48.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Galih_EmptyScedule_Icon.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.targetsize-16.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.targetsize-24.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.targetsize-24_altform-unplated.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.targetsize-256.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.targetsize-32.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Square44x44Logo.targetsize-48.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\store2.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\StoreLogo.backup.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\StoreLogo.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\StoreLogo.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\StoreLogo.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\StoreLogo.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\StoreLogo.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\ttd.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Wide310x150Logo.scale-100.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Wide310x150Logo.scale-125.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Wide310x150Logo.scale-150.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Wide310x150Logo.scale-200.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\Wide310x150Logo.scale-400.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Update="Assets\WindowIcon.ico"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Include="Assets\WidgetIcon.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Include="Assets\TodayClass_Icon_Widget.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Include="Assets\UpcomingClass_Icon_Widget.png"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
+    <Content Include="Assets\WidgetTheme.xaml"><CopyToOutputDirectory>Always</CopyToOutputDirectory></Content>
   </ItemGroup>
+
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
   </ItemGroup>
+
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
