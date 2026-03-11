@@ -190,9 +190,7 @@ namespace MyTelU_Launcher.Views
 
         private void OpenDebugLog_Click(object sender, RoutedEventArgs e)
         {
-            var logPath = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TY4EHelper", "schedule_debug.log");
+            var logPath = AppDataStore.GetFilePath("schedule_debug.log");
 
             if (System.IO.File.Exists(logPath))
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(logPath) { UseShellExecute = true });

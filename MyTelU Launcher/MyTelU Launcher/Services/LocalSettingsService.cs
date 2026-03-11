@@ -5,7 +5,6 @@ using MyTelU_Launcher.Core.Helpers;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.Models;
 using System.Threading;
-using Windows.ApplicationModel;
 using Windows.Storage;
 
 namespace MyTelU_Launcher.Services;
@@ -26,6 +25,10 @@ public class LocalSettingsService : ILocalSettingsService
 
     private bool _isInitialized;
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+    private ApplicationDataContainer? _packageLocalSettings;
+
+    private bool _packageLocalSettingsResolved;
 
     public LocalSettingsService(IFileService fileService, IOptions<LocalSettingsOptions> options)
     {
@@ -53,21 +56,20 @@ public class LocalSettingsService : ILocalSettingsService
         await _semaphore.WaitAsync();
         try
         {
-            if (RuntimeHelper.IsMSIX)
+            var packagedSettings = GetPackagedLocalSettings();
+            if (packagedSettings != null)
             {
-                if (ApplicationData.Current.LocalSettings.Values.TryGetValue(key, out var obj))
+                if (packagedSettings.Values.TryGetValue(key, out var obj))
                 {
                     return await Json.ToObjectAsync<T>((string)obj);
                 }
             }
-            else
-            {
-                await InitializeAsync();
 
-                if (_settings != null && _settings.TryGetValue(key, out var obj))
-                {
-                    return await Json.ToObjectAsync<T>(obj);
-                }
+            await InitializeAsync();
+
+            if (_settings != null && _settings.TryGetValue(key, out var fileValue))
+            {
+                return await Json.ToObjectAsync<T>(fileValue);
             }
 
             return default;
@@ -83,22 +85,45 @@ public class LocalSettingsService : ILocalSettingsService
         await _semaphore.WaitAsync();
         try
         {
-            if (RuntimeHelper.IsMSIX)
-            {
-                ApplicationData.Current.LocalSettings.Values[key] = await Json.StringifyAsync(value);
-            }
-            else
-            {
-                await InitializeAsync();
+            var serializedValue = await Json.StringifyAsync(value);
+            var packagedSettings = GetPackagedLocalSettings();
 
-                _settings[key] = await Json.StringifyAsync(value);
-
-                await Task.Run(() => _fileService.Save(_applicationDataFolder, _localsettingsFile, _settings));
+            if (packagedSettings != null)
+            {
+                packagedSettings.Values[key] = serializedValue;
             }
+
+            await InitializeAsync();
+
+            _settings[key] = serializedValue;
+
+            await Task.Run(() => _fileService.Save(_applicationDataFolder, _localsettingsFile, _settings));
         }
         finally
         {
             _semaphore.Release();
         }
+    }
+
+    private ApplicationDataContainer? GetPackagedLocalSettings()
+    {
+        if (_packageLocalSettingsResolved)
+            return _packageLocalSettings;
+
+        _packageLocalSettingsResolved = true;
+
+        if (!RuntimeHelper.IsMSIX)
+            return null;
+
+        try
+        {
+            _packageLocalSettings = ApplicationData.Current.LocalSettings;
+        }
+        catch (InvalidOperationException)
+        {
+            _packageLocalSettings = null;
+        }
+
+        return _packageLocalSettings;
     }
 }

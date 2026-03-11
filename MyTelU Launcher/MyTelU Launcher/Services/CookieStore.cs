@@ -15,9 +15,7 @@ namespace MyTelU_Launcher.Services;
 /// </summary>
 internal static class CookieStore
 {
-    private static readonly string _cookiesFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "TY4EHelper", "cookies.json");
+    private static readonly string _cookiesFile = AppDataStore.GetFilePath("cookies.json");
 
     // Application-specific entropy bound to this app's context.
     private static readonly byte[] s_entropy = "MyTelU-iGracias-cookies-v1"u8.ToArray();

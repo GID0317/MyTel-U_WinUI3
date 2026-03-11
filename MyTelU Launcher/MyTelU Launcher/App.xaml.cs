@@ -122,7 +122,7 @@ public partial class App : Application
         System.Diagnostics.Debug.WriteLine(msg);
         try
         {
-            var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TY4EHelper");
+            var logDir = AppDataStore.DirectoryPath;
             Directory.CreateDirectory(logDir);
             File.AppendAllText(Path.Combine(logDir, "crash.log"), msg + Environment.NewLine);
         }

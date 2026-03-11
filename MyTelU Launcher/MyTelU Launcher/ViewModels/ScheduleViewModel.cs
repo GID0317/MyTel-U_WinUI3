@@ -260,9 +260,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     {
         // Append to the same log file the service uses
 #if DEBUG
-        var logFile = System.IO.Path.Combine(
-            System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData),
-            "TY4EHelper", "academic_years_debug.log");
+    var logFile = AppDataStore.GetFilePath("academic_years_debug.log");
         try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] LoadAcademicYearsAsync invoked\n"); } catch { }
 #endif
 
@@ -705,9 +703,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
         try
         {
 #if DEBUG
-            var _bgLogFile = System.IO.Path.Combine(
-                System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData),
-                "TY4EHelper", "silent_login.log");
+            var _bgLogFile = AppDataStore.GetFilePath("silent_login.log");
             void BgLog(string msg)
             {
                 try { System.IO.File.AppendAllText(_bgLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [BGValidate] {msg}\n"); } catch { }

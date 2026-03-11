@@ -15,10 +15,10 @@
   <Identity
     Name="DeNesisTeam.MyTelULauncher"
     Publisher="CN=DeNesis"
-    Version="4.0.1.0" />
-    
+    Version="4.0.0.0" />
+
   <mp:PhoneIdentity PhoneProductId="d24d1284-7289-41dc-91e2-3ce23a83e406" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
-    
+
   <Properties>
     <DisplayName>MyTel‑U Launcher</DisplayName>
     <PublisherDisplayName>DeNesis Team</PublisherDisplayName>
@@ -43,11 +43,10 @@
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"  Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png"/>
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square71x71Logo="Assets\SmallTile.png" Square310x310Logo="Assets\LargeTile.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
       </uap:VisualElements>
       <Extensions>
-        <!-- WIDGET REGISTRATION -->
         <uap3:Extension Category="windows.appExtension">
           <uap3:AppExtension Name="com.microsoft.windows.widgets" Id="MyTelUScheduleWidget" DisplayName="MyTelU Schedule" Description="Shows your class schedule" PublicFolder="Assets">
             <uap3:Properties>
@@ -65,7 +64,7 @@
                         <Size Name="medium" />
                       </Capability>
                       <Capability>
-                         <Size Name="large" />
+                        <Size Name="large" />
                       </Capability>
                     </Capabilities>
                     <ThemeResources>
@@ -75,14 +74,12 @@
                       <Screenshots>
                         <Screenshot Path="Assets\TodayClass_Icon_Widget.png" DisplayAltText="Today's Schedule" />
                       </Screenshots>
-                      <DarkMode />
-                      <LightMode />
                     </ThemeResources>
                   </Definition>
                   <Definition Id="MySchedule_All" DisplayName="All Upcoming Classes" Description="View your Full Schedule." AllowMultiple="true">
                     <Capabilities>
                       <Capability>
-                         <Size Name="large" />
+                        <Size Name="large" />
                       </Capability>
                     </Capabilities>
                     <ThemeResources>
@@ -92,8 +89,6 @@
                       <Screenshots>
                         <Screenshot Path="Assets\UpcomingClass_Icon_Widget.png" DisplayAltText="Full Schedule" />
                       </Screenshots>
-                      <DarkMode />
-                      <LightMode />
                     </ThemeResources>
                   </Definition>
                 </Definitions>
@@ -101,21 +96,21 @@
             </uap3:Properties>
           </uap3:AppExtension>
         </uap3:Extension>
+
         <com:Extension Category="windows.comServer">
           <com:ComServer>
             <com:ExeServer Executable="TY4EHelper.Widgets\TY4EHelper.Widgets.exe" DisplayName="Schedule Widget Provider">
               <com:Class Id="94819777-622C-4BA7-8A7C-0C023EFB31B1" DisplayName="ScheduleWidgetProvider" />
             </com:ExeServer>
             <com:ExeServer Executable="MyTelU Launcher.exe" Arguments="----AppNotificationActivated:" DisplayName="Toast activator">
-                <com:Class Id="506b6933-ccd8-44dc-89b5-56f930d26525" DisplayName="Toast activator"/>
+              <com:Class Id="506b6933-ccd8-44dc-89b5-56f930d26525" DisplayName="Toast activator"/>
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
 
-          <desktop:Extension Category="windows.toastNotificationActivation">
-              <desktop:ToastNotificationActivation ToastActivatorCLSID="506b6933-ccd8-44dc-89b5-56f930d26525" />
-          </desktop:Extension>
-
+        <desktop:Extension Category="windows.toastNotificationActivation">
+          <desktop:ToastNotificationActivation ToastActivatorCLSID="506b6933-ccd8-44dc-89b5-56f930d26525" />
+        </desktop:Extension>
       </Extensions>
     </Application>
   </Applications>

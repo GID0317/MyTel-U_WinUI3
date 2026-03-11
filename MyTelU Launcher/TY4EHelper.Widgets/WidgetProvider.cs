@@ -13,15 +13,12 @@ namespace TY4EHelper.Widgets
     [Guid("94819777-622C-4BA7-8A7C-0C023EFB31B1")]
     public class WidgetProvider : IWidgetProvider
     {
-        // Keeping track of which widget instance is which type
-        // Key: WidgetId, Value: DefinitionId
         private static Dictionary<string, string> _widgetDefinitions = new Dictionary<string, string>();
-        
-        // Key: WidgetId, Value: PageIndex
         private static Dictionary<string, int> _widgetPageIndices = new Dictionary<string, int>();
 
         public void CreateWidget(WidgetContext widgetContext)
         {
+            WidgetFileLogger.Write("Provider", $"CreateWidget id={widgetContext.Id}, definition={widgetContext.DefinitionId}");
             _widgetDefinitions[widgetContext.Id] = widgetContext.DefinitionId;
             _widgetPageIndices[widgetContext.Id] = 0;
             UpdateWidget(widgetContext.Id);
@@ -29,6 +26,7 @@ namespace TY4EHelper.Widgets
 
         public void DeleteWidget(string widgetId, string customState)
         {
+            WidgetFileLogger.Write("Provider", $"DeleteWidget id={widgetId}, hadDefinition={_widgetDefinitions.ContainsKey(widgetId)}, hadPage={_widgetPageIndices.ContainsKey(widgetId)}");
             if (_widgetDefinitions.ContainsKey(widgetId))
             {
                 _widgetDefinitions.Remove(widgetId);
@@ -38,15 +36,16 @@ namespace TY4EHelper.Widgets
                 _widgetPageIndices.Remove(widgetId);
             }
         }
-        
+
         public void OnActionInvoked(WidgetActionInvokedArgs actionInvokedArgs)
         {
             var id = actionInvokedArgs.WidgetContext.Id;
             var verb = actionInvokedArgs.Verb;
-            
+            WidgetFileLogger.Write("Provider", $"OnActionInvoked id={id}, verb={verb}");
+
             if (verb == "Refresh")
             {
-                _liveScheduleCache = null; // invalidate so next fetch goes to network
+                _liveScheduleCache = null;
                 UpdateWidget(id, forceRefresh: true);
             }
             else if (verb == "NextPage")
@@ -65,68 +64,67 @@ namespace TY4EHelper.Widgets
             {
                 try
                 {
-                    // Widget EXE lives at: [output]\TY4EHelper.Widgets\TY4EHelper.Widgets.exe
-                    // Main app EXE lives at: [output]\MyTelU Launcher.exe
-                    var widgetExe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                    var widgetExe = Process.GetCurrentProcess().MainModule?.FileName;
                     if (widgetExe != null)
                     {
                         var widgetDir = Path.GetDirectoryName(widgetExe);
-                        var appDir   = Path.GetDirectoryName(widgetDir);
-                        var mainExe  = Path.Combine(appDir!, "MyTelU Launcher.exe");
+                        var appDir = Path.GetDirectoryName(widgetDir);
+                        var mainExe = Path.Combine(appDir!, "MyTelU Launcher.exe");
                         if (File.Exists(mainExe))
-                            System.Diagnostics.Process.Start(
-                                new System.Diagnostics.ProcessStartInfo(mainExe) { UseShellExecute = true });
+                        {
+                            Process.Start(new ProcessStartInfo(mainExe) { UseShellExecute = true });
+                        }
                     }
                 }
-                catch (Exception ex) { Debug.WriteLine($"[Widget] LaunchApp error: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Widget] LaunchApp error: {ex.Message}");
+                }
             }
         }
 
         public void OnWidgetContextChanged(WidgetContextChangedArgs contextChangedArgs)
         {
+            WidgetFileLogger.Write("Provider", $"OnWidgetContextChanged id={contextChangedArgs.WidgetContext.Id}, definition={contextChangedArgs.WidgetContext.DefinitionId}");
             UpdateWidget(contextChangedArgs.WidgetContext.Id);
         }
 
         public void Activate(WidgetContext widgetContext)
         {
+            WidgetFileLogger.Write("Provider", $"Activate id={widgetContext.Id}, definition={widgetContext.DefinitionId}");
             _widgetDefinitions[widgetContext.Id] = widgetContext.DefinitionId;
             UpdateWidget(widgetContext.Id);
         }
 
         public void Deactivate(string widgetId)
         {
-            // Pause high frequency updates
+            WidgetFileLogger.Write("Provider", $"Deactivate id={widgetId}");
         }
 
-        // Widgets only accept HTTP/HTTPS URLs or data URIs for images, so these assets are cached as data URIs.
-        // Flip this on temporarily for screenshots.
         private const bool DEMO_MODE = false;
 
         private static ScheduleResponse GetDemoSchedule() => new ScheduleResponse
         {
-            StudentId    = "1234567890",
-            FetchTime    = DateTime.Now.ToString("o"),
+            StudentId = "1234567890",
+            FetchTime = DateTime.Now.ToString("o"),
             AcademicYear = "2025/2026 Semester 2",
-            Courses      = new List<CourseItem>
+            Courses = new List<CourseItem>
             {
-                new CourseItem { Day="Monday",    Time="07:00 - 08:40", CourseCode="TK1234", CourseName="Introduction to Algorithms",     Room="GKU Timur 301", ClassCode="TK-47-01", Lecturer="Budi",      RoomClass="GKU Timur 301 · TK-47-01", StatusText="Done",    StatusColor="Good"      },
-                new CourseItem { Day="Monday",    Time="09:00 - 10:40", CourseCode="TK2345", CourseName="Discrete Mathematics",           Room="GKU Barat 201",  ClassCode="TK-47-03", Lecturer="Agus",     RoomClass="GKU Barat 201 · TK-47-03",  StatusText="Ongoing", StatusColor="Accent"    },
-                new CourseItem { Day="Monday",    Time="13:00 - 14:40", CourseCode="TK3456", CourseName="Object Oriented Programming",    Room="Lab Komputer 1", ClassCode="TK-47-02", Lecturer="Umar",     RoomClass="Lab Komputer 1 · TK-47-02", StatusText="Later",  StatusColor="Default"   },
-                new CourseItem { Day="Tuesday",   Time="07:00 - 08:40", CourseCode="TK4567", CourseName="Database Systems",               Room="GKU Timur 405", ClassCode="TK-47-05", Lecturer="Wildan",    RoomClass="GKU Timur 405 · TK-47-05",  StatusText="",        StatusColor="Default"   },
-                new CourseItem { Day="Tuesday",   Time="10:00 - 11:40", CourseCode="TK5678", CourseName="Computer Networks",              Room="Lab Jaringan 2", ClassCode="TK-47-04", Lecturer="M.T. Rina Wulandari",  RoomClass="Lab Jaringan 2 · TK-47-04", StatusText="",        StatusColor="Default"   },
-                new CourseItem { Day="Wednesday", Time="08:00 - 09:40", CourseCode="TK6789", CourseName= "Software Engineering" ,          Room= "GKU Barat 303" , ClassCode= "TK-47-06" , Lecturer= "Dr. Dewi Anggraini" ,   RoomClass= "GKU Barat 303 · TK-47-06" ,  StatusText="",        StatusColor= "Default"   },
-                new CourseItem { Day="Wednesday", Time="13:00 - 15:40", CourseCode="TK7890", CourseName="Artificial Intelligence",        Room="Lab AI 1",       ClassCode= "TK-47-07" , Lecturer= "Prof. Bambang Hari" ,   RoomClass= "Lab AI 1 · TK-47-07" ,       StatusText="",        StatusColor= "Default"   },
-                new CourseItem { Day="Thursday",  Time="07:00 - 08:40", CourseCode="TK8901", CourseName="Operating Systems",              Room="GKU Timur 201", ClassCode="TK-47-01", Lecturer="Dr. Fajar Nugraha",    RoomClass="GKU Timur 201 · TK-47-01",  StatusText="",        StatusColor="Default"   },
-                new CourseItem { Day="Friday",    Time="09:00 - 10:40", CourseCode="TK9012", CourseName="Human Computer Interaction",     Room="GKU Barat 101",  ClassCode="TK-47-08", Lecturer="M.Sc. Lestari Putri",  RoomClass="GKU Barat 101 · TK-47-08",  StatusText="",        StatusColor="Default"   },
-                new CourseItem { Day="Friday",    Time="13:00 - 14:40", CourseCode="TK0123", CourseName="Capstone Project",               Room="Lab Riset 3",    ClassCode="TK-47-09", Lecturer="Dr. Yusuf Hakim",      RoomClass="Lab Riset 3 · TK-47-09",    StatusText="",        StatusColor="Default"   },
+                new CourseItem { Day = "Monday", Time = "07:00 - 08:40", CourseCode = "TK1234", CourseName = "Introduction to Algorithms", Room = "GKU Timur 301", ClassCode = "TK-47-01", Lecturer = "Budi", RoomClass = "GKU Timur 301 · TK-47-01", StatusText = "Done", StatusColor = "Good" },
+                new CourseItem { Day = "Monday", Time = "09:00 - 10:40", CourseCode = "TK2345", CourseName = "Discrete Mathematics", Room = "GKU Barat 201", ClassCode = "TK-47-03", Lecturer = "Agus", RoomClass = "GKU Barat 201 · TK-47-03", StatusText = "Ongoing", StatusColor = "Accent" },
+                new CourseItem { Day = "Monday", Time = "13:00 - 14:40", CourseCode = "TK3456", CourseName = "Object Oriented Programming", Room = "Lab Komputer 1", ClassCode = "TK-47-02", Lecturer = "Umar", RoomClass = "Lab Komputer 1 · TK-47-02", StatusText = "Later", StatusColor = "Default" },
+                new CourseItem { Day = "Tuesday", Time = "07:00 - 08:40", CourseCode = "TK4567", CourseName = "Database Systems", Room = "GKU Timur 405", ClassCode = "TK-47-05", Lecturer = "Wildan", RoomClass = "GKU Timur 405 · TK-47-05", StatusText = "", StatusColor = "Default" },
+                new CourseItem { Day = "Tuesday", Time = "10:00 - 11:40", CourseCode = "TK5678", CourseName = "Computer Networks", Room = "Lab Jaringan 2", ClassCode = "TK-47-04", Lecturer = "M.T. Rina Wulandari", RoomClass = "Lab Jaringan 2 · TK-47-04", StatusText = "", StatusColor = "Default" },
+                new CourseItem { Day = "Wednesday", Time = "08:00 - 09:40", CourseCode = "TK6789", CourseName = "Software Engineering", Room = "GKU Barat 303", ClassCode = "TK-47-06", Lecturer = "Dr. Dewi Anggraini", RoomClass = "GKU Barat 303 · TK-47-06", StatusText = "", StatusColor = "Default" },
+                new CourseItem { Day = "Wednesday", Time = "13:00 - 15:40", CourseCode = "TK7890", CourseName = "Artificial Intelligence", Room = "Lab AI 1", ClassCode = "TK-47-07", Lecturer = "Prof. Bambang Hari", RoomClass = "Lab AI 1 · TK-47-07", StatusText = "", StatusColor = "Default" },
+                new CourseItem { Day = "Thursday", Time = "07:00 - 08:40", CourseCode = "TK8901", CourseName = "Operating Systems", Room = "GKU Timur 201", ClassCode = "TK-47-01", Lecturer = "Dr. Fajar Nugraha", RoomClass = "GKU Timur 201 · TK-47-01", StatusText = "", StatusColor = "Default" },
+                new CourseItem { Day = "Friday", Time = "09:00 - 10:40", CourseCode = "TK9012", CourseName = "Human Computer Interaction", Room = "GKU Barat 101", ClassCode = "TK-47-08", Lecturer = "M.Sc. Lestari Putri", RoomClass = "GKU Barat 101 · TK-47-08", StatusText = "", StatusColor = "Default" },
+                new CourseItem { Day = "Friday", Time = "13:00 - 14:40", CourseCode = "TK0123", CourseName = "Capstone Project", Room = "Lab Riset 3", ClassCode = "TK-47-09", Lecturer = "Dr. Yusuf Hakim", RoomClass = "Lab Riset 3 · TK-47-09", StatusText = "", StatusColor = "Default" },
             }
         };
-        // ──────────────────────────────────────────────────────────────────────
 
         private static string? _cachedGalihDataUri;
         private static string? _cachedGalihEmptyDataUri;
-
-        // Keep pagination local once a fresh widget payload has been fetched.
         private static ScheduleResponse? _liveScheduleCache;
         private static DateTime _liveScheduleCacheTime = DateTime.MinValue;
 
@@ -138,7 +136,7 @@ namespace TY4EHelper.Widgets
                 var assetPath = Path.Combine(AppContext.BaseDirectory, "GalihKoper_Widget.png");
                 if (!File.Exists(assetPath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Widget] GalihKoper_Icon.png not found at: {assetPath}");
+                    Debug.WriteLine($"[Widget] GalihKoper_Icon.png not found at: {assetPath}");
                     _cachedGalihDataUri = "";
                     return "";
                 }
@@ -147,9 +145,10 @@ namespace TY4EHelper.Widgets
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Widget] GetGalihImageUrl failed: {ex.Message}");
+                Debug.WriteLine($"[Widget] GetGalihImageUrl failed: {ex.Message}");
                 _cachedGalihDataUri = "";
             }
+
             return _cachedGalihDataUri ?? "";
         }
 
@@ -161,7 +160,7 @@ namespace TY4EHelper.Widgets
                 var assetPath = Path.Combine(AppContext.BaseDirectory, "GalihEmpty_Widget.png");
                 if (!File.Exists(assetPath))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Widget] GalihEmpty_Widget.png not found at: {assetPath}");
+                    Debug.WriteLine($"[Widget] GalihEmpty_Widget.png not found at: {assetPath}");
                     _cachedGalihEmptyDataUri = "";
                     return "";
                 }
@@ -170,9 +169,10 @@ namespace TY4EHelper.Widgets
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Widget] GetGalihEmptyUrl failed: {ex.Message}");
+                Debug.WriteLine($"[Widget] GetGalihEmptyUrl failed: {ex.Message}");
                 _cachedGalihEmptyDataUri = "";
             }
+
             return _cachedGalihEmptyDataUri ?? "";
         }
 
@@ -185,15 +185,19 @@ namespace TY4EHelper.Widgets
                 var d = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 return d != null && d.ContainsKey("PHPSESSID");
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
         private void PushWidgetUpdate(string widgetId, object dataObj)
         {
+            WidgetFileLogger.Write("Render", $"PushWidgetUpdate id={widgetId}, payloadType={dataObj.GetType().Name}");
             WidgetManager.GetDefault().UpdateWidget(new WidgetUpdateRequestOptions(widgetId)
             {
                 Template = GetAdaptiveCardTemplate(),
-                Data    = JsonSerializer.Serialize(dataObj),
+                Data = JsonSerializer.Serialize(dataObj),
                 CustomState = ""
             });
         }
@@ -207,34 +211,40 @@ namespace TY4EHelper.Widgets
                     definitionId = defId;
 
                 if (!_widgetPageIndices.ContainsKey(widgetId)) _widgetPageIndices[widgetId] = 0;
+                WidgetFileLogger.Write("Update", $"Begin id={widgetId}, definition={definitionId}, forceRefresh={forceRefresh}, page={_widgetPageIndices[widgetId]}");
 
                 if (!DEMO_MODE && !HasSavedSession())
                 {
+                    WidgetFileLogger.Write("Update", $"No saved session for id={widgetId}; showing login prompt");
                     PushWidgetUpdate(widgetId, new
                     {
-                        headerTitle     = "MyTelU Schedule",
-                        courses         = new List<CourseItem>(),
-                        hasCourses      = false,
-                        showNoCourses   = false,
-                        loginRequired   = true,
+                        headerTitle = "MyTelU Schedule",
+                        courses = new List<CourseItem>(),
+                        hasCourses = false,
+                        showNoCourses = false,
+                        loginRequired = true,
                         showLoginPrompt = true,
-                        showStatus      = false,
-                        isCached        = false,
-                        galihImageUrl   = GetGalihImageUrl(),
-                        galihEmptyUrl   = GetGalihEmptyUrl(),
-                        statusColor     = "Default",
-                        statusMessage   = "",
-                        lastUpdated     = DateTime.Now.ToString("HH:mm"),
-                        showPagination  = false,
-                        canGoBack       = false,
-                        canGoNext       = false
+                        showStatus = false,
+                        isCached = false,
+                        galihImageUrl = GetGalihImageUrl(),
+                        galihEmptyUrl = GetGalihEmptyUrl(),
+                        statusColor = "Default",
+                        statusMessage = "",
+                        lastUpdated = DateTime.Now.ToString("HH:mm"),
+                        showPagination = false,
+                        canGoBack = false,
+                        canGoNext = false
                     });
                     return;
                 }
 
                 int currentPage = _widgetPageIndices[widgetId];
 
-                if (DEMO_MODE) { forceRefresh = false; _liveScheduleCache = GetDemoSchedule(); }
+                if (DEMO_MODE)
+                {
+                    forceRefresh = false;
+                    _liveScheduleCache = GetDemoSchedule();
+                }
 
                 ScheduleResponse? schedule;
                 if (!forceRefresh && _liveScheduleCache != null)
@@ -246,28 +256,31 @@ namespace TY4EHelper.Widgets
                     schedule = await FetchScheduleAsync();
                     if (schedule != null && !schedule.IsCachedData)
                     {
-                        _liveScheduleCache     = schedule;
+                        _liveScheduleCache = schedule;
                         _liveScheduleCacheTime = DateTime.Now;
                     }
                 }
-                bool isCached   = schedule?.IsCachedData == true;
-                var  allCourses = schedule?.Courses ?? new List<CourseItem>();
+
+                bool isCached = schedule?.IsCachedData == true;
+                var allCourses = schedule?.Courses ?? new List<CourseItem>();
                 SortCourses(allCourses);
 
                 List<CourseItem> displayCourses;
                 string statusText;
                 string headerText = "My Schedule";
-                bool   showPagination = false, hasPrev = false, hasNext = false;
+                bool showPagination = false;
+                bool hasPrev = false;
+                bool hasNext = false;
 
-                string cacheNote   = isCached ? " · cached" : "";
+                string cacheNote = isCached ? " · cached" : "";
                 string statusColor = isCached ? "Warning" : "Default";
 
                 if (definitionId == "MySchedule_All")
                 {
                     headerText = "All Upcoming Classes";
-                    int pageSize   = 4;
+                    int pageSize = 4;
                     int totalCount = allCourses.Count;
-                    int maxPages   = (int)Math.Ceiling((double)totalCount / pageSize);
+                    int maxPages = (int)Math.Ceiling((double)totalCount / pageSize);
                     if (currentPage >= maxPages) currentPage = Math.Max(0, maxPages - 1);
                     _widgetPageIndices[widgetId] = currentPage;
 
@@ -277,18 +290,18 @@ namespace TY4EHelper.Widgets
                         : $"Page {currentPage + 1}/{Math.Max(1, maxPages)}{cacheNote}";
 
                     showPagination = totalCount > pageSize;
-                    hasPrev        = currentPage > 0;
-                    hasNext        = (currentPage + 1) * pageSize < totalCount;
+                    hasPrev = currentPage > 0;
+                    hasNext = (currentPage + 1) * pageSize < totalCount;
                 }
-                else // "MySchedule" — Today's view
+                else
                 {
                     headerText = "Today's Classes";
 
                     if (schedule == null)
                     {
                         displayCourses = new List<CourseItem>();
-                        statusText     = "Session expired · open the app to refresh";
-                        statusColor    = "Attention";
+                        statusText = "Session expired · open the app to refresh";
+                        statusColor = "Attention";
                     }
                     else
                     {
@@ -302,7 +315,7 @@ namespace TY4EHelper.Widgets
                         foreach (var c in todaysCourses)
                         {
                             var s = GetCourseStatus(c.Time);
-                            c.StatusText  = s.text;
+                            c.StatusText = s.text;
                             c.StatusColor = s.color;
                         }
 
@@ -318,25 +331,26 @@ namespace TY4EHelper.Widgets
                 string noCourseMessage = definitionId == "MySchedule_All"
                     ? "No upcoming classes!"
                     : "No classes today!";
+
                 PushWidgetUpdate(widgetId, new
                 {
-                    headerTitle      = headerText,
-                    courses          = displayCourses,
-                    hasCourses       = hasCourses,
-                    showNoCourses    = !hasCourses,          // pre-computed for template $when
-                    noCourseMessage  = noCourseMessage,
-                    loginRequired    = false,
-                    showLoginPrompt  = false,               // pre-computed for template $when
-                    galihImageUrl    = GetGalihImageUrl(),
-                    galihEmptyUrl    = GetGalihEmptyUrl(),
-                    showStatus       = statusText.Length > 0, // pre-computed for template $when
-                    isCached         = isCached,
-                    statusColor      = statusColor,
-                    statusMessage    = statusText,
-                    lastUpdated      = DateTime.Now.ToString("HH:mm"),
-                    showPagination   = showPagination,
-                    canGoBack        = hasPrev,
-                    canGoNext        = hasNext
+                    headerTitle = headerText,
+                    courses = displayCourses,
+                    hasCourses = hasCourses,
+                    showNoCourses = !hasCourses,
+                    noCourseMessage = noCourseMessage,
+                    loginRequired = false,
+                    showLoginPrompt = false,
+                    galihImageUrl = GetGalihImageUrl(),
+                    galihEmptyUrl = GetGalihEmptyUrl(),
+                    showStatus = statusText.Length > 0,
+                    isCached = isCached,
+                    statusColor = statusColor,
+                    statusMessage = statusText,
+                    lastUpdated = DateTime.Now.ToString("HH:mm"),
+                    showPagination = showPagination,
+                    canGoBack = hasPrev,
+                    canGoNext = hasNext
                 });
             }
             catch (Exception ex)
@@ -344,11 +358,11 @@ namespace TY4EHelper.Widgets
                 Debug.WriteLine($"Error updating widget: {ex.Message}");
             }
         }
-        
+
         private (string text, string color) GetCourseStatus(string timeString)
         {
             if (string.IsNullOrEmpty(timeString)) return ("", "Default");
-            
+
             try
             {
                 var parts = timeString.Split('-');
@@ -357,7 +371,7 @@ namespace TY4EHelper.Widgets
 
                 DateTime startTime = DateTime.Today;
                 DateTime endTime = DateTime.Today;
-                
+
                 if (DateTime.TryParseExact(startStr, "HH:mm", null, System.Globalization.DateTimeStyles.None, out var sTime))
                 {
                     startTime = sTime;
@@ -383,7 +397,7 @@ namespace TY4EHelper.Widgets
                 {
                     endTime = startTime.AddHours(2);
                 }
-                
+
                 startTime = DateTime.Today.Add(startTime.TimeOfDay);
                 endTime = DateTime.Today.Add(endTime.TimeOfDay);
                 var now = DateTime.Now;
@@ -401,7 +415,10 @@ namespace TY4EHelper.Widgets
                     return ("UPCOMING", "Good");
                 }
             }
-            catch { return ("", "Default"); }
+            catch
+            {
+                return ("", "Default");
+            }
         }
 
         private void SortCourses(List<CourseItem> courses)
@@ -420,7 +437,7 @@ namespace TY4EHelper.Widgets
         {
             if (string.IsNullOrEmpty(day)) return 99;
             day = day.Trim().ToUpper();
-            
+
             if (day.Contains("SENIN") || day.Contains("MONDAY")) return 1;
             if (day.Contains("SELASA") || day.Contains("TUESDAY")) return 2;
             if (day.Contains("RABU") || day.Contains("WEDNESDAY")) return 3;
@@ -428,28 +445,18 @@ namespace TY4EHelper.Widgets
             if (day.Contains("JUMAT") || day.Contains("FRIDAY")) return 5;
             if (day.Contains("SABTU") || day.Contains("SATURDAY")) return 6;
             if (day.Contains("MINGGU") || day.Contains("SUNDAY")) return 7;
-            
+
             return 99;
         }
 
-        private static readonly string _appDataDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TY4EHelper");
+        private static readonly string _appDataDir = WidgetAppDataStore.DirectoryPath;
 
-        private static readonly string _cacheFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TY4EHelper", "schedule_cache.json");
+        private static readonly string _cacheFile = WidgetAppDataStore.GetFilePath("schedule_cache.json");
 
-        private static readonly string _settingsFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TY4EHelper", "settings.json");
+        private static readonly string _settingsFile = WidgetAppDataStore.GetFilePath("settings.json");
 
-        // Must stay aligned with CookieStore in the main app.
-        private static readonly string _cookiesFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TY4EHelper", "cookies.json");
+        private static readonly string _cookiesFile = WidgetAppDataStore.GetFilePath("cookies.json");
 
-        /// <summary>Decrypts the widget cookie file, or returns null when missing or unreadable.</summary>
         private static string? LoadCookiesJson()
         {
             if (!File.Exists(_cookiesFile)) return null;
@@ -464,15 +471,16 @@ namespace TY4EHelper.Widgets
                 }
                 catch (CryptographicException)
                 {
-                    // Older installs wrote plain JSON before DPAPI was added.
                     var text = Encoding.UTF8.GetString(bytes).Trim();
                     return text.StartsWith("{") ? text : null;
                 }
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
-        /// <summary>Decrypts a widget cache file, or returns null when missing or unreadable.</summary>
         private static string? LoadSecureFile(string path)
         {
             if (!File.Exists(path)) return null;
@@ -487,15 +495,16 @@ namespace TY4EHelper.Widgets
                 }
                 catch (CryptographicException)
                 {
-                    // Older installs wrote plain JSON before DPAPI was added.
                     var text = Encoding.UTF8.GetString(bytes).Trim();
                     return (text.StartsWith("{") || text.StartsWith("[")) ? text : null;
                 }
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
-        /// <summary>Encrypts and writes a widget cache file with the same DPAPI scheme as the app.</summary>
         private static void SaveSecureFile(string path, string json)
         {
             try
@@ -507,7 +516,9 @@ namespace TY4EHelper.Widgets
                 Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 File.WriteAllBytes(path, cipher);
             }
-            catch { /* best-effort */ }
+            catch
+            {
+            }
         }
 
         private static Dictionary<string, string> LoadSettings()
@@ -518,7 +529,10 @@ namespace TY4EHelper.Widgets
                 var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_settingsFile));
                 return d ?? new();
             }
-            catch { return new(); }
+            catch
+            {
+                return new();
+            }
         }
 
         private async Task<ScheduleResponse?> FetchScheduleAsync()
@@ -548,19 +562,20 @@ namespace TY4EHelper.Widgets
                 if (!settings.TryGetValue("studentId", out var studentId) || string.IsNullOrWhiteSpace(studentId))
                     return null;
 
-                string yearCode, semCode;
+                string yearCode;
+                string semCode;
                 if (settings.TryGetValue("yearCode", out var yr) && settings.TryGetValue("semesterCode", out var sm)
                     && !string.IsNullOrWhiteSpace(yr) && !string.IsNullOrWhiteSpace(sm))
                 {
                     yearCode = yr;
-                    semCode  = sm;
+                    semCode = sm;
                 }
                 else
                 {
                     var now = DateTime.Now;
                     int year = now.Month >= 8 ? now.Year : now.Year - 1;
                     yearCode = $"{year % 100}{(year + 1) % 100}";
-                    semCode  = now.Month is >= 2 and <= 7 ? "2" : "1";
+                    semCode = now.Month is >= 2 and <= 7 ? "2" : "1";
                 }
 
                 string schoolYear = $"{yearCode}/{semCode}";
@@ -584,7 +599,8 @@ namespace TY4EHelper.Widgets
                     "iDisplayStart=0", "iDisplayLength=200",
                 };
                 for (int i = 0; i < 9; i++) parts.Add($"mDataProp_{i}={i}");
-                parts.Add("sSearch="); parts.Add("bRegex=false");
+                parts.Add("sSearch=");
+                parts.Add("bRegex=false");
                 for (int i = 0; i < 9; i++)
                 {
                     parts.Add($"sSearch_{i}=");
@@ -592,10 +608,12 @@ namespace TY4EHelper.Widgets
                     parts.Add($"bSearchable_{i}=true");
                     parts.Add($"bSortable_{i}=true");
                 }
-                parts.Add("iSortCol_0=0"); parts.Add("sSortDir_0=asc"); parts.Add("iSortingCols=1");
+                parts.Add("iSortCol_0=0");
+                parts.Add("sSortDir_0=asc");
+                parts.Add("iSortingCols=1");
                 parts.Add($"schoolYear={Uri.EscapeDataString(schoolYear)}");
 
-                var url  = "https://igracias.telkomuniversity.ac.id/libraries/ajax/ajax.schedule.php?" + string.Join("&", parts);
+                var url = "https://igracias.telkomuniversity.ac.id/libraries/ajax/ajax.schedule.php?" + string.Join("&", parts);
                 var resp = await client.GetAsync(url);
                 if (!resp.IsSuccessStatusCode) return null;
 
@@ -632,37 +650,38 @@ namespace TY4EHelper.Widgets
                     if (cols.Count < 9) continue;
 
                     string timeStart = cols[1].Length >= 5 ? cols[1][..5] : cols[1];
-                    string timeEnd   = cols[7].Length >= 5 ? cols[7][..5] : cols[7];
+                    string timeEnd = cols[7].Length >= 5 ? cols[7][..5] : cols[7];
 
-                    var room     = cols[2].Trim();
+                    var room = cols[2].Trim();
                     var classCode = cols.Count > 6 ? cols[6].Trim() : "";
-                    var lecturer  = cols.Count > 5 ? cols[5].Trim() : "";
+                    var lecturer = cols.Count > 5 ? cols[5].Trim() : "";
                     var roomClass = (room, classCode) switch
                     {
                         ({ Length: > 0 }, { Length: > 0 }) => $"{room} · {classCode}",
-                        ({ Length: > 0 }, _)               => room,
-                        (_, { Length: > 0 })               => classCode,
-                        _                                  => ""
+                        ({ Length: > 0 }, _) => room,
+                        (_, { Length: > 0 }) => classCode,
+                        _ => ""
                     };
+
                     courses.Add(new CourseItem
                     {
-                        Day        = cols[0].Trim(),
-                        Time       = $"{timeStart} - {timeEnd}",
+                        Day = cols[0].Trim(),
+                        Time = $"{timeStart} - {timeEnd}",
                         CourseCode = cols[3].Trim(),
                         CourseName = cols[4].Trim(),
-                        Room       = room,
-                        ClassCode  = classCode,
-                        Lecturer   = lecturer,
-                        RoomClass  = roomClass,
+                        Room = room,
+                        ClassCode = classCode,
+                        Lecturer = lecturer,
+                        RoomClass = roomClass,
                     });
                 }
 
                 return new ScheduleResponse
                 {
-                    StudentId    = studentId,
-                    FetchTime    = DateTime.Now.ToString("o"),
+                    StudentId = studentId,
+                    FetchTime = DateTime.Now.ToString("o"),
                     AcademicYear = schoolYear,
-                    Courses      = courses,
+                    Courses = courses,
                 };
             }
             catch (Exception ex)
@@ -674,8 +693,13 @@ namespace TY4EHelper.Widgets
 
         private void SaveCache(ScheduleResponse schedule)
         {
-            try { SaveSecureFile(_cacheFile, JsonSerializer.Serialize(schedule)); }
-            catch { /* best-effort */ }
+            try
+            {
+                SaveSecureFile(_cacheFile, JsonSerializer.Serialize(schedule));
+            }
+            catch
+            {
+            }
         }
 
         private ScheduleResponse? LoadCache()
@@ -688,14 +712,14 @@ namespace TY4EHelper.Widgets
                 if (cached != null) cached.IsCachedData = true;
                 return cached;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
-
 
         private string GetAdaptiveCardTemplate()
         {
-            // Keep $when on the outer container. Putting $when and $data on the same element
-            // makes the condition evaluate in the repeated item scope instead of the top-level payload.
             return @"{
     ""type"": ""AdaptiveCard"",
     ""$schema"": ""http://adaptivecards.io/schemas/adaptive-card.json"",
@@ -889,7 +913,6 @@ namespace TY4EHelper.Widgets
         }
     }
 
-    // Models (Recreated here to avoid dependency on main project which is an App)
     public class CourseItem
     {
         [JsonPropertyName("day")]
@@ -919,10 +942,9 @@ namespace TY4EHelper.Widgets
         [JsonPropertyName("raw_text")]
         public string RawText { get; set; } = "";
 
-        // Computed properties for display in Adaptive Card
         public string StatusColor { get; set; } = "Default";
         public string StatusText { get; set; } = "";
-        public string RoomClass { get; set; } = ""; // pre-built "Room · Class" string
+        public string RoomClass { get; set; } = "";
     }
 
     public class ScheduleResponse
