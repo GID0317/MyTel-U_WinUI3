@@ -12,6 +12,9 @@ internal static class WidgetFileLogger
 
     public static void Write(string area, string message)
     {
+        if (!WidgetDiagnostics.LoggingEnabled)
+            return;
+
         var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{area}] {message}";
         Debug.WriteLine(line);
 
@@ -42,6 +45,9 @@ internal static class WidgetFileLogger
 
     public static void WriteException(string area, Exception ex, string? context = null)
     {
+        if (!WidgetDiagnostics.LoggingEnabled)
+            return;
+
         var baseMessage = context is null
             ? $"{ex.GetType().Name}: {ex.Message}"
             : $"{context} | {ex.GetType().Name}: {ex.Message}";

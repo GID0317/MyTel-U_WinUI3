@@ -90,6 +90,8 @@ namespace TY4EHelper.Widgets
 
         static void Main(string[] args)
         {
+            WidgetDiagnostics.ApplyRuntimeConfiguration();
+
             AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
             {
                 if (eventArgs.ExceptionObject is Exception ex)

@@ -260,13 +260,13 @@ public partial class ScheduleViewModel : ObservableRecipient,
     {
         // Append to the same log file the service uses
 #if DEBUG
-    var logFile = AppDataStore.GetFilePath("academic_years_debug.log");
-        try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] LoadAcademicYearsAsync invoked\n"); } catch { }
+        var logFile = AppDataStore.GetFilePath("academic_years_debug.log");
+        DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] LoadAcademicYearsAsync invoked", 100_000);
 #endif
 
         var options = await _scheduleService.FetchAcademicYearsAsync();
 #if DEBUG
-        try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] options count={options?.Count ?? -1}\n"); } catch { }
+        DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] options count={options?.Count ?? -1}", 100_000);
 #endif
 
         AcademicYearOptions.Clear();
@@ -289,13 +289,13 @@ public partial class ScheduleViewModel : ObservableRecipient,
                 SelectedAcademicYear = fallback;
                 _suppressAcademicYearChange = false;
 #if DEBUG
-                try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] Using cached academic year fallback '{fallback.Text}'\n"); } catch { }
+                DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] Using cached academic year fallback '{fallback.Text}'", 100_000);
 #endif
             }
             else
             {
 #if DEBUG
-                try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No options and no saved year to show\n"); } catch { }
+                DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No options and no saved year to show", 100_000);
 #endif
             }
             return;
@@ -323,13 +323,13 @@ public partial class ScheduleViewModel : ObservableRecipient,
             _suppressAcademicYearChange = false;
             FeatureFlowLogger.Write("Schedule", $"academic-years resolved: selected={toSelect.Value} | {toSelect.Text}, options={options.Count}");
 #if DEBUG
-            try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] SelectedAcademicYear set to '{toSelect.Text}'\n"); } catch { }
+        DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] SelectedAcademicYear set to '{toSelect.Text}'", 100_000);
 #endif
         }
         else
         {
 #if DEBUG
-            try { System.IO.File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No year selected (toSelect was null)\n"); } catch { }
+        DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No year selected (toSelect was null)", 100_000);
 #endif
         }
     }
@@ -706,7 +706,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
             var _bgLogFile = AppDataStore.GetFilePath("silent_login.log");
             void BgLog(string msg)
             {
-                try { System.IO.File.AppendAllText(_bgLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [BGValidate] {msg}\n"); } catch { }
+                DiagnosticLogging.AppendLine(_bgLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [BGValidate] {msg}", 200_000);
             }
             BgLog("=== BackgroundValidateAndRefreshScheduleAsync started ===");
 #endif

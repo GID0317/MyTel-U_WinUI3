@@ -454,16 +454,10 @@ public class BrowserLoginService : IBrowserLoginService
     {
 #if DEBUG
         Debug.WriteLine($"[SilentLogin] {msg}");
-        try
-        {
-            var logFile = AppDataStore.GetFilePath("silent_login.log");
-            Directory.CreateDirectory(Path.GetDirectoryName(logFile)!);
-            // Rotate if > 200 KB
-            if (File.Exists(logFile) && new FileInfo(logFile).Length > 200_000)
-                File.Delete(logFile);
-            File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n");
-        }
-        catch { }
+        DiagnosticLogging.AppendLine(
+            AppDataStore.GetFilePath("silent_login.log"),
+            $"[{DateTime.Now:HH:mm:ss.fff}] {msg}",
+            200_000);
 #endif
     }
 

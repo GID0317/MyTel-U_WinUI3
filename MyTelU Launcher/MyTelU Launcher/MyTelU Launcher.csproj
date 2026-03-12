@@ -43,6 +43,12 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
+    <SelfContained>false</SelfContained>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <WidgetSelfContained>true</WidgetSelfContained>
+    <WidgetWindowsAppSDKSelfContained>true</WidgetWindowsAppSDKSelfContained>
+    <PlaywrightPlatform>win-x64</PlaywrightPlatform>
+    <PublishProfile>Properties\PublishProfiles\win-x64-debug.pubxml</PublishProfile>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)'=='Release|x64' ">

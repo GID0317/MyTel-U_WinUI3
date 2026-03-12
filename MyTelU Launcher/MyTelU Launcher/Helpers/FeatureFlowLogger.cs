@@ -11,20 +11,11 @@ public static class FeatureFlowLogger
 
     public static void Write(string area, string message)
     {
-#if DEBUG
+        if (!DiagnosticLogging.LoggingEnabled)
+            return;
+
         var line = $"[{DateTime.Now:HH:mm:ss.fff}] [{area}] {message}";
         Debug.WriteLine(line);
-
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(LogFile)!);
-            if (File.Exists(LogFile) && new FileInfo(LogFile).Length > 400_000)
-                File.Delete(LogFile);
-            File.AppendAllText(LogFile, line + Environment.NewLine);
-        }
-        catch
-        {
-        }
-#endif
+        DiagnosticLogging.AppendLine(LogFile, line, 400_000);
     }
 }
