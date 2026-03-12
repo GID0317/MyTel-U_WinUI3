@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Net;
 using System.Net.Http;
 using MyTelU_Launcher.Models;
@@ -56,6 +57,7 @@ public class ScheduleService : IScheduleService, IDisposable
 
     private static readonly string _cookiesFile  = Path.Combine(_appDataDir, "cookies.json");
     private static readonly string _cacheFile    = Path.Combine(_appDataDir, "schedule_cache.json");
+    private static readonly string _attendanceCacheFile = Path.Combine(_appDataDir, "attendance_cache.json");
     private static readonly string _settingsFile = Path.Combine(_appDataDir, "settings.json");
 
     private readonly HttpClient _httpClient = new();
@@ -171,7 +173,8 @@ public class ScheduleService : IScheduleService, IDisposable
         {
             ct.ThrowIfCancellationRequested();
             var settings  = LoadSettings();
-            if (!settings.TryGetValue("studentId", out var studentId) || string.IsNullOrWhiteSpace(studentId))
+            var studentId = await ResolveStudentIdAsync(settings, ct);
+            if (string.IsNullOrWhiteSpace(studentId))
             {
                 return null;
             }
@@ -378,6 +381,71 @@ public class ScheduleService : IScheduleService, IDisposable
             return JsonSerializer.Deserialize<ScheduleResponse>(json);
         }
         catch { return null; }
+    }
+
+    private async Task<string?> ResolveStudentIdAsync(Dictionary<string, string> settings, CancellationToken ct)
+    {
+        if (settings.TryGetValue("studentId", out var existingStudentId)
+            && !string.IsNullOrWhiteSpace(existingStudentId))
+        {
+            return existingStudentId;
+        }
+
+        var recoveredStudentId = LoadCache()?.StudentId;
+        if (string.IsNullOrWhiteSpace(recoveredStudentId))
+            recoveredStudentId = LoadAttendanceCacheStudentId();
+
+        if (string.IsNullOrWhiteSpace(recoveredStudentId))
+            recoveredStudentId = await FetchStudentIdFromSessionAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(recoveredStudentId))
+        {
+            settings["studentId"] = recoveredStudentId;
+            SaveSettings(settings);
+        }
+
+        return recoveredStudentId;
+    }
+
+    private static string? LoadAttendanceCacheStudentId()
+    {
+        try
+        {
+            var json = SecureFileStore.Load(_attendanceCacheFile);
+            if (json == null) return null;
+
+            var attendance = JsonSerializer.Deserialize<AttendanceResponse>(json);
+            return string.IsNullOrWhiteSpace(attendance?.StudentId) ? null : attendance.StudentId;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<string?> FetchStudentIdFromSessionAsync(CancellationToken ct)
+    {
+        if (!HasSavedSession)
+            return null;
+
+        try
+        {
+            using var client = BuildPageHttpClient();
+            var response = await client.GetAsync("https://igracias.telkomuniversity.ac.id/registration/?pageid=17985", ct);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var html = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(html))
+                return null;
+
+            var match = Regex.Match(html, @"\b1\d{9,13}\b");
+            return match.Success ? match.Value : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // ── Settings helpers ─────────────────────────────────────────────────────
