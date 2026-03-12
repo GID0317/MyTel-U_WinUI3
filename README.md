@@ -64,8 +64,8 @@ Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c
 </table>
 
 # Third-party Package used
-- `CommunityToolkit`
-- `Win App SDK`
-- `WinUIEX`
-- `DotNet`
-- `ColorThief`
+- `CommunityToolkit` by Microsoft
+- `Win App SDK` by Microsoft
+- `WinUIEX` by dotMorten
+- `DotNet` By Microsoft
+- `ColorThief` by ksemenenko forked by CollapseLauncher
