@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Net;
 using System.Net.Http;
 using MyTelU_Launcher.Models;
+using MyTelU_Launcher.Helpers;
 using HtmlAgilityPack;
 
 namespace MyTelU_Launcher.Services;
@@ -413,11 +414,7 @@ public class ScheduleService : IScheduleService, IDisposable
     {
 #if DEBUG
         var logFile = Path.Combine(_appDataDir, "academic_years_debug.log");
-        // Keep the debug log small enough to inspect without manual cleanup.
-        try { if (File.Exists(logFile) && new FileInfo(logFile).Length > 100_000) File.Delete(logFile); } catch { }
-        void Log(string msg) {
-            try { File.AppendAllText(logFile, $"[{DateTime.Now:HH:mm:ss}] {msg}\n"); } catch { }
-        }
+        void Log(string msg) => DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] {msg}", 100_000);
 #else
         void Log(string msg) { }
 #endif
@@ -449,7 +446,10 @@ public class ScheduleService : IScheduleService, IDisposable
 
 #if DEBUG
             // Save the raw HTML for inspection (debug builds only)
-            try { File.WriteAllText(Path.Combine(_appDataDir, "academic_years_page.html"), html); } catch { }
+            if (DiagnosticLogging.LoggingEnabled)
+            {
+                try { File.WriteAllText(Path.Combine(_appDataDir, "academic_years_page.html"), html); } catch { }
+            }
 #endif
 
             var doc = new HtmlDocument();

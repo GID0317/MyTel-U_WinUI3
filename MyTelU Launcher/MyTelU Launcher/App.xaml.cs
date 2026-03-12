@@ -44,6 +44,8 @@ public partial class App : Application
 
     public App()
     {
+        DiagnosticLogging.ApplyRuntimeConfiguration();
+
         InitializeComponent();
 
         // Apply the previously-cached accent color synchronously before any window is created.
@@ -120,13 +122,7 @@ public partial class App : Application
         e.Handled = true;
         var msg = $"[{DateTime.Now:u}] Unhandled exception: {e.Exception}";
         System.Diagnostics.Debug.WriteLine(msg);
-        try
-        {
-            var logDir = AppDataStore.DirectoryPath;
-            Directory.CreateDirectory(logDir);
-            File.AppendAllText(Path.Combine(logDir, "crash.log"), msg + Environment.NewLine);
-        }
-        catch { }
+        DiagnosticLogging.AppendLine(AppDataStore.GetFilePath("crash.log"), msg);
     }
 
     protected async override void OnLaunched(LaunchActivatedEventArgs args)
