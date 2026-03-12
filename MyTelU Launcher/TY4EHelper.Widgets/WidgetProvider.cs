@@ -453,6 +453,8 @@ namespace TY4EHelper.Widgets
 
         private static readonly string _cacheFile = WidgetAppDataStore.GetFilePath("schedule_cache.json");
 
+        private static readonly string _attendanceCacheFile = WidgetAppDataStore.GetFilePath("attendance_cache.json");
+
         private static readonly string _settingsFile = WidgetAppDataStore.GetFilePath("settings.json");
 
         private static readonly string _cookiesFile = WidgetAppDataStore.GetFilePath("cookies.json");
@@ -535,6 +537,56 @@ namespace TY4EHelper.Widgets
             }
         }
 
+        private static void SaveSettings(Dictionary<string, string> settings)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_settingsFile)!);
+                File.WriteAllText(_settingsFile, JsonSerializer.Serialize(settings));
+            }
+            catch
+            {
+            }
+        }
+
+        private string? ResolveStudentId(Dictionary<string, string> settings)
+        {
+            if (settings.TryGetValue("studentId", out var studentId) && !string.IsNullOrWhiteSpace(studentId))
+                return studentId;
+
+            studentId = LoadCache()?.StudentId;
+            if (string.IsNullOrWhiteSpace(studentId))
+                studentId = LoadAttendanceCacheStudentId();
+
+            if (!string.IsNullOrWhiteSpace(studentId))
+            {
+                settings["studentId"] = studentId;
+                SaveSettings(settings);
+            }
+
+            return studentId;
+        }
+
+        private static string? LoadAttendanceCacheStudentId()
+        {
+            try
+            {
+                var json = LoadSecureFile(_attendanceCacheFile);
+                if (json == null) return null;
+
+                using var doc = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("student_id", out var studentIdElement))
+                    return null;
+
+                var studentId = studentIdElement.GetString();
+                return string.IsNullOrWhiteSpace(studentId) ? null : studentId;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private async Task<ScheduleResponse?> FetchScheduleAsync()
         {
             var result = await TryFetchFromServer();
@@ -559,7 +611,8 @@ namespace TY4EHelper.Widgets
 
                 var settings = LoadSettings();
 
-                if (!settings.TryGetValue("studentId", out var studentId) || string.IsNullOrWhiteSpace(studentId))
+                var studentId = ResolveStudentId(settings);
+                if (string.IsNullOrWhiteSpace(studentId))
                     return null;
 
                 string yearCode;

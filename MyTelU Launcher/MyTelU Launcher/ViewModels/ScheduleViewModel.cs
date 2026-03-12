@@ -896,7 +896,10 @@ public partial class ScheduleViewModel : ObservableRecipient,
             SemesterCode = parts[1],
             IsSelected = true
         };
-            /// <summary>Refreshes cached schedule data in the background when saved cookies might be stale.</summary>
+
+        AcademicYearOptions.Add(fallback);
+        _suppressAcademicYearChange = true;
+        SelectedAcademicYear = fallback;
         _suppressAcademicYearChange = false;
     }
 
