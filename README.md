@@ -45,7 +45,7 @@ This project is open source, so any contributions are welcomed! （￣︶￣）�
 
 Please read our [Instalation Guide](https://github.com/GID0317/MyTel-U_WinUI3/wiki/My-Tel%E2%80%90U-Launcher-Installation-Guide) for more detail about instalation process, we recommend you download the latest version for a better experience. Also don't forget to Raise an [Feedback](https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose) issue if you have any!
 
-Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/100c1f2c5b1eae2eeee22e962d55b2edbbc821eedad0c11a94d69ef7c686b8b8)
+Virus Total Check: [Virus Total Result](https://www.virustotal.com/gui/file/2d92908a11c80260cd30c23c522b4913945037773ca3a8497d0693360aee348c)
 
 # Features
 - **Home**: Application Hub, ported from MyTel-U for mobile devices.
