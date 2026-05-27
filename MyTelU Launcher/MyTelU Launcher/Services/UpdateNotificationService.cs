@@ -1,12 +1,14 @@
 using System.Security;
 
 using MyTelU_Launcher.Contracts.Services;
+using Windows.ApplicationModel;
 
 namespace MyTelU_Launcher.Services;
 
 public class UpdateNotificationService : IUpdateNotificationService
 {
     private const string LastSeenVersionKey = "PostUpdateNotificationLastSeenVersion";
+    private const string LastSeenPackageStampKey = "PostUpdateNotificationLastSeenPackageStamp";
 
     private readonly ILocalSettingsService _localSettingsService;
     private readonly IAppNotificationService _appNotificationService;
@@ -25,22 +27,47 @@ public class UpdateNotificationService : IUpdateNotificationService
         if (string.IsNullOrWhiteSpace(currentVersion))
             return;
 
+        var currentPackageStamp = GetCurrentPackageStamp();
         var lastSeenVersion = await _localSettingsService.ReadSettingAsync<string>(LastSeenVersionKey);
+        var lastSeenPackageStamp = await _localSettingsService.ReadSettingAsync<string>(LastSeenPackageStampKey);
 
         if (string.IsNullOrWhiteSpace(lastSeenVersion))
         {
             if (HasExistingUserData())
                 _appNotificationService.Show(BuildPayload(currentVersion));
 
-            await _localSettingsService.SaveSettingAsync(LastSeenVersionKey, currentVersion);
+            await SaveNotificationMarkerAsync(currentVersion, currentPackageStamp);
             return;
         }
 
-        if (string.Equals(lastSeenVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+        if (HasAlreadyShownForThisPackage(lastSeenVersion, lastSeenPackageStamp, currentVersion, currentPackageStamp))
             return;
 
         _appNotificationService.Show(BuildPayload(currentVersion));
+        await SaveNotificationMarkerAsync(currentVersion, currentPackageStamp);
+    }
+
+    private async Task SaveNotificationMarkerAsync(string currentVersion, string currentPackageStamp)
+    {
         await _localSettingsService.SaveSettingAsync(LastSeenVersionKey, currentVersion);
+
+        if (!string.IsNullOrWhiteSpace(currentPackageStamp))
+            await _localSettingsService.SaveSettingAsync(LastSeenPackageStampKey, currentPackageStamp);
+    }
+
+    private static bool HasAlreadyShownForThisPackage(
+        string? lastSeenVersion,
+        string? lastSeenPackageStamp,
+        string currentVersion,
+        string currentPackageStamp)
+    {
+        if (!string.Equals(lastSeenVersion, currentVersion, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(currentPackageStamp))
+            return true;
+
+        return string.Equals(lastSeenPackageStamp, currentPackageStamp, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildPayload(string currentVersion)
@@ -87,5 +114,25 @@ public class UpdateNotificationService : IUpdateNotificationService
             return $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
 
         return $"{version.Major}.{version.Minor}.{version.Build}";
+    }
+
+    private static string GetCurrentPackageStamp()
+    {
+        try
+        {
+            var installPath = Package.Current.InstalledLocation?.Path;
+            if (string.IsNullOrWhiteSpace(installPath) || !Directory.Exists(installPath))
+                return string.Empty;
+
+            var creationTime = Directory.GetCreationTimeUtc(installPath);
+            var writeTime = Directory.GetLastWriteTimeUtc(installPath);
+            var packageTime = creationTime > writeTime ? creationTime : writeTime;
+
+            return $"{installPath}|{packageTime.Ticks}";
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 }
