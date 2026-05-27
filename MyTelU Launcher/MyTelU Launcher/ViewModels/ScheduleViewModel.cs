@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.Models;
 using MyTelU_Launcher.Services;
@@ -26,6 +28,10 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     private readonly IScheduleService      _scheduleService;
     private readonly IBrowserLoginService  _browserLoginService;
+    private readonly IClassReminderService _classReminderService;
+    private readonly SemaphoreSlim _classReminderRescheduleSemaphore = new(1, 1);
+    private readonly object _classReminderRescheduleGate = new();
+    private CancellationTokenSource? _classReminderRescheduleCts;
 
     [RelayCommand(CanExecute = nameof(CanLoginWithBrowser))]
     private async Task BeginLoginFromOnboardingAsync() => await LoginWithBrowserAsync();
@@ -133,6 +139,57 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     public string CurrentLayoutIcon => IsListLayout ? "\uE8FD" : IsTableLayout ? "\uE8A1" : "\uECA5";
 
+    [ObservableProperty]
+    private string _classReminderLabel = "Reminder";
+
+    [ObservableProperty]
+    private string _classReminderIconGlyph = "\uE7ED";
+
+    [ObservableProperty]
+    private bool _isClassReminderDisabled = true;
+
+    [ObservableProperty]
+    private bool _isClassReminder5Minutes;
+
+    [ObservableProperty]
+    private bool _isClassReminder10Minutes;
+
+    [ObservableProperty]
+    private bool _isClassReminder20Minutes;
+
+    [ObservableProperty]
+    private bool _isClassReminder30Minutes;
+
+    [ObservableProperty]
+    private bool _isClassReminder1Hour;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundDefault = true;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundAlarm;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundIm;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundMail;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundSms;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundLoopingAlarm;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundLoopingAlarm2;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundLoopingAlarm3;
+
+    [ObservableProperty]
+    private bool _isClassReminderSoundLoopingCall;
+
     [RelayCommand] private void SetListLayout()      { IsListLayout = true;  IsTableLayout = false; }
     [RelayCommand] private void SetTableLayout()     { IsListLayout = false; IsTableLayout = true;  }
     [RelayCommand] private void SetTimetableLayout() { IsListLayout = false; IsTableLayout = false; }
@@ -172,6 +229,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     {
         _scheduleService.ClearSession();
         _browserLoginService.ClearCredentials();
+        _classReminderService.ClearScheduledReminders();
         // Reset state and reload (will show needs-login)
         await LoadScheduleAsync();
     }
@@ -352,16 +410,133 @@ public partial class ScheduleViewModel : ObservableRecipient,
             SelectedDay = value.Day;
     }
 
-    public ScheduleViewModel(IScheduleService scheduleService, IBrowserLoginService browserLoginService)
+    public ScheduleViewModel(
+        IScheduleService scheduleService,
+        IBrowserLoginService browserLoginService,
+        IClassReminderService classReminderService)
     {
         _scheduleService     = scheduleService;
         _browserLoginService = browserLoginService;
+        _classReminderService = classReminderService;
 
         WeakReferenceMessenger.Default.RegisterAll(this);
         // Seed state in case login was already started before this VM was constructed.
         IsBrowserLoginRunning = _browserLoginService.IsRunning;
         // Running both concurrently against the same session can cause one to fail.
         _ = InitializeAsync();
+    }
+
+    public Task RescheduleClassRemindersAsync()
+    {
+        QueueClassReminderReschedule();
+        return Task.CompletedTask;
+    }
+
+    private void QueueClassReminderReschedule()
+    {
+        var coursesSnapshot = _allSorted.ToList();
+        CancellationTokenSource cts;
+
+        lock (_classReminderRescheduleGate)
+        {
+            _classReminderRescheduleCts?.Cancel();
+            _classReminderRescheduleCts = new CancellationTokenSource();
+            cts = _classReminderRescheduleCts;
+        }
+
+        _ = RunClassReminderRescheduleAsync(coursesSnapshot, cts.Token);
+    }
+
+    private async Task RunClassReminderRescheduleAsync(List<CourseItem> coursesSnapshot, CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(250, token);
+            await _classReminderRescheduleSemaphore.WaitAsync(token);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                await _classReminderService.RescheduleAsync(coursesSnapshot);
+            }
+            finally
+            {
+                _classReminderRescheduleSemaphore.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            FeatureFlowLogger.Write("Schedule", $"class reminder reschedule failed: {ex.Message}");
+        }
+    }
+
+    public async Task SetClassReminderPresetAsync(int minutesBefore)
+    {
+        var current = await _classReminderService.GetSettingsAsync();
+        var updated = new ClassReminderSettings
+        {
+            IsEnabled = minutesBefore > 0,
+            MinutesBefore = minutesBefore > 0 ? minutesBefore : current.MinutesBefore,
+            SoundEvent = current.SoundEvent
+        };
+
+        await _classReminderService.SaveSettingsAsync(updated);
+        ApplyClassReminderState(updated);
+        QueueClassReminderReschedule();
+    }
+
+    public async Task SetClassReminderSoundAsync(string soundEvent)
+    {
+        var current = await _classReminderService.GetSettingsAsync();
+        current.SoundEvent = soundEvent;
+        await _classReminderService.SaveSettingsAsync(current);
+        ApplyClassReminderState(current);
+        QueueClassReminderReschedule();
+    }
+
+    public async Task LoadClassReminderStateAsync()
+    {
+        var settings = await _classReminderService.GetSettingsAsync();
+        ApplyClassReminderState(settings);
+    }
+
+    private void ApplyClassReminderState(ClassReminderSettings settings)
+    {
+        IsClassReminderDisabled = !settings.IsEnabled;
+        IsClassReminder5Minutes = settings.IsEnabled && settings.MinutesBefore == 5;
+        IsClassReminder10Minutes = settings.IsEnabled && settings.MinutesBefore == 10;
+        IsClassReminder20Minutes = settings.IsEnabled && settings.MinutesBefore == 20;
+        IsClassReminder30Minutes = settings.IsEnabled && settings.MinutesBefore == 30;
+        IsClassReminder1Hour = settings.IsEnabled && settings.MinutesBefore == 60;
+        IsClassReminderSoundDefault = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Reminder", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundAlarm = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Alarm", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundIm = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.IM", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundMail = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Mail", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundSms = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.SMS", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundLoopingAlarm = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Looping.Alarm", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundLoopingAlarm2 = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Looping.Alarm2", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundLoopingAlarm3 = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Looping.Alarm3", StringComparison.OrdinalIgnoreCase);
+        IsClassReminderSoundLoopingCall = string.Equals(settings.SoundEvent, "ms-winsoundevent:Notification.Looping.Call", StringComparison.OrdinalIgnoreCase);
+
+        ClassReminderLabel = settings.IsEnabled
+            ? $"Reminder: {FormatReminderLabel(settings.MinutesBefore)}"
+            : "Reminder";
+        ClassReminderIconGlyph = settings.IsEnabled ? "\uEA8F" : "\uE7ED";
+    }
+
+    private static string FormatReminderLabel(int minutes)
+    {
+        if (minutes < 60)
+            return $"{minutes} min";
+
+        var hours = minutes / 60;
+        var remainingMinutes = minutes % 60;
+        if (remainingMinutes == 0)
+            return hours == 1 ? "1 hour" : $"{hours} hours";
+
+        return $"{hours}h {remainingMinutes}m";
     }
 
     private async Task InitializeAsync()
@@ -371,8 +546,9 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
         // 2. Fetch academic years in parallel (network bound)
         var yearsTask = LoadAcademicYearsAsync();
+        var reminderTask = LoadClassReminderStateAsync();
 
-        await Task.WhenAll(scheduleTask, yearsTask);
+        await Task.WhenAll(scheduleTask, yearsTask, reminderTask);
     }
 
     [RelayCommand(CanExecute = nameof(CanLoginWithBrowser))]
@@ -836,6 +1012,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
             Courses.Add(course);
 
         _allSorted = sorted;
+        _ = RescheduleClassRemindersAsync();
 
         var days = sorted
             .Select(c => c.Day ?? "")

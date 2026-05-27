@@ -8,10 +8,6 @@ namespace MyTelU_Launcher.Services;
 /// (ProtectedData, CurrentUser scope). The raw PHPSESSID is never stored
 /// as plain text on disk — the binary blob can only be decrypted by the
 /// same Windows user account on the same machine.
-///
-/// Migration: plain-text cookies.json files written before encryption was
-/// added are automatically re-encrypted on first read so existing installs
-/// upgrade silently.
 /// </summary>
 internal static class CookieStore
 {
@@ -27,8 +23,12 @@ internal static class CookieStore
     {
         var plain  = Encoding.UTF8.GetBytes(json);
         var cipher = ProtectedData.Protect(plain, s_entropy, DataProtectionScope.CurrentUser);
-        Directory.CreateDirectory(Path.GetDirectoryName(_cookiesFile)!);
-        File.WriteAllBytes(_cookiesFile, cipher);
+        var directory = Path.GetDirectoryName(_cookiesFile)!;
+        Directory.CreateDirectory(directory);
+
+        var tempPath = Path.Combine(directory, $"{Path.GetFileName(_cookiesFile)}.{Guid.NewGuid():N}.tmp");
+        File.WriteAllBytes(tempPath, cipher);
+        File.Move(tempPath, _cookiesFile, true);
     }
 
     /// <summary>Async overload — DPAPI is synchronous, so this offloads to a thread-pool thread.</summary>
@@ -37,7 +37,6 @@ internal static class CookieStore
 
     /// <summary>
     /// Decrypts and returns the stored cookie JSON, or <c>null</c> if missing/unreadable.
-    /// Plain-text files from older installs are re-encrypted automatically.
     /// </summary>
     public static string? Load()
     {
@@ -52,13 +51,6 @@ internal static class CookieStore
             }
             catch (CryptographicException)
             {
-                // Legacy plain-text install — re-encrypt transparently.
-                var legacy = Encoding.UTF8.GetString(bytes).Trim();
-                if (legacy.StartsWith("{"))
-                {
-                    try { Save(legacy); } catch { /* best-effort */ }
-                    return legacy;
-                }
                 return null;
             }
         }

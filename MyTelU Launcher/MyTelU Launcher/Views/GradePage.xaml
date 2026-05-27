@@ -377,19 +377,25 @@
                 <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                       Margin="0,32,48,32" CornerRadius="20">
 
-                        <!-- Gradient background -->
                     <Grid.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="{ThemeResource SystemAccentColor}" Offset="0.0"/>
-                            <GradientStop Color="Transparent" Offset="1.0"/>
-                        </LinearGradientBrush>
+                        <SolidColorBrush Color="{ThemeResource CardBackgroundFillColorDefault}" />
                     </Grid.Background>
+
+                    <Rectangle VerticalAlignment="Bottom"
+                               Height="320"
+                               Opacity="0.55">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="Transparent" Offset="0.0"/>
+                                <GradientStop Color="{ThemeResource SystemAccentColor}" Offset="1.0"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
 
                         <!-- Mascot image -->
                         <Image Source="ms-appx:///Assets/GalihKoper_Icon.png"
-                               HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                Margin="16,32,16,0"
-                               MaxHeight="400"
                                Stretch="Uniform"/>
                 </Grid>
             </Grid>

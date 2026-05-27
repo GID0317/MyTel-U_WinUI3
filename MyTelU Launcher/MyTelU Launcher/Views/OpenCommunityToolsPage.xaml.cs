@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using MyTelU_Launcher.Contracts.Services;
+using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.Models;
 using MyTelU_Launcher.ViewModels;
+using Windows.System;
 
 namespace MyTelU_Launcher.Views;
 
@@ -21,24 +23,37 @@ public sealed partial class OpenCommunityToolsPage : Page
         InitializeComponent();
     }
 
-    private void ToolButton_Click(object sender, RoutedEventArgs e)
+    private async void ToolButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.Tag is string url)
+        if (sender is Button button && button.Tag is ToolItem tool)
         {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = url,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                // Handle error
-                Debug.WriteLine($"Error opening URL: {ex.Message}");
-            }
+            await OpenToolAsync(tool);
         }
+    }
+
+    private static async Task OpenToolAsync(ToolItem tool)
+    {
+        if (string.IsNullOrWhiteSpace(tool.Url))
+            return;
+
+        var shouldOpenExternally = await App.GetService<ILocalSettingsService>()
+            .ReadSettingAsync<bool>(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser);
+
+        if (shouldOpenExternally && TryCreateUri(tool.Url, out var uri))
+        {
+            await Launcher.LaunchUriAsync(uri);
+            return;
+        }
+
+        ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), tool.Url);
+    }
+
+    private static bool TryCreateUri(string url, out Uri uri)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out uri!))
+            return true;
+
+        return Uri.TryCreate("https://" + url, UriKind.Absolute, out uri!);
     }
 
     private async void EditButton_Click(object sender, RoutedEventArgs e)

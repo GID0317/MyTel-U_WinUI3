@@ -31,20 +31,14 @@ public class AppNotificationService : IAppNotificationService
 
     public void OnNotificationInvoked(AppNotificationManager sender, AppNotificationActivatedEventArgs args)
     {
-        // TODO: Handle notification invocations when your app is already running.
-
-        //// // Navigate to a specific page based on the notification arguments.
-        //// if (ParseArguments(args.Argument)["action"] == "Settings")
-        //// {
-        ////    App.MainWindow.DispatcherQueue.TryEnqueue(() =>
-        ////    {
-        ////        _navigationService.NavigateTo(typeof(SettingsViewModel).FullName!);
-        ////    });
-        //// }
+        var arguments = ParseArguments(args.Argument);
 
         App.MainWindow.DispatcherQueue.TryEnqueue(() =>
         {
-            App.MainWindow.ShowMessageDialogAsync("To check for an update, please check your internet connection settings and try again later.", "Netwo");
+            if (arguments["action"] == "schedule")
+                _navigationService.NavigateTo(typeof(ScheduleViewModel).FullName!);
+            else if (arguments["action"] == "settings")
+                _navigationService.NavigateTo(typeof(SettingsViewModel).FullName!);
 
             App.MainWindow.BringToFront();
         });

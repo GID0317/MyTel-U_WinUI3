@@ -1,6 +1,7 @@
 using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using MyTelU_Launcher.Models;
 using MyTelU_Launcher.ViewModels;
 
 namespace MyTelU_Launcher.Views;
@@ -9,7 +10,7 @@ public sealed partial class ToolsFlyoutContent : UserControl
 {
     public OpenCommunityToolsViewModel ViewModel { get; }
 
-    public event EventHandler<string>? ToolInvoked;
+    public event EventHandler<ToolItem>? ToolInvoked;
     public event EventHandler? EditRequested;
 
     public ToolsFlyoutContent()
@@ -20,9 +21,9 @@ public sealed partial class ToolsFlyoutContent : UserControl
 
     private void ToolButton_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button button && button.Tag is string url)
+        if (sender is Button button && button.Tag is ToolItem tool)
         {
-            ToolInvoked?.Invoke(this, url);
+            ToolInvoked?.Invoke(this, tool);
         }
     }
 

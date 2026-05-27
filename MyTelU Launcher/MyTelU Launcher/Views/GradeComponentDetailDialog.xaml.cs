@@ -80,7 +80,7 @@ public sealed partial class GradeComponentDetailDialog : ContentDialog
 
         try
         {
-            var components = await gradeService.GetCourseDetailAsync(_grade.InternalId);
+            var components = await gradeService.GetCourseDetailAsync(_grade);
 
             LoadingRing.IsActive = false;
             LoadingPanel.Visibility = Visibility.Collapsed;

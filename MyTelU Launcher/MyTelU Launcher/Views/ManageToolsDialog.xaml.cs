@@ -74,22 +74,59 @@ public sealed partial class ManageToolsDialog : ContentDialog
         }
     }
 
-    private void RemoveButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    private async void RemoveButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
         var tool = GetToolFromSender(sender);
-        
-        if (tool != null)
+        if (tool == null)
         {
-            // Determine which collection this tool belongs to
-            if (ViewModel.Tools.Contains(tool))
-            {
-                ViewModel.RemoveTool(tool, ViewModel.Tools);
-            }
-            else if (ViewModel.CommunityTools.Contains(tool))
-            {
-                ViewModel.RemoveTool(tool, ViewModel.CommunityTools);
-            }
+            return;
         }
+
+        var targetCollection = ViewModel.Tools.Contains(tool)
+            ? ViewModel.Tools
+            : ViewModel.CommunityTools.Contains(tool)
+                ? ViewModel.CommunityTools
+                : null;
+        var sectionName = ReferenceEquals(targetCollection, ViewModel.CommunityTools)
+            ? "Community Tools"
+            : "Tools";
+
+        if (targetCollection == null)
+        {
+            return;
+        }
+
+        Hide();
+
+        var confirmed = await ShowRemoveToolConfirmationAsync(tool, sectionName);
+        if (confirmed)
+        {
+            ViewModel.RemoveTool(tool, targetCollection);
+        }
+
+        await ShowAsync();
+    }
+
+    private async Task<bool> ShowRemoveToolConfirmationAsync(ToolItem tool, string sectionName)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Remove this item?",
+            PrimaryButtonText = "Remove",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+            Content = new TextBlock
+            {
+                Text = $"\"{tool.Name}\" will be removed from {sectionName}.",
+                TextWrapping = TextWrapping.WrapWholeWords
+            }
+        };
+
+        var accentService = App.GetService<MyTelU_Launcher.Services.AccentColorService>();
+        accentService?.ApplyToContentDialog(dialog);
+
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
     private async void EditButton_Click(object sender, RoutedEventArgs e)

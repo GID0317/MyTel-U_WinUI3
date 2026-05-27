@@ -85,6 +85,17 @@
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
+
+                <controls:SettingsCard x:Name="CommunityToolsBrowserSettingsCard"
+                                       Header="Community Tools"
+                                       Margin="0,0,0,0"
+                                       Description="Always open Tools and Community Tools links in your default browser">
+                    <controls:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xE774;" />
+                    </controls:SettingsCard.HeaderIcon>
+                    <ToggleSwitch IsOn="{x:Bind ViewModel.AlwaysOpenCommunityToolsInExternalBrowser, Mode=TwoWay}" />
+                </controls:SettingsCard>
+
                 <!-- Tools Management Card -->
                 <controls:SettingsCard x:Name="ToolsManagementCard"
                        Header="Reset Tools"
@@ -108,7 +119,7 @@
                 <controls:SettingsCard x:Name="UpdateSettingsCard"
                        Header="Update Check"
                        Margin="0,0,0,0"
-                       Description="Current version: 4.0.0">
+                       Description="{x:Bind ViewModel.CurrentVersionDescription, Mode=OneWay}">
                     <controls:SettingsCard.HeaderIcon>
                         <FontIcon Glyph="&#xE895;" />
                     </controls:SettingsCard.HeaderIcon>
@@ -136,7 +147,7 @@
                     <TextBlock IsTextSelectionEnabled="True"
                                SelectionHighlightColor="{ThemeResource AccentFillColorDefaultBrush}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Version 4.0.0" />
+                               Text="{x:Bind ViewModel.AboutVersionText, Mode=OneWay}" />
                     <controls:SettingsExpander.Items>
                         <controls:SettingsCard Header="Send a Feedback, File a bug or contribute to the project">
                             <HyperlinkButton Content="Go to the page"

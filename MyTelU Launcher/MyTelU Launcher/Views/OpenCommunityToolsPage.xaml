@@ -28,7 +28,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ToolItem">
                                 <Button Click="ToolButton_Click"
-                                        Tag="{x:Bind Url}"
+                                        Tag="{Binding}"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Left"
                                         Padding="16,12"
@@ -64,7 +64,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ToolItem">
                                 <Button Click="ToolButton_Click"
-                                        Tag="{x:Bind Url}"
+                                        Tag="{Binding}"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Left"
                                         Padding="16,12"

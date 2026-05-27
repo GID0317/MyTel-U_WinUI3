@@ -64,6 +64,8 @@ public partial class App : Application
 
                 // Services
                 services.AddSingleton<IAppNotificationService, AppNotificationService>();
+                services.AddSingleton<IUpdateNotificationService, UpdateNotificationService>();
+                services.AddSingleton<IClassReminderService, ClassReminderService>();
                 services.AddSingleton<ILocalSettingsService, LocalSettingsService>();
                 services.AddSingleton<IThemeSelectorService, ThemeSelectorService>();
                 services.AddSingleton<AccentColorService>();
@@ -137,12 +139,13 @@ public partial class App : Application
         {
             // Log error and use a fallback version.
             System.Diagnostics.Debug.WriteLine("Failed to get package version: " + ex.Message);
-            AppVersion = new Version(4, 0, 0, 0);
+            AppVersion = new Version(4, 1, 0, 0);
         }
 
         base.OnLaunched(args);
         //App.GetService<IAppNotificationService>().Show(string.Format("AppNotificationSamplePayload".GetLocalized(), AppContext.BaseDirectory));
         _ = App.GetService<IScheduleService>().StartServerAsync();
         await App.GetService<IActivationService>().ActivateAsync(args);
+        await App.GetService<IUpdateNotificationService>().ShowPostUpdateNotificationAsync();
     }
 }

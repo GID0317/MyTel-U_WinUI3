@@ -146,6 +146,133 @@
                     <!-- Action buttons -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
 
+                        <!-- Class reminder dropdown -->
+                        <DropDownButton ToolTipService.ToolTip="Class reminder">
+                            <DropDownButton.Content>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
+                                              Glyph="{x:Bind ViewModel.ClassReminderIconGlyph, Mode=OneWay}"
+                                              FontSize="16"/>
+                                    <TextBlock Text="{x:Bind ViewModel.ClassReminderLabel, Mode=OneWay}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DropDownButton.Content>
+                            <DropDownButton.Flyout>
+                                <MenuFlyout Placement="Bottom">
+                                    <RadioMenuFlyoutItem Text="Disabled"
+                                                         GroupName="ClassReminderGroup"
+                                                         IsChecked="{x:Bind ViewModel.IsClassReminderDisabled, Mode=OneWay}"
+                                                         Tag="0"
+                                                         Click="ClassReminderPreset_Click">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE7ED;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
+                                    <RadioMenuFlyoutItem Text="10 min"
+                                                         GroupName="ClassReminderGroup"
+                                                         IsChecked="{x:Bind ViewModel.IsClassReminder10Minutes, Mode=OneWay}"
+                                                         Tag="10"
+                                                         Click="ClassReminderPreset_Click">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA8F;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
+                                    <RadioMenuFlyoutItem Text="5 min"
+                                                         GroupName="ClassReminderGroup"
+                                                         IsChecked="{x:Bind ViewModel.IsClassReminder5Minutes, Mode=OneWay}"
+                                                         Tag="5"
+                                                         Click="ClassReminderPreset_Click">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA8F;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
+                                    <RadioMenuFlyoutItem Text="20 min"
+                                                         GroupName="ClassReminderGroup"
+                                                         IsChecked="{x:Bind ViewModel.IsClassReminder20Minutes, Mode=OneWay}"
+                                                         Tag="20"
+                                                         Click="ClassReminderPreset_Click">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA8F;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
+                                    <RadioMenuFlyoutItem Text="30 min"
+                                                         GroupName="ClassReminderGroup"
+                                                         IsChecked="{x:Bind ViewModel.IsClassReminder30Minutes, Mode=OneWay}"
+                                                         Tag="30"
+                                                         Click="ClassReminderPreset_Click">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA8F;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
+                                    <RadioMenuFlyoutItem Text="1 hour"
+                                                         GroupName="ClassReminderGroup"
+                                                         IsChecked="{x:Bind ViewModel.IsClassReminder1Hour, Mode=OneWay}"
+                                                         Tag="60"
+                                                         Click="ClassReminderPreset_Click">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA8F;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Custom..."
+                                                    Click="ClassReminderCustom_Click">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xEA8F;"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator/>
+                                    <MenuFlyoutSubItem Text="Sound">
+                                        <MenuFlyoutSubItem.Icon>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8D6;"/>
+                                        </MenuFlyoutSubItem.Icon>
+                                        <RadioMenuFlyoutItem Text="Default"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundDefault, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Reminder"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="Alarm"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundAlarm, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Alarm"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="IM"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundIm, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.IM"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="Mail"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundMail, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Mail"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="SMS"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundSms, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.SMS"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="Looping alarm"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundLoopingAlarm, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Looping.Alarm"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="Looping alarm 2"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundLoopingAlarm2, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Looping.Alarm2"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="Looping alarm 3"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundLoopingAlarm3, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Looping.Alarm3"
+                                                             Click="ClassReminderSound_Click"/>
+                                        <RadioMenuFlyoutItem Text="Looping call"
+                                                             GroupName="ClassReminderSoundGroup"
+                                                             IsChecked="{x:Bind ViewModel.IsClassReminderSoundLoopingCall, Mode=OneWay}"
+                                                             Tag="ms-winsoundevent:Notification.Looping.Call"
+                                                             Click="ClassReminderSound_Click"/>
+                                    </MenuFlyoutSubItem>
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+
                         <!-- View layout dropdown -->
                         <DropDownButton ToolTipService.ToolTip="Change layout">
                             <DropDownButton.Content>
@@ -304,7 +431,8 @@
                                       Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="25"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
@@ -333,7 +461,13 @@
                                                        Foreground="{ThemeResource BadgeTextBrush}"/>
                                         </Border>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,8,0">
+                                    <Border Grid.Column="1"
+                                            Width="1"
+                                            MinHeight="44"
+                                            Background="{ThemeResource DividerStrokeColorDefaultBrush}"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,8,0">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <TextBlock Text="{x:Bind CourseCode}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                             <TextBlock Text="-" FontSize="15" FontWeight="SemiBold" Opacity="0.4" VerticalAlignment="Center"/>
@@ -351,7 +485,7 @@
                                         </StackPanel>
                                         <TextBlock Text="{x:Bind Lecturer}" FontSize="11" Opacity="0.6" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <FontIcon Grid.Column="2" Glyph="&#xE814;" Foreground="Red"
+                                    <FontIcon Grid.Column="3" Glyph="&#xE814;" Foreground="Red"
                                               Visibility="{x:Bind HasConflict, Converter={StaticResource BoolToVisibility}}"
                                               ToolTipService.ToolTip="Schedule conflict detected"
                                               VerticalAlignment="Center"/>
@@ -733,19 +867,25 @@
                 <Grid Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                       Margin="0,32,48,32" CornerRadius="20">
 
-                    <!-- Gradient background -->
                     <Grid.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="{ThemeResource SystemAccentColor}" Offset="0.0"/>
-                            <GradientStop Color="Transparent" Offset="1.0"/>
-                        </LinearGradientBrush>
+                        <SolidColorBrush Color="{ThemeResource CardBackgroundFillColorDefault}" />
                     </Grid.Background>
+
+                    <Rectangle VerticalAlignment="Bottom"
+                               Height="320"
+                               Opacity="0.55">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="Transparent" Offset="0.0"/>
+                                <GradientStop Color="{ThemeResource SystemAccentColor}" Offset="1.0"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
 
                     <!-- Mascot image -->
                     <Image Source="ms-appx:///Assets/GalihKoper_Icon.png"
-                           HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                            Margin="16,32,16,0"
-                           MaxHeight="400"
                            Stretch="Uniform"/>
 
                 </Grid>

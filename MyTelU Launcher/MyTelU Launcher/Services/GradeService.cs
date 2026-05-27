@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
 using HtmlAgilityPack;
@@ -21,7 +22,7 @@ public interface IGradeService
     Task<GradeResponse?> GetGradesAsync(string schoolYear = "", string semester = "", CancellationToken ct = default);
 
     /// <summary>Fetches component score breakdown for one course by its internal_id.</summary>
-    Task<List<GradeComponentScore>> GetCourseDetailAsync(string internalId, CancellationToken ct = default);
+    Task<List<GradeComponentScore>> GetCourseDetailAsync(GradeItem grade, CancellationToken ct = default);
 
     /// <summary>Scrapes available academic years from the score page &lt;select name="schoolYear"&gt; dropdown.</summary>
     Task<List<AcademicYearOption>> FetchAcademicYearsAsync(CancellationToken ct = default);
@@ -44,7 +45,7 @@ public class GradeService : IGradeService, IDisposable
     private const string AjaxUrl =
         "https://igracias.telkomuniversity.ac.id/libraries/ajax/ajax.score.php";
 
-    public bool HasCachedGrades => File.Exists(_cacheFile);
+    public bool HasCachedGrades => SecureFileStore.Load(_cacheFile) != null;
 
     public GradeResponse? GetCachedGrades() => LoadCache();
 
@@ -138,10 +139,15 @@ public class GradeService : IGradeService, IDisposable
         }
     }
 
-    public async Task<List<GradeComponentScore>> GetCourseDetailAsync(string internalId, CancellationToken ct = default)
+    public async Task<List<GradeComponentScore>> GetCourseDetailAsync(GradeItem grade, CancellationToken ct = default)
     {
+        var cacheKeys = GetComponentCacheKeys(grade);
+
+        if (!NetworkInterface.GetIsNetworkAvailable())
+            return LoadComponentCache(cacheKeys) ?? new();
+
         if (!HasSavedSession())
-            return LoadComponentCache(internalId) ?? new();
+            return LoadComponentCache(cacheKeys) ?? new();
 
         try
         {
@@ -151,28 +157,31 @@ public class GradeService : IGradeService, IDisposable
 
             var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                ["rId"] = internalId,
+                ["rId"] = grade.InternalId,
             });
 
             var resp = await client.PostAsync($"{AjaxUrl}?act=getcomponentscore", content, ct);
-            if (!resp.IsSuccessStatusCode) return LoadComponentCache(internalId) ?? new();
+            if (!resp.IsSuccessStatusCode) return LoadComponentCache(cacheKeys) ?? new();
 
             await using var responseStream = await resp.Content.ReadAsStreamAsync(ct);
-            if (resp.Content.Headers.ContentLength == 0) return LoadComponentCache(internalId) ?? new();
+            if (resp.Content.Headers.ContentLength == 0) return LoadComponentCache(cacheKeys) ?? new();
 
             List<GradeComponentScore> components;
             try { components = await ParseComponentScoresAsync(responseStream, ct); }
-            catch { return LoadComponentCache(internalId) ?? new(); }
+            catch { return LoadComponentCache(cacheKeys) ?? new(); }
 
             if (components.Count > 0)
-                SaveComponentCache(internalId, components);
+            {
+                SaveComponentCache(cacheKeys, components);
+                return components;
+            }
 
-            return components;
+            return LoadComponentCache(cacheKeys) ?? new();
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[GradeService] GetCourseDetailAsync error: {ex.Message}");
-            return LoadComponentCache(internalId) ?? new();
+            return LoadComponentCache(cacheKeys) ?? new();
         }
     }
 
@@ -376,7 +385,7 @@ public class GradeService : IGradeService, IDisposable
 
     private static readonly object _componentCacheLock = new();
 
-    private static void SaveComponentCache(string internalId, List<GradeComponentScore> components)
+    private static void SaveComponentCache(IReadOnlyList<string> cacheKeys, List<GradeComponentScore> components)
     {
         lock (_componentCacheLock)
         {
@@ -389,7 +398,9 @@ public class GradeService : IGradeService, IDisposable
                     ? new Dictionary<string, List<GradeComponentScore>>()
                     : JsonSerializer.Deserialize<Dictionary<string, List<GradeComponentScore>>>(json)
                       ?? new Dictionary<string, List<GradeComponentScore>>();
-                dict[internalId] = components;
+                foreach (var key in cacheKeys)
+                    dict[key] = components;
+
                 SecureFileStore.Save(_componentCacheFile, JsonSerializer.Serialize(dict));
             }
             catch (Exception ex)
@@ -399,14 +410,36 @@ public class GradeService : IGradeService, IDisposable
         }
     }
 
-    private static List<GradeComponentScore>? LoadComponentCache(string internalId)
+    private static List<GradeComponentScore>? LoadComponentCache(IReadOnlyList<string> cacheKeys)
     {
         try
         {
             var dict = LoadAllComponentCache();
-            return dict != null && dict.TryGetValue(internalId, out var data) ? data : null;
+            if (dict == null) return null;
+
+            foreach (var key in cacheKeys)
+            {
+                if (dict.TryGetValue(key, out var data))
+                    return data;
+            }
+
+            return null;
         }
         catch { return null; }
+    }
+
+    private static string[] GetComponentCacheKeys(GradeItem grade)
+    {
+        var keys = new List<string>(2);
+
+        if (!string.IsNullOrWhiteSpace(grade.InternalId))
+        {
+            keys.Add($"id:{grade.InternalId.Trim()}");
+            keys.Add(grade.InternalId.Trim());
+        }
+
+        keys.Add($"course:{grade.CourseCode.Trim()}|{grade.SchoolYear.Trim()}|{grade.Semester.Trim()}|{grade.Period.Trim()}");
+        return keys.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     private static Dictionary<string, List<GradeComponentScore>>? LoadAllComponentCache()

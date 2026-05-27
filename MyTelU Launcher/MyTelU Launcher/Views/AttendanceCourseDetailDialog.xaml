@@ -17,6 +17,8 @@
                     <SolidColorBrush x:Key="PresentBrush"  Color="#4EC94E"/>
                     <SolidColorBrush x:Key="AbsentBrush"   Color="#FF6B6B"/>
                     <SolidColorBrush x:Key="ExcusedBrush"  Color="#FFD42E"/>
+                    <SolidColorBrush x:Key="SickBrush"     Color="#60CDFF"/>
+                    <SolidColorBrush x:Key="OtherBrush"    Color="#9E9E9E"/>
                     <SolidColorBrush x:Key="BadgeTextBrush" Color="#1C1C1C"/>
                     <x:Double x:Key="ContentDialogMinWidth">560</x:Double>
                     <x:Double x:Key="ContentDialogMaxWidth">560</x:Double>
@@ -25,6 +27,8 @@
                     <SolidColorBrush x:Key="PresentBrush"  Color="#1A7F1A"/>
                     <SolidColorBrush x:Key="AbsentBrush"   Color="#C42B1C"/>
                     <SolidColorBrush x:Key="ExcusedBrush"  Color="#B07800"/>
+                    <SolidColorBrush x:Key="SickBrush"     Color="#0078D4"/>
+                    <SolidColorBrush x:Key="OtherBrush"    Color="#5C5C5C"/>
                     <SolidColorBrush x:Key="BadgeTextBrush" Color="#FFFFFF"/>
                     <x:Double x:Key="ContentDialogMinWidth">560</x:Double>
                     <x:Double x:Key="ContentDialogMaxWidth">560</x:Double>
@@ -33,6 +37,8 @@
                     <SolidColorBrush x:Key="PresentBrush"  Color="#4EC94E"/>
                     <SolidColorBrush x:Key="AbsentBrush"   Color="#FF6B6B"/>
                     <SolidColorBrush x:Key="ExcusedBrush"  Color="#FFD42E"/>
+                    <SolidColorBrush x:Key="SickBrush"     Color="#60CDFF"/>
+                    <SolidColorBrush x:Key="OtherBrush"    Color="#9E9E9E"/>
                     <SolidColorBrush x:Key="BadgeTextBrush" Color="#1C1C1C"/>
                     <x:Double x:Key="ContentDialogMinWidth">560</x:Double>
                     <x:Double x:Key="ContentDialogMaxWidth">560</x:Double>
@@ -142,13 +148,25 @@
                             <Border Padding="8,3" CornerRadius="4"
                                     Background="{ThemeResource AbsentBrush}"
                                     Visibility="{x:Bind IsAbsent, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="Alpa" FontSize="10" FontWeight="Bold"
+                                <TextBlock Text="{x:Bind AttendanceStatusLabel}" FontSize="10" FontWeight="Bold"
                                            Foreground="{ThemeResource BadgeTextBrush}"/>
                             </Border>
                             <Border Padding="8,3" CornerRadius="4"
                                     Background="{ThemeResource ExcusedBrush}"
                                     Visibility="{x:Bind IsExcused, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="Izin" FontSize="10" FontWeight="Bold"
+                                <TextBlock Text="{x:Bind AttendanceStatusLabel}" FontSize="10" FontWeight="Bold"
+                                           Foreground="{ThemeResource BadgeTextBrush}"/>
+                            </Border>
+                            <Border Padding="8,3" CornerRadius="4"
+                                    Background="{ThemeResource SickBrush}"
+                                    Visibility="{x:Bind IsSick, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{x:Bind AttendanceStatusLabel}" FontSize="10" FontWeight="Bold"
+                                           Foreground="{ThemeResource BadgeTextBrush}"/>
+                            </Border>
+                            <Border Padding="8,3" CornerRadius="4"
+                                    Background="{ThemeResource OtherBrush}"
+                                    Visibility="{x:Bind IsOtherAttendance, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{x:Bind AttendanceStatusLabel}" FontSize="10" FontWeight="Bold"
                                            Foreground="{ThemeResource BadgeTextBrush}"/>
                             </Border>
                         </StackPanel>

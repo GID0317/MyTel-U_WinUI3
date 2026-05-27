@@ -35,7 +35,7 @@
                                         HorizontalAlignment="Stretch"
                                         Style="{StaticResource AccentButtonStyle}"
                                         Click="ToolButton_Click"
-                                        Tag="{x:Bind Url}"
+                                        Tag="{Binding}"
                                         HorizontalContentAlignment="Left"
                                         Margin="0,0,10,10">
                                     <StackPanel Orientation="Horizontal"
@@ -67,7 +67,7 @@
                                 <Button FontWeight="SemiBold"
                                         HorizontalAlignment="Stretch"
                                         Click="ToolButton_Click"
-                                        Tag="{x:Bind Url}"
+                                        Tag="{Binding}"
                                         HorizontalContentAlignment="Left"
                                         Margin="0,0,10,10">
                                     <StackPanel Orientation="Horizontal"

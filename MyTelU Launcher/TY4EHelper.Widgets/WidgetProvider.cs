@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using HtmlAgilityPack;
+using System.Threading;
 
 namespace TY4EHelper.Widgets
 {
@@ -15,6 +15,14 @@ namespace TY4EHelper.Widgets
     {
         private static Dictionary<string, string> _widgetDefinitions = new Dictionary<string, string>();
         private static Dictionary<string, int> _widgetPageIndices = new Dictionary<string, int>();
+        private static int _memoryTrimScheduled;
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetCurrentProcess();
+
+        [DllImport("psapi.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EmptyWorkingSet(IntPtr hProcess);
 
         public void CreateWidget(WidgetContext widgetContext)
         {
@@ -126,8 +134,6 @@ namespace TY4EHelper.Widgets
         private static string? _cachedGalihDataUri;
         private static string? _cachedGalihEmptyDataUri;
         private static ScheduleResponse? _liveScheduleCache;
-        private static DateTime _liveScheduleCacheTime = DateTime.MinValue;
-
         private static string GetGalihImageUrl()
         {
             if (_cachedGalihDataUri != null) return _cachedGalihDataUri;
@@ -200,6 +206,31 @@ namespace TY4EHelper.Widgets
                 Data = JsonSerializer.Serialize(dataObj),
                 CustomState = ""
             });
+            ScheduleIdleMemoryTrim();
+        }
+
+        private static void ScheduleIdleMemoryTrim()
+        {
+            if (Interlocked.Exchange(ref _memoryTrimScheduled, 1) == 1)
+                return;
+
+            ThreadPool.QueueUserWorkItem(static _ =>
+            {
+                try
+                {
+                    Thread.Sleep(1500);
+                    GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: false);
+                    GC.WaitForPendingFinalizers();
+                    EmptyWorkingSet(GetCurrentProcess());
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    Volatile.Write(ref _memoryTrimScheduled, 0);
+                }
+            });
         }
 
         private async void UpdateWidget(string widgetId, bool forceRefresh = true)
@@ -227,7 +258,7 @@ namespace TY4EHelper.Widgets
                         showStatus = false,
                         isCached = false,
                         galihImageUrl = GetGalihImageUrl(),
-                        galihEmptyUrl = GetGalihEmptyUrl(),
+                        galihEmptyUrl = "",
                         statusColor = "Default",
                         statusMessage = "",
                         lastUpdated = DateTime.Now.ToString("HH:mm"),
@@ -257,7 +288,6 @@ namespace TY4EHelper.Widgets
                     if (schedule != null && !schedule.IsCachedData)
                     {
                         _liveScheduleCache = schedule;
-                        _liveScheduleCacheTime = DateTime.Now;
                     }
                 }
 
@@ -335,14 +365,14 @@ namespace TY4EHelper.Widgets
                 PushWidgetUpdate(widgetId, new
                 {
                     headerTitle = headerText,
-                    courses = displayCourses,
+                    courses = displayCourses.Select(WidgetCourseItem.From).ToList(),
                     hasCourses = hasCourses,
                     showNoCourses = !hasCourses,
                     noCourseMessage = noCourseMessage,
                     loginRequired = false,
                     showLoginPrompt = false,
-                    galihImageUrl = GetGalihImageUrl(),
-                    galihEmptyUrl = GetGalihEmptyUrl(),
+                    galihImageUrl = "",
+                    galihEmptyUrl = hasCourses ? "" : GetGalihEmptyUrl(),
                     showStatus = statusText.Length > 0,
                     isCached = isCached,
                     statusColor = statusColor,
@@ -837,72 +867,116 @@ namespace TY4EHelper.Widgets
                 {
                     ""type"": ""Container"",
                     ""$data"": ""${courses}"",
-                    ""separator"": true,
                     ""spacing"": ""Small"",
+                    ""style"": ""emphasis"",
                     ""items"": [
                         {
+                            ""type"": ""Container"",
+                            ""bleed"": true,
+                            ""spacing"": ""None"",
+                            ""minHeight"": ""3px"",
+                            ""items"": []
+                        },
+                        {
                             ""type"": ""ColumnSet"",
+                            ""bleed"": true,
+                            ""spacing"": ""None"",
                             ""columns"": [
                                 {
                                     ""type"": ""Column"",
-                                    ""width"": ""auto"",
-                                    ""items"": [
-                                        {
-                                            ""type"": ""TextBlock"",
-                                            ""text"": ""${time}"",
-                                            ""weight"": ""Bolder"",
-                                            ""size"": ""Small""
-                                        },
-                                        {
-                                            ""type"": ""TextBlock"",
-                                            ""text"": ""${StatusText}"",
-                                            ""size"": ""Small"",
-                                            ""weight"": ""Bolder"",
-                                            ""color"": ""${StatusColor}"",
-                                            ""spacing"": ""None""
-                                        },
-                                        {
-                                            ""type"": ""TextBlock"",
-                                            ""text"": ""${day}"",
-                                            ""size"": ""Small"",
-                                            ""isSubtle"": true,
-                                            ""spacing"": ""None"",
-                                            ""wrap"": false
-                                        }
-                                    ]
+                                    ""width"": ""3px"",
+                                    ""items"": []
                                 },
                                 {
                                     ""type"": ""Column"",
                                     ""width"": ""stretch"",
                                     ""items"": [
                                         {
-                                            ""type"": ""TextBlock"",
-                                            ""text"": ""${course_code} - ${course_name}"",
-                                            ""weight"": ""Bolder"",
-                                            ""size"": ""Small"",
-                                            ""wrap"": true
-                                        },
-                                        {
-                                            ""type"": ""TextBlock"",
-                                            ""text"": ""${RoomClass}"",
-                                            ""size"": ""Small"",
-                                            ""isSubtle"": true,
-                                            ""spacing"": ""None"",
-                                            ""wrap"": true,
-                                            ""$when"": ""${RoomClass != """"}"" 
-                                        },
-                                        {
-                                            ""type"": ""TextBlock"",
-                                            ""text"": ""${Lecturer}"",
-                                            ""size"": ""Small"",
-                                            ""isSubtle"": true,
-                                            ""spacing"": ""None"",
-                                            ""wrap"": true,
-                                            ""$when"": ""${Lecturer != """"}"" 
+                                            ""type"": ""ColumnSet"",
+                                            ""spacing"": ""Small"",
+                                            ""columns"": [
+                                                {
+                                                    ""type"": ""Column"",
+                                                    ""width"": ""auto"",
+                                                    ""verticalContentAlignment"": ""Center"",
+                                                    ""items"": [
+                                                        {
+                                                            ""type"": ""TextBlock"",
+                                                            ""text"": ""${day}"",
+                                                            ""weight"": ""Bolder"",
+                                                            ""size"": ""Small"",
+                                                            ""wrap"": false
+                                                        },
+                                                        {
+                                                            ""type"": ""TextBlock"",
+                                                            ""text"": ""${time}"",
+                                                            ""size"": ""Small"",
+                                                            ""isSubtle"": true,
+                                                            ""spacing"": ""None"",
+                                                            ""wrap"": false
+                                                        },
+                                                        {
+                                                            ""type"": ""TextBlock"",
+                                                            ""text"": ""${StatusText}"",
+                                                            ""size"": ""Small"",
+                                                            ""weight"": ""Bolder"",
+                                                            ""color"": ""${StatusColor}"",
+                                                            ""spacing"": ""None"",
+                                                            ""wrap"": false
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    ""type"": ""Column"",
+                                                    ""width"": ""stretch"",
+                                                    ""items"": [
+                                                        {
+                                                            ""type"": ""TextBlock"",
+                                                            ""text"": ""${CourseTitle}"",
+                                                            ""weight"": ""Bolder"",
+                                                            ""size"": ""Small"",
+                                                            ""wrap"": true,
+                                                            ""maxLines"": 2
+                                                        },
+                                                        {
+                                                            ""type"": ""TextBlock"",
+                                                            ""text"": ""${MetaLine}"",
+                                                            ""size"": ""Small"",
+                                                            ""isSubtle"": true,
+                                                            ""spacing"": ""None"",
+                                                            ""wrap"": true,
+                                                            ""maxLines"": 1,
+                                                            ""$when"": ""${MetaLine != ''}"" 
+                                                        },
+                                                        {
+                                                            ""type"": ""TextBlock"",
+                                                            ""text"": ""${Lecturer}"",
+                                                            ""size"": ""Small"",
+                                                            ""isSubtle"": true,
+                                                            ""spacing"": ""None"",
+                                                            ""wrap"": true,
+                                                            ""maxLines"": 1,
+                                                            ""$when"": ""${Lecturer != ''}"" 
+                                                        }
+                                                    ]
+                                                }
+                                            ]
                                         }
                                     ]
+                                },
+                                {
+                                    ""type"": ""Column"",
+                                    ""width"": ""3px"",
+                                    ""items"": []
                                 }
                             ]
+                        },
+                        {
+                            ""type"": ""Container"",
+                            ""bleed"": true,
+                            ""spacing"": ""None"",
+                            ""minHeight"": ""3px"",
+                            ""items"": []
                         }
                     ]
                 }
@@ -998,6 +1072,41 @@ namespace TY4EHelper.Widgets
         public string StatusColor { get; set; } = "Default";
         public string StatusText { get; set; } = "";
         public string RoomClass { get; set; } = "";
+        public string CourseTitle => JoinNonEmpty(" - ", CourseCode, CourseName);
+        public string MetaLine => JoinNonEmpty(" \u00B7 ", Room, ClassCode);
+
+        private static string JoinNonEmpty(string separator, params string[] values)
+            => string.Join(separator, values.Where(value => !string.IsNullOrWhiteSpace(value)).Select(value => value.Trim()));
+    }
+
+    internal sealed class WidgetCourseItem
+    {
+        [JsonPropertyName("day")]
+        public string Day { get; init; } = "";
+
+        [JsonPropertyName("time")]
+        public string Time { get; init; } = "";
+
+        public string StatusColor { get; init; } = "Default";
+
+        public string StatusText { get; init; } = "";
+
+        public string CourseTitle { get; init; } = "";
+
+        public string MetaLine { get; init; } = "";
+
+        public string Lecturer { get; init; } = "";
+
+        public static WidgetCourseItem From(CourseItem course) => new()
+        {
+            Day = course.Day,
+            Time = course.Time,
+            StatusColor = course.StatusColor,
+            StatusText = course.StatusText,
+            CourseTitle = course.CourseTitle,
+            MetaLine = course.MetaLine,
+            Lecturer = course.Lecturer
+        };
     }
 
     public class ScheduleResponse

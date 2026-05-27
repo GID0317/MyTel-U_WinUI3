@@ -45,7 +45,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
     private const string DetailUrl =
         "https://igracias.telkomuniversity.ac.id/libraries/ajax/ajax.presence.php";
 
-    public bool HasCachedAttendance => File.Exists(_cacheFile);
+    public bool HasCachedAttendance => SecureFileStore.Load(_cacheFile) != null;
 
     public AttendanceResponse? GetCachedAttendance() => LoadCache();
 
@@ -104,6 +104,9 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
     public async Task<AttendanceCourseDetail?> GetCourseDetailAsync(int courseId, CancellationToken ct = default)
     {
+        if (!NetworkInterface.GetIsNetworkAvailable())
+            return LoadDetailCache(courseId);
+
         if (!HasSavedSession())
             return LoadDetailCache(courseId);
 
@@ -126,7 +129,17 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             var html = await resp.Content.ReadAsStringAsync(ct);
             if (string.IsNullOrWhiteSpace(html)) return LoadDetailCache(courseId);
 
+            if (LooksLikeExpiredSession(resp, html))
+                return LoadDetailCache(courseId);
+
             var detail = ParseDetailHtml(html);
+            if (detail.Sessions.Count == 0)
+            {
+                var cached = LoadDetailCache(courseId);
+                if (cached?.Sessions.Count > 0)
+                    return cached;
+            }
+
             SaveDetailCache(courseId, detail);
             return detail;
         }
@@ -135,6 +148,17 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             Debug.WriteLine($"[AttendanceService] GetCourseDetailAsync error: {ex.Message}");
             return LoadDetailCache(courseId);
         }
+    }
+
+    private static bool LooksLikeExpiredSession(HttpResponseMessage response, string html)
+    {
+        var redirectedToLogin = response.RequestMessage?.RequestUri?.AbsoluteUri
+            .Contains("login", StringComparison.OrdinalIgnoreCase) == true;
+
+        return redirectedToLogin
+            || html.Contains("textUsername", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("textPassword", StringComparison.OrdinalIgnoreCase)
+            || html.Contains("login_button", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<List<AcademicYearOption>> FetchAvailableSemestersAsync(CancellationToken ct = default)
@@ -207,7 +231,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
             var html = await resp.Content.ReadAsStringAsync(ct);
 
-            if (html.Length < 500 || resp.RequestMessage?.RequestUri?.AbsoluteUri.Contains("login", StringComparison.OrdinalIgnoreCase) == true)
+            if (html.Length < 500 || LooksLikeExpiredSession(resp, html))
             {
                 Debug.WriteLine("[AttendanceService] Session appears expired.");
                 return null;
@@ -315,32 +339,28 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         }
 
         var sessions = new List<AttendanceSessionDetail>();
-        var table = doc.DocumentNode.SelectSingleNode("//table");
-        if (table != null)
+        var rows = doc.DocumentNode.SelectNodes("//tr");
+        if (rows != null)
         {
-            var rows = table.SelectNodes(".//tr");
-            if (rows != null)
+            foreach (var row in rows)
             {
-                foreach (var row in rows.Skip(1))
-                {
-                    var cells = row.SelectNodes("td")?.Select(td => td.InnerText.Trim()).ToList();
-                    if (cells == null || cells.Count < 9) continue;
+                var cells = row.SelectNodes("td")?.Select(td => CleanCell(td.InnerText)).ToList();
+                if (cells == null || cells.Count < 9) continue;
+                if (!int.TryParse(cells[0], out var no)) continue;
 
-                    int.TryParse(cells[0], out var no);
-                    sessions.Add(new AttendanceSessionDetail
-                    {
-                        No = no,
-                        Date = cells[1],
-                        Day = cells[2],
-                        Lecturer = cells[3],
-                        StartTime = cells[4],
-                        EndTime = cells[5],
-                        Rfid = cells[6],
-                        SessionType = cells[7],
-                        Attendance = cells[8],
-                        Content = cells.Count > 9 ? cells[9] : "",
-                    });
-                }
+                sessions.Add(new AttendanceSessionDetail
+                {
+                    No = no,
+                    Date = cells[1],
+                    Day = cells[2],
+                    Lecturer = cells[3],
+                    StartTime = cells[4],
+                    EndTime = cells[5],
+                    Rfid = cells[6],
+                    SessionType = cells[7],
+                    Attendance = cells[8],
+                    Content = cells.Count > 9 ? cells[9] : "",
+                });
             }
         }
 
@@ -351,6 +371,11 @@ public partial class AttendanceService : IAttendanceService, IDisposable
             StudentId = studentIdParsed,
             Sessions = sessions,
         };
+    }
+
+    private static string CleanCell(string value)
+    {
+        return WhitespaceRegex().Replace(WebUtility.HtmlDecode(HtmlEntity.DeEntitize(value)), " ").Trim();
     }
 
     private void SaveCache(AttendanceResponse data)
@@ -500,6 +525,9 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
     [GeneratedRegex(@"([\d.]+)")]
     private static partial Regex PercentageRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
 
     public void Dispose() { /* nothing pooled */ }
 }

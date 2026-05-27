@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <RootNamespace>MyTelU_Launcher.Core</RootNamespace>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

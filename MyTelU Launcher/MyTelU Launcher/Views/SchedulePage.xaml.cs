@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
+using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.ViewModels;
 using MyTelU_Launcher.Models;
@@ -185,6 +186,140 @@ namespace MyTelU_Launcher.Views
             {
                 scheduleService.SaveAcademicYear(selectedOption.YearCode, selectedOption.SemesterCode);
                 ViewModel.RefreshScheduleCommand.Execute(null);
+            }
+        }
+
+        private async void ClassReminderPreset_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuFlyoutItem item ||
+                item.Tag is not string tag ||
+                !int.TryParse(tag, out var minutes))
+                return;
+
+            await ViewModel.SetClassReminderPresetAsync(minutes);
+        }
+
+        private async void ClassReminderSound_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuFlyoutItem item ||
+                item.Tag is not string soundEvent)
+                return;
+
+            await ViewModel.SetClassReminderSoundAsync(soundEvent);
+        }
+
+        private async void ClassReminderCustom_Click(object sender, RoutedEventArgs e)
+        {
+            var reminderService = App.GetService<IClassReminderService>();
+            var settings = await reminderService.GetSettingsAsync();
+            var currentMinutes = settings.IsEnabled ? settings.MinutesBefore : 30;
+
+            var hoursBox = new NumberBox
+            {
+                Header = "Hours",
+                Minimum = 0,
+                Maximum = 23,
+                SmallChange = 1,
+                LargeChange = 1,
+                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+                Value = currentMinutes / 60,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+
+            var minutesBox = new NumberBox
+            {
+                Header = "Minutes",
+                Minimum = 0,
+                Maximum = 59,
+                SmallChange = 5,
+                LargeChange = 10,
+                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+                Value = currentMinutes % 60,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+
+            var validationText = new TextBlock
+            {
+                Text = "Enter a reminder time of at least 1 minute.",
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
+                Visibility = Visibility.Collapsed,
+                TextWrapping = TextWrapping.WrapWholeWords
+            };
+
+            var durationGrid = new Grid { ColumnSpacing = 12 };
+            durationGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            durationGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(hoursBox, 0);
+            Grid.SetColumn(minutesBox, 1);
+            durationGrid.Children.Add(hoursBox);
+            durationGrid.Children.Add(minutesBox);
+
+            var content = new StackPanel
+            {
+                Spacing = 16,
+                MaxWidth = 420,
+                Children =
+                {
+                    new StackPanel
+                    {
+                        Spacing = 8,
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "Choose how long before class starts the notification should appear.",
+                                Opacity = 0.72,
+                                TextWrapping = TextWrapping.WrapWholeWords
+                            },
+                            durationGrid
+                        }
+                    },
+                    validationText
+                }
+            };
+
+            var dialog = new ContentDialog
+            {
+                Title = "Custom reminder time",
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                Content = content,
+                XamlRoot = XamlRoot
+            };
+
+            App.GetService<AccentColorService>()?.ApplyToContentDialog(dialog);
+
+            dialog.PrimaryButtonClick += (_, args) =>
+            {
+                var totalMinutes = GetReminderMinutes();
+                var isValid = totalMinutes > 0;
+                validationText.Visibility = isValid ? Visibility.Collapsed : Visibility.Visible;
+                args.Cancel = !isValid;
+            };
+
+            var result = await dialog.ShowAsync();
+            if (result != ContentDialogResult.Primary)
+            {
+                await ViewModel.LoadClassReminderStateAsync();
+                return;
+            }
+
+            await reminderService.SaveSettingsAsync(new ClassReminderSettings
+            {
+                IsEnabled = true,
+                MinutesBefore = GetReminderMinutes(),
+                SoundEvent = settings.SoundEvent
+            });
+
+            await ViewModel.LoadClassReminderStateAsync();
+            await ViewModel.RescheduleClassRemindersAsync();
+
+            int GetReminderMinutes()
+            {
+                var hours = double.IsNaN(hoursBox.Value) ? 0 : (int)Math.Floor(hoursBox.Value);
+                var minutes = double.IsNaN(minutesBox.Value) ? 0 : (int)Math.Floor(minutesBox.Value);
+                return (hours * 60) + minutes;
             }
         }
 

@@ -5,9 +5,11 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using CommunityToolkit.Mvvm.Messaging;
+using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.ViewModels;
 using MyTelU_Launcher.Models;
+using Windows.System;
 
 namespace MyTelU_Launcher.Views
 {
@@ -180,9 +182,9 @@ namespace MyTelU_Launcher.Views
             _toolsFlyoutContent = null;
         }
 
-        private void ToolsFlyoutContent_ToolInvoked(object? sender, string url)
+        private async void ToolsFlyoutContent_ToolInvoked(object? sender, ToolItem tool)
         {
-            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), url);
+            await OpenToolAsync(tool);
         }
 
         private async void ToolsFlyoutContent_EditRequested(object? sender, EventArgs e)
@@ -215,12 +217,37 @@ namespace MyTelU_Launcher.Views
             }
         }
 
-        private void ToolButton_Click(object sender, RoutedEventArgs e)
+        private async void ToolButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button button && button.Tag is string url)
+            if (sender is Button button && button.Tag is ToolItem tool)
             {
-                ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), url);
+                await OpenToolAsync(tool);
             }
+        }
+
+        private static async System.Threading.Tasks.Task OpenToolAsync(ToolItem tool)
+        {
+            if (string.IsNullOrWhiteSpace(tool.Url))
+                return;
+
+            var shouldOpenExternally = await App.GetService<ILocalSettingsService>()
+                .ReadSettingAsync<bool>(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser);
+
+            if (shouldOpenExternally && TryCreateUri(tool.Url, out var uri))
+            {
+                await Launcher.LaunchUriAsync(uri);
+                return;
+            }
+
+            ShellPage.Current?.ShowOverlay(typeof(InAppBrowserPage), tool.Url);
+        }
+
+        private static bool TryCreateUri(string url, out Uri uri)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out uri!))
+                return true;
+
+            return Uri.TryCreate("https://" + url, UriKind.Absolute, out uri!);
         }
 
         private async System.Threading.Tasks.Task ShowManageToolsDialogAsync()

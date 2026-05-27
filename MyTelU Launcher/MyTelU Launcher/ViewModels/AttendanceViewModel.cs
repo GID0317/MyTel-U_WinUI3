@@ -393,6 +393,39 @@ public partial class AttendanceViewModel : ObservableRecipient,
             var data = await _attendanceService.GetAttendanceAsync(schoolYear, token);
             if (token.IsCancellationRequested) return;
 
+            if (data == null
+                && bypass
+                && System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
+                && _browserLoginService.HasSavedCredentials)
+            {
+                FeatureFlowLogger.Write("Attendance", "manual refresh live fetch failed: trying silent relogin");
+                bool reloginOk;
+                IsBrowserLoginRunning = true;
+                try
+                {
+                    reloginOk = await _browserLoginService.TrySilentLoginAsync(token);
+                }
+                finally
+                {
+                    IsBrowserLoginRunning = false;
+                }
+
+                if (token.IsCancellationRequested) return;
+
+                if (reloginOk)
+                {
+                    _ = LoadAcademicYearsAsync();
+                    data = await _attendanceService.GetAttendanceAsync(schoolYear, token);
+                    FeatureFlowLogger.Write("Attendance", data != null
+                        ? "manual refresh retry success after relogin"
+                        : "manual refresh retry failed after relogin");
+                }
+                else
+                {
+                    FeatureFlowLogger.Write("Attendance", "manual refresh relogin failed");
+                }
+            }
+
             if (data != null)
             {
                 PopulateData(data);

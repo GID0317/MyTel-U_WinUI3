@@ -107,11 +107,27 @@ public class AttendanceSessionDetail
     public string Attendance { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
 
-    // ── Computed ────────
-    [JsonIgnore] public bool IsPresent => string.Equals(Attendance, "Hadir", System.StringComparison.OrdinalIgnoreCase);
-    [JsonIgnore] public bool IsAbsent => Attendance.Contains("Alpa", System.StringComparison.OrdinalIgnoreCase)
-                                       || Attendance.Contains("Alpha", System.StringComparison.OrdinalIgnoreCase);
-    [JsonIgnore] public bool IsExcused => string.Equals(Attendance, "Izin", System.StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore] public string AttendanceStatusLabel
+    {
+        get
+        {
+            var attendance = (Attendance ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(attendance)) return "Other";
+            if (IsPresent) return "Hadir";
+            if (IsAbsent) return "Alfa";
+            if (IsExcused) return "Izin";
+            if (IsSick) return "Sakit";
+            return attendance;
+        }
+    }
+
+    [JsonIgnore] public bool IsPresent => string.Equals((Attendance ?? string.Empty).Trim(), "Hadir", System.StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore] public bool IsAbsent => (Attendance ?? string.Empty).Contains("Alpa", System.StringComparison.OrdinalIgnoreCase)
+                                       || (Attendance ?? string.Empty).Contains("Alpha", System.StringComparison.OrdinalIgnoreCase)
+                                       || (Attendance ?? string.Empty).Contains("Alfa", System.StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore] public bool IsExcused => string.Equals((Attendance ?? string.Empty).Trim(), "Izin", System.StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore] public bool IsSick => string.Equals((Attendance ?? string.Empty).Trim(), "Sakit", System.StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore] public bool IsOtherAttendance => !IsPresent && !IsAbsent && !IsExcused && !IsSick;
     [JsonIgnore] public bool HasContent => !string.IsNullOrWhiteSpace(Content);
 }
 

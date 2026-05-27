@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
@@ -24,8 +23,15 @@ namespace MyTelU_Launcher.ViewModels
         [ObservableProperty]
         private string _versionDescription;
 
+        public string CurrentVersionDescription => $"Current version: {GetShortVersionText()}";
+
+        public string AboutVersionText => $"Version {GetShortVersionText()}";
+
         [ObservableProperty]
         private bool _isCustomImageBGEnabled;
+
+        [ObservableProperty]
+        private bool _alwaysOpenCommunityToolsInExternalBrowser;
 
         // Explicit backing field and property for the custom image path.
         private string _customImagePath;
@@ -64,6 +70,7 @@ namespace MyTelU_Launcher.ViewModels
         private async void InitializeSettingsAsync()
         {
             _isCustomImageBGEnabled = await _localSettingsService.ReadSettingAsync<bool>("IsCustomImageBGEnabled");
+            AlwaysOpenCommunityToolsInExternalBrowser = await _localSettingsService.ReadSettingAsync<bool>(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser);
             // Load any previously saved custom image path.
             CustomImagePath = await _localSettingsService.ReadSettingAsync<string>("CustomBackgroundImagePath");
             OnPropertyChanged(nameof(CustomImagePathDescription));
@@ -94,6 +101,11 @@ namespace MyTelU_Launcher.ViewModels
                 // When disabled, signal default image usage.
                 WeakReferenceMessenger.Default.Send(new BackgroundImageChangedMessage(string.Empty));
             }
+        }
+
+        partial void OnAlwaysOpenCommunityToolsInExternalBrowserChanged(bool value)
+        {
+            _ = _localSettingsService.SaveSettingAsync(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser, value);
         }
 
         public async void ResetTools()
@@ -133,6 +145,18 @@ namespace MyTelU_Launcher.ViewModels
 
         private static string GetVersionDescription()
         {
+            var version = GetAppVersion();
+            return $"{"AppDisplayName".GetLocalized()} - {version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+        }
+
+        private static string GetShortVersionText()
+        {
+            var version = GetAppVersion();
+            return $"{version.Major}.{version.Minor}.{version.Build}";
+        }
+
+        private static Version GetAppVersion()
+        {
             Version version;
             if (RuntimeHelper.IsMSIX)
             {
@@ -141,10 +165,10 @@ namespace MyTelU_Launcher.ViewModels
             }
             else
             {
-                version = Assembly.GetExecutingAssembly().GetName().Version!;
+                version = App.AppVersion;
             }
 
-            return $"{"AppDisplayName".GetLocalized()} - {version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+            return version;
         }
     }
 }
