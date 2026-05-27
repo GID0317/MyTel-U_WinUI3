@@ -118,9 +118,9 @@ namespace TY4EHelper.Widgets
             AcademicYear = "2025/2026 Semester 2",
             Courses = new List<CourseItem>
             {
-                new CourseItem { Day = "Monday", Time = "07:00 - 08:40", CourseCode = "TK1234", CourseName = "Introduction to Algorithms", Room = "GKU Timur 301", ClassCode = "TK-47-01", Lecturer = "Budi", RoomClass = "GKU Timur 301 · TK-47-01", StatusText = "Done", StatusColor = "Good" },
-                new CourseItem { Day = "Monday", Time = "09:00 - 10:40", CourseCode = "TK2345", CourseName = "Discrete Mathematics", Room = "GKU Barat 201", ClassCode = "TK-47-03", Lecturer = "Agus", RoomClass = "GKU Barat 201 · TK-47-03", StatusText = "Ongoing", StatusColor = "Accent" },
-                new CourseItem { Day = "Monday", Time = "13:00 - 14:40", CourseCode = "TK3456", CourseName = "Object Oriented Programming", Room = "Lab Komputer 1", ClassCode = "TK-47-02", Lecturer = "Umar", RoomClass = "Lab Komputer 1 · TK-47-02", StatusText = "Later", StatusColor = "Default" },
+                new CourseItem { Day = "Monday", Time = "07:00 - 08:40", CourseCode = "TK1234", CourseName = "Introduction to Algorithms", Room = "GKU Timur 301", ClassCode = "TK-47-01", Lecturer = "Budi", RoomClass = "GKU Timur 301 · TK-47-01", StatusText = "FINISHED", StatusColor = "Good" },
+                new CourseItem { Day = "Monday", Time = "09:00 - 10:40", CourseCode = "TK2345", CourseName = "Discrete Mathematics", Room = "GKU Barat 201", ClassCode = "TK-47-03", Lecturer = "Agus", RoomClass = "GKU Barat 201 · TK-47-03", StatusText = "ONGOING", StatusColor = "Warning" },
+                new CourseItem { Day = "Monday", Time = "13:00 - 14:40", CourseCode = "TK3456", CourseName = "Object Oriented Programming", Room = "Lab Komputer 1", ClassCode = "TK-47-02", Lecturer = "Umar", RoomClass = "Lab Komputer 1 · TK-47-02", StatusText = "UPCOMING", StatusColor = "Accent" },
                 new CourseItem { Day = "Tuesday", Time = "07:00 - 08:40", CourseCode = "TK4567", CourseName = "Database Systems", Room = "GKU Timur 405", ClassCode = "TK-47-05", Lecturer = "Wildan", RoomClass = "GKU Timur 405 · TK-47-05", StatusText = "", StatusColor = "Default" },
                 new CourseItem { Day = "Tuesday", Time = "10:00 - 11:40", CourseCode = "TK5678", CourseName = "Computer Networks", Room = "Lab Jaringan 2", ClassCode = "TK-47-04", Lecturer = "M.T. Rina Wulandari", RoomClass = "Lab Jaringan 2 · TK-47-04", StatusText = "", StatusColor = "Default" },
                 new CourseItem { Day = "Wednesday", Time = "08:00 - 09:40", CourseCode = "TK6789", CourseName = "Software Engineering", Room = "GKU Barat 303", ClassCode = "TK-47-06", Lecturer = "Dr. Dewi Anggraini", RoomClass = "GKU Barat 303 · TK-47-06", StatusText = "", StatusColor = "Default" },
@@ -434,15 +434,15 @@ namespace TY4EHelper.Widgets
 
                 if (now >= startTime && now <= endTime)
                 {
-                    return ("ONGOING", "Attention");
+                    return ("ONGOING", "Warning");
                 }
                 else if (now > endTime)
                 {
-                    return ("FINISHED", "Default");
+                    return ("FINISHED", "Good");
                 }
                 else
                 {
-                    return ("UPCOMING", "Good");
+                    return ("UPCOMING", "Accent");
                 }
             }
             catch
