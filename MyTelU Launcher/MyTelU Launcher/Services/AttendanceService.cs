@@ -440,8 +440,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         try
         {
             var settingsFile = Path.Combine(_appDataDir, "settings.json");
-            if (!File.Exists(settingsFile)) return null;
-            var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(settingsFile));
+            var d = SecureSettingsStore.Load(settingsFile);
             return d?.TryGetValue("studentId", out var id) == true ? id : null;
         }
         catch { return null; }
@@ -452,8 +451,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         try
         {
             var settingsFile = Path.Combine(_appDataDir, "settings.json");
-            if (!File.Exists(settingsFile)) return null;
-            var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(settingsFile));
+            var d = SecureSettingsStore.Load(settingsFile);
             if (d?.TryGetValue("yearCode", out var yr) == true && d.TryGetValue("semesterCode", out var sm) == true)
                 return $"{yr}/{sm}";
             return null;

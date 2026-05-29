@@ -46,9 +46,9 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
     private async Task ResetToolsAsync()
     {
         // Clear saved settings
-        await _localSettingsService.SaveSettingAsync<List<ToolItem>>(ToolsSettingsKey, null);
-        await _localSettingsService.SaveSettingAsync<List<ToolItem>>(CommunityToolsSettingsKey, null);
-        await _localSettingsService.SaveSettingAsync<List<string>>(DeletedToolsSettingsKey, null);
+        await _localSettingsService.SaveProtectedSettingAsync<List<ToolItem>>(ToolsSettingsKey, null);
+        await _localSettingsService.SaveProtectedSettingAsync<List<ToolItem>>(CommunityToolsSettingsKey, null);
+        await _localSettingsService.SaveProtectedSettingAsync<List<string>>(DeletedToolsSettingsKey, null);
 
         // Reload (which will load defaults since settings are null)
         await LoadToolsAsync();
@@ -56,9 +56,9 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
 
     private async Task LoadToolsAsync()
     {
-        var savedTools = await _localSettingsService.ReadSettingAsync<List<ToolItem>>(ToolsSettingsKey);
-        var savedCommunityTools = await _localSettingsService.ReadSettingAsync<List<ToolItem>>(CommunityToolsSettingsKey);
-        var deletedTools = await _localSettingsService.ReadSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? [];
+        var savedTools = await _localSettingsService.ReadProtectedSettingAsync<List<ToolItem>>(ToolsSettingsKey);
+        var savedCommunityTools = await _localSettingsService.ReadProtectedSettingAsync<List<ToolItem>>(CommunityToolsSettingsKey);
+        var deletedTools = await _localSettingsService.ReadProtectedSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? [];
         var deletedToolsSet = new HashSet<string>(deletedTools, StringComparer.OrdinalIgnoreCase);
         var hasToolChanges = false;
         var hasCommunityToolChanges = false;
@@ -166,12 +166,12 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
 
     private async void SaveToolsAsync()
     {
-        await _localSettingsService.SaveSettingAsync(ToolsSettingsKey, Tools.ToList());
+        await _localSettingsService.SaveProtectedSettingAsync(ToolsSettingsKey, Tools.ToList());
     }
 
     private async void SaveCommunityToolsAsync()
     {
-        await _localSettingsService.SaveSettingAsync(CommunityToolsSettingsKey, CommunityTools.ToList());
+        await _localSettingsService.SaveProtectedSettingAsync(CommunityToolsSettingsKey, CommunityTools.ToList());
     }
 
     public void MoveToolUp(ToolItem tool, ObservableCollection<ToolItem> collection)
@@ -201,11 +201,11 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
 
         if (isDefault)
         {
-            var deletedTools = await _localSettingsService.ReadSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? new List<string>();
+            var deletedTools = await _localSettingsService.ReadProtectedSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? new List<string>();
             if (!deletedTools.Contains(tool.Url))
             {
                 deletedTools.Add(tool.Url);
-                await _localSettingsService.SaveSettingAsync(DeletedToolsSettingsKey, deletedTools);
+                await _localSettingsService.SaveProtectedSettingAsync(DeletedToolsSettingsKey, deletedTools);
             }
         }
     }
@@ -295,13 +295,13 @@ public partial class OpenCommunityToolsViewModel : ObservableRecipient
 
     private async Task EnsureDeletedDefaultToolAsync(string toolUrl)
     {
-        var deletedTools = await _localSettingsService.ReadSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? [];
+        var deletedTools = await _localSettingsService.ReadProtectedSettingAsync<List<string>>(DeletedToolsSettingsKey) ?? [];
         if (deletedTools.Contains(toolUrl))
         {
             return;
         }
 
         deletedTools.Add(toolUrl);
-        await _localSettingsService.SaveSettingAsync(DeletedToolsSettingsKey, deletedTools);
+        await _localSettingsService.SaveProtectedSettingAsync(DeletedToolsSettingsKey, deletedTools);
     }
 }

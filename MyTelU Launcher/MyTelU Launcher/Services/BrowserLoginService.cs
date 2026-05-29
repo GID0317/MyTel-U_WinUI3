@@ -482,12 +482,10 @@ public class BrowserLoginService : IBrowserLoginService
         try
         {
             // Preserve an earlier successful capture.
-            if (File.Exists(_settingsFile))
+            var settings = await SecureSettingsStore.LoadAsync(_settingsFile, ct);
+            if (settings.ContainsKey("studentId"))
             {
-                try {
-                    var text = await File.ReadAllTextAsync(_settingsFile, ct);
-                    if (text.Contains("studentId")) return;
-                } catch {}
+                return;
             }
 
             var result = await page.EvaluateAsync<string>(@"() => {
@@ -499,16 +497,8 @@ public class BrowserLoginService : IBrowserLoginService
 
             if (!string.IsNullOrWhiteSpace(result))
             {
-                var settings = new Dictionary<string, string>();
-                if (File.Exists(_settingsFile))
-                {
-                    try {
-                         settings = JsonSerializer.Deserialize<Dictionary<string, string>>(await File.ReadAllTextAsync(_settingsFile, ct)) ?? new();
-                    } catch {}
-                }
-                
                 settings["studentId"] = result;
-                await File.WriteAllTextAsync(_settingsFile, JsonSerializer.Serialize(settings), ct);
+                await SecureSettingsStore.SaveAsync(_settingsFile, settings, ct);
                 Debug.WriteLine($"[BrowserLogin] Captured StudentID: {result}");
             }
         }

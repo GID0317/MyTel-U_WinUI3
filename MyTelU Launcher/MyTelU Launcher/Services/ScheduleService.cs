@@ -451,13 +451,7 @@ public class ScheduleService : IScheduleService, IDisposable
     // ── Settings helpers ─────────────────────────────────────────────────────
     private Dictionary<string, string> LoadSettings()
     {
-        try
-        {
-            if (!File.Exists(_settingsFile)) return new Dictionary<string, string>();
-            var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_settingsFile));
-            return d ?? new Dictionary<string, string>();
-        }
-        catch { return new Dictionary<string, string>(); }
+        return SecureSettingsStore.Load(_settingsFile);
     }
 
     private void SaveSettings(Dictionary<string, string> settings)
@@ -465,7 +459,7 @@ public class ScheduleService : IScheduleService, IDisposable
         try
         {
             Directory.CreateDirectory(_appDataDir);
-            File.WriteAllText(_settingsFile, JsonSerializer.Serialize(settings));
+            SecureSettingsStore.Save(_settingsFile, settings);
         }
         catch { }
     }
