@@ -1,0 +1,6 @@
+# Signing certificates and private keys must stay local.
+*.pfx
+*.p12
+*.pvk
+*.snk
+
