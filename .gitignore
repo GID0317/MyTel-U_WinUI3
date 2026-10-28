@@ -4,3 +4,15 @@
 *.pvk
 *.snk
 
+# Local builds, SDKs, and Visual Studio state.
+.vs/
+.tools/
+.history/
+**/bin/
+**/obj/
+Packages/
+Output/
+*.user
+*.tmp
+*.log
+

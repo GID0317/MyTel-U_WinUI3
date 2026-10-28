@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:helpers="using:MyTelU_Launcher.Helpers"
+    xmlns:controls="using:MyTelU_Launcher.Controls"
     xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
     xmlns:i="using:Microsoft.Xaml.Interactivity"
     mc:Ignorable="d"
@@ -12,9 +13,42 @@
 
     <Page.Resources>
         <helpers:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <Style x:Key="AccountMenuFlyoutHeaderStyle" TargetType="controls:AccountMenuFlyoutHeader">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="controls:AccountMenuFlyoutHeader">
+                        <Grid MinWidth="280" MaxWidth="320" Padding="12,6,14,6" ColumnSpacing="12"
+                              AutomationProperties.AccessibilityView="Raw">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <PersonPicture Width="36" Height="36" VerticalAlignment="Top"
+                                           DisplayName="{TemplateBinding DisplayName}"
+                                           ProfilePicture="{TemplateBinding ProfilePicture}"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}"
+                                           Text="{TemplateBinding DisplayName}" TextWrapping="Wrap"/>
+                                <TextBlock Style="{ThemeResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{TemplateBinding Description}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ProgressRing Grid.Column="2" Width="16" Height="16" VerticalAlignment="Center"
+                                          IsActive="{TemplateBinding IsBusy}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Page.Resources>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <!-- Overall Page Background -->
         <Grid.Background>
             <SolidColorBrush Color="Transparent"/>
@@ -22,42 +56,71 @@
 
         <!-- Background Image -->
         <Image Source="{x:Bind ViewModel.BackgroundImage, Mode=OneWay}"
+               Grid.RowSpan="2"
                Stretch="UniformToFill"
                HorizontalAlignment="Stretch"
                VerticalAlignment="Stretch"
                Canvas.ZIndex="-1"/>
 
         <!-- App Title Bar -->
-        <Grid x:Name="AppTitleBar"
-              Canvas.ZIndex="1"
-              Height="{Binding ElementName=NavigationViewControl, Path=CompactPaneLength}"
-              IsHitTestVisible="True"
-              VerticalAlignment="Top">
-            <Image Source="ms-appx:///Assets/Icon_App.ico"
-                   HorizontalAlignment="Left"
-                   Width="30"
-                   Height="30"
-                   Margin="20,0,0,0"/>
-            <TextBlock x:Name="AppTitleBarText"
-                       VerticalAlignment="Center"
-                       TextWrapping="NoWrap"
-                       FontWeight="Bold"
-                       Style="{StaticResource CaptionTextBlockStyle}"
-                       Margin="60,0,0,0"/>
-        </Grid>
+        <TitleBar x:Name="AppTitleBar"
+                  Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
+                  IsBackButtonVisible="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}"
+                  IsBackButtonEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}"
+                  BackRequested="TitleBar_BackRequested"
+                  IsPaneToggleButtonVisible="True"
+                  PaneToggleRequested="TitleBar_PaneToggleRequested">
+            <TitleBar.IconSource>
+                <BitmapIconSource UriSource="ms-appx:///Assets/Icon_App.png" ShowAsMonochrome="False"/>
+            </TitleBar.IconSource>
+            <TitleBar.RightHeader>
+                <Button x:Name="AccountButton" Width="32" Height="32" Padding="0" CornerRadius="16" BorderThickness="0"
+                        CenterPoint="16,16,0"
+                        PointerEntered="AccountButton_PointerEntered"
+                        PointerExited="AccountButton_ResetScale"
+                        PointerCanceled="AccountButton_ResetScale"
+                        PointerCaptureLost="AccountButton_ResetScale"
+                        Style="{StaticResource SubtleButtonStyle}"
+                        AutomationProperties.Name="Student profile" ToolTipService.ToolTip="Student profile">
+                    <Button.ScaleTransition>
+                        <Vector3Transition Duration="0:0:0.08"/>
+                    </Button.ScaleTransition>
+                    <PersonPicture x:Name="AccountAvatar" Width="32" Height="32"/>
+                    <Button.Flyout>
+                        <MenuFlyout x:Name="AccountFlyout" Placement="BottomEdgeAlignedRight"
+                                Opening="AccountFlyout_Opening" Closed="AccountFlyout_Closed">
+                            <controls:AccountMenuFlyoutHeader x:Name="AccountMenuHeader"
+                                AutomationProperties.Name="Student account"
+                                Style="{StaticResource AccountMenuFlyoutHeaderStyle}"/>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem x:Name="AccountSignIn" Text="Sign in" Click="AccountSignIn_Click" Visibility="Collapsed">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE748;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="AccountKtm" Text="KTM Digital" Click="AccountKtm_Click">
+                                <MenuFlyoutItem.Icon><SymbolIcon Symbol="ContactInfo"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem x:Name="AccountSignOut" Text="Sign out" Click="AccountSignOut_Click">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xF3B1;"/></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </TitleBar.RightHeader>
+        </TitleBar>
 
         <!-- NavigationView -->
         <NavigationView
             x:Name="NavigationViewControl"
+            Grid.Row="1"
             Canvas.ZIndex="0"
             Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"
-            IsBackButtonVisible="Visible"
-            IsBackEnabled="{x:Bind ViewModel.IsBackEnabled, Mode=OneWay}"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleButtonVisible="False"
+            IsTitleBarAutoPaddingEnabled="False"
             SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}"
             IsSettingsVisible="True"
             ExpandedModeThresholdWidth="1280"
-            DisplayModeChanged="NavigationViewControl_DisplayModeChanged"
-            Header="{x:Bind ((ContentControl)ViewModel.Selected).Content, Mode=OneWay}">
+            AlwaysShowHeader="False">
 
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="Home" helpers:NavigationHelper.NavigateTo="MyTelU_Launcher.ViewModels.HomeViewModel">
@@ -84,7 +147,7 @@
             </NavigationView.MenuItems>
 
             <!-- Main Content Area -->
-            <Grid Margin="0,-1,0,0" Background="Transparent">
+            <Grid Background="Transparent">
                 <!-- Content Area Background Image -->
                 <Image Source="{x:Bind ViewModel.BackgroundImage, Mode=OneWay}"
                        Stretch="UniformToFill"
@@ -116,18 +179,13 @@
                 </InfoBar>
 
                 <!-- Main Navigation Frame -->
-                <ScrollViewer VerticalScrollMode="Auto"
-                              VerticalScrollBarVisibility="Auto"
-                              Canvas.ZIndex="1"
-                              Background="Transparent">
-                    <Frame x:Name="NavigationFrame" Background="Transparent">
-                        <Frame.ContentTransitions>
-                            <TransitionCollection>
-                                <NavigationThemeTransition/>
-                            </TransitionCollection>
-                        </Frame.ContentTransitions>
-                    </Frame>
-                </ScrollViewer>
+                <Frame x:Name="NavigationFrame" Background="Transparent">
+                    <Frame.ContentTransitions>
+                        <TransitionCollection>
+                            <NavigationThemeTransition/>
+                        </TransitionCollection>
+                    </Frame.ContentTransitions>
+                </Frame>
             </Grid>
 
             <NavigationView.HeaderTemplate>
@@ -153,6 +211,7 @@
 
         <!-- Overlay Container: Displays on top of all UI when activated -->
         <Grid x:Name="OverlayContainer"
+              Grid.RowSpan="2"
               Background="#80000000"
               Visibility="Collapsed"
               HorizontalAlignment="Stretch"

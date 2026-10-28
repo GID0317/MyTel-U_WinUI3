@@ -8,7 +8,8 @@ namespace MyTelU_Launcher.Models;
 /// aaData column layout: [0]=course_code, [1]=course_name, [2]=credits, [3]=period,
 ///   [4]=grade, [5]=flag, [6]=active("Y"/"T"), [7]=internal_id
 /// </summary>
-public class GradeItem
+[WinRT.GeneratedBindableCustomProperty]
+public partial class GradeItem
 {
     [JsonPropertyName("course_code")]
     public string CourseCode { get; set; } = string.Empty;

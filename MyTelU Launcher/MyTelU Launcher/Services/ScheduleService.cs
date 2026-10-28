@@ -1,3 +1,4 @@
+using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Text.Json;
@@ -90,6 +91,8 @@ public class ScheduleService : IScheduleService, IDisposable
 
     public void ClearSession()
     {
+        App.GetService<MobileAcademicService>().ResetSession();
+        App.GetService<StudyPlanService>().ResetSession();
         AppDataStore.ClearAll();
     }
 
@@ -215,25 +218,25 @@ public class ScheduleService : IScheduleService, IDisposable
             foreach (var c in courses)
                 c.HasConflict = conflictCodes.Contains(c.CourseCode ?? "");
 
-            var timetable = new Dictionary<string, object>();
+            var timetable = new Dictionary<string, Dictionary<string, List<TimetableEntry>>>();
             foreach (var c in courses)
             {
                 var day  = c.Day  ?? "";
                 var slot = c.Time ?? "";
                 if (day == "" || slot == "") continue;
                 if (!timetable.ContainsKey(day))
-                    timetable[day] = new Dictionary<string, object>();
-                var dayDict = (Dictionary<string, object>)timetable[day];
+                    timetable[day] = new Dictionary<string, List<TimetableEntry>>();
+                var dayDict = timetable[day];
                 if (!dayDict.ContainsKey(slot))
-                    dayDict[slot] = new List<object>();
-                ((List<object>)dayDict[slot]).Add(new
+                    dayDict[slot] = new List<TimetableEntry>();
+                dayDict[slot].Add(new TimetableEntry
                 {
-                    course_code  = c.CourseCode,
-                    course_name  = c.CourseName,
-                    room         = c.Room,
-                    @class       = c.Class,
-                    status       = c.Status,
-                    has_conflict = c.HasConflict
+                    CourseCode  = c.CourseCode ?? string.Empty,
+                    CourseName  = c.CourseName ?? string.Empty,
+                    Room         = c.Room ?? string.Empty,
+                    Class       = c.Class ?? string.Empty,
+                    Status       = c.Status ?? string.Empty,
+                    HasConflict = c.HasConflict
                 });
             }
 
@@ -667,7 +670,7 @@ public class ScheduleService : IScheduleService, IDisposable
     /// The X-Requested-With header must be absent so the server returns the full page
     /// including the schoolYear &lt;select&gt; dropdown.
     /// </summary>
-    private HttpClient BuildPageHttpClient()
+    internal static HttpClient BuildPageHttpClient()
     {
         try
         {

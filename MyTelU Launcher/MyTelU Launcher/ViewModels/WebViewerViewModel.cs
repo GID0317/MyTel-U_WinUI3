@@ -24,14 +24,14 @@ namespace MyTelU_Launcher.ViewModels
             _failureTimer.Tick += OnFailureTimerTick;
         }
 
-        [ObservableProperty]
-        private Uri source = new("https://igracias.telkomuniversity.ac.id/");
+[ObservableProperty]
+        public partial Uri Source { get; set; } = new("https://igracias.telkomuniversity.ac.id/");
 
-        [ObservableProperty]
-        private bool isLoading = true;
+[ObservableProperty]
+        public partial bool IsLoading { get; set; } = true;
 
-        [ObservableProperty]
-        private bool hasFailures;
+[ObservableProperty]
+        public partial bool HasFailures { get; set; }
 
         public IWebViewService WebViewService
         {

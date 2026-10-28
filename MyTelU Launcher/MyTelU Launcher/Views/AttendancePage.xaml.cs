@@ -17,82 +17,21 @@ public sealed partial class AttendancePage : Page
 {
     public AttendanceViewModel ViewModel { get; }
 
+    private bool _hasNavigated;
+
     public AttendancePage()
     {
         ViewModel = App.GetService<AttendanceViewModel>();
         InitializeComponent();
-
-        // Scale login overlay from center
-        LoginOverlay.SizeChanged += (s, e) =>
-        {
-            var visual = ElementCompositionPreview.GetElementVisual(LoginOverlay);
-            visual.CenterPoint = new Vector3(
-                (float)(LoginOverlay.ActualWidth / 2),
-                (float)(LoginOverlay.ActualHeight / 2),
-                0f);
-        };
-
-        // Safety net: CommunityToolkit implicit show animations (ShowList) use a
-        // Composition KeyFrameAnimation that starts at opacity 0. On the very first
-        // Collapsed→Visible transition of a newly created element the animation can
-        // complete without committing its final value, leaving the visual transparent.
-        // After the animation duration (+buffer), snap the visual to fully opaque.
-        CourseContentGrid.RegisterPropertyChangedCallback(
-            UIElement.VisibilityProperty,
-            (sender, dp) =>
-            {
-                if (CourseContentGrid.Visibility == Visibility.Visible)
-                    _ = SnapContentOpacityAfterAnimationAsync();
-            });
     }
 
-    /// <summary>
-    /// Waits for the ShowList animation to finish (350 ms + margin), then
-    /// force-sets the Composition visual's opacity to 1 and offset to zero.
-    /// When the animation played correctly this is a harmless no-op.
-    /// </summary>
-    private async Task SnapContentOpacityAfterAnimationAsync()
-    {
-        await Task.Delay(400);
-        if (CourseContentGrid.Visibility == Visibility.Visible)
-        {
-            var visual = ElementCompositionPreview.GetElementVisual(CourseContentGrid);
-            visual.Opacity = 1f;
-            visual.Offset  = Vector3.Zero;
-        }
-    }
-
-    protected override void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+    protected override async void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
-
-        // If a load is in progress but we already have data, cancel it so the page
-        // is immediately usable with cached data instead of being blocked by the overlay.
-        if (ViewModel.IsLoading && ViewModel.Courses.Count > 0)
-        {
-            ViewModel.CancelLoad();
-            // Fall through to the composition reset below.
-        }
-
-        // When SessionCookiesSavedMessage fires while on another page, InitializeAsync runs
-        // off-screen. It toggles IsLoading true→false which collapses then re-shows the
-        // content grid, firing both the HideList and ShowList implicit animations on an
-        // off-screen Composition tree. If the user navigates here before the 0.25 s
-        // ShowList animation has finished, the grid is caught at a partial opacity and
-        // stays frozen there (the animation already ended). Snap the composition visual
-        // to its final fully-visible state to clear any leftover animated values.
-        if (ViewModel.IsNotLoadingAndNotEmpty)
-        {
-            var visual = ElementCompositionPreview.GetElementVisual(CourseContentGrid);
-            visual.Opacity = 1f;
-            visual.Offset  = Vector3.Zero;
-        }
-
-        // Re-trigger a load if we have a session but no data yet and nothing is running.
-        // This handles the case where the VM was created after SessionCookiesSavedMessage
-        // already fired (e.g., user logged in from the Schedule page before ever visiting here).
-        if (!ViewModel.IsLoading && ViewModel.Courses.Count == 0 && !ViewModel.NeedsLogin)
-            _ = ViewModel.LoadAttendanceAsync();
+        await ViewModel.Initialization;
+        if (_hasNavigated)
+            await ViewModel.LoadAttendanceAsync();
+        _hasNavigated = true;
     }
 
     /// <summary>
@@ -100,7 +39,7 @@ public sealed partial class AttendancePage : Page
     /// </summary>
     private async void CourseCard_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not SettingsCard card || card.Tag is not AttendanceCourseItem course)
+        if (sender is not FrameworkElement card || card.Tag is not AttendanceCourseItem course)
         {
             System.Diagnostics.Debug.WriteLine($"[AttendancePage] CourseCard_Click: tag={((sender as SettingsCard)?.Tag?.GetType().Name ?? "null")}");
             return;
@@ -119,6 +58,14 @@ public sealed partial class AttendancePage : Page
         dialog.SetDetail(detail);
 
         await showTask;
+    }
+
+    private async void PrintAttendance_Click(object sender, RoutedEventArgs e)
+    {
+        string subtitle = $"{ViewModel.AttendanceData?.AcademicYear} | {(ViewModel.IsOffline ? "Cached data" : "Loaded data")} | {ViewModel.AttendanceData?.FetchTime}";
+        await App.GetService<AcademicPrintService>().PrintAsync(XamlRoot, "Attendance", subtitle,
+            ["Code", "Course", "Class", "Attended", "Sessions", "Presence"], [1.2, 3, 1, 0.8, 0.8, 0.8],
+            ViewModel.Courses.Select(c => new[] { c.CourseCode, c.CourseName, c.ClassCode ?? "", c.Attended.ToString(), c.TotalSessions?.ToString() ?? "-", c.PercentageStr }));
     }
 
     private void MascotContainer_Loaded(object sender, RoutedEventArgs e)

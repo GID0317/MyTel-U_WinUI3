@@ -1,3 +1,4 @@
+using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Text.Json;
 
 namespace MyTelU_Launcher.Services;

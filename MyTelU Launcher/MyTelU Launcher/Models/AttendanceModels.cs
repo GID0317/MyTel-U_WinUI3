@@ -7,7 +7,8 @@ namespace MyTelU_Launcher.Models;
 /// One course row in the attendance summary table.
 /// Maps to the Python AttendanceFetcher output.
 /// </summary>
-public class AttendanceCourseItem
+[WinRT.GeneratedBindableCustomProperty]
+public partial class AttendanceCourseItem
 {
     [JsonPropertyName("course_id")]
     public int? CourseId { get; set; }

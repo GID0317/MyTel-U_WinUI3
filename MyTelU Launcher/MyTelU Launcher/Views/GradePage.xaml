@@ -79,6 +79,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                         <!-- Single combined period picker -->
                         <ComboBox x:Name="PeriodComboBox"
+                                  IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
                                   ItemsSource="{x:Bind ViewModel.PeriodOptions}"
                                   SelectedItem="{x:Bind ViewModel.SelectedPeriod, Mode=TwoWay}"
                                   DisplayMemberPath="Label"
@@ -106,6 +107,9 @@
                             <FontIcon Glyph="&#xE712;" FontSize="16"/>
                             <Button.Flyout>
                                 <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutItem Text="Print grades" Click="PrintGrades_Click">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE749;"/></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                     <MenuFlyoutItem Text="More grade information"
                                                     Command="{x:Bind ViewModel.OpenGradesInBrowserCommand}">
                                         <MenuFlyoutItem.Icon>
@@ -209,6 +213,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <Border Grid.Column="0" Margin="0,0,6,0" Padding="16,12" CornerRadius="8"
@@ -248,6 +253,14 @@
                                     <TextBlock Text="Total SKS" FontSize="12" Opacity="0.6"/>
                                     <TextBlock Text="{x:Bind ViewModel.TotalCredits, Mode=OneWay}"
                                                FontSize="28" FontWeight="Bold"/>
+                                </StackPanel>
+                            </Border>
+                            <Border Grid.Column="4" Margin="12,0,0,0" Padding="16,12" CornerRadius="8"
+                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel ToolTipService.ToolTip="{x:Bind ViewModel.TakStatus, Mode=OneWay}">
+                                    <TextBlock Text="TAK" FontSize="12" Opacity="0.6"/>
+                                    <TextBlock Text="{x:Bind ViewModel.TakScore, Mode=OneWay}" FontSize="28" FontWeight="Bold"/>
                                 </StackPanel>
                             </Border>
                         </Grid>

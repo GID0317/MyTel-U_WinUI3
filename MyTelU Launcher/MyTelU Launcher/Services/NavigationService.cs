@@ -86,12 +86,9 @@ public class NavigationService : INavigationService
     {
         var pageType = _pageService.GetPageType(pageKey);
 
-        // When a transitionInfo is provided (e.g. EntranceNavigationTransitionInfo from nav-item tap),
-        // always navigate so the frame-level transition plays every time, even when the page is already
-        // cached via NavigationCacheMode="Required". Without this the transition only fires on first visit.
         bool differentPage = _frame?.Content?.GetType() != pageType;
         bool differentParam = parameter != null && !parameter.Equals(_lastParameterUsed);
-        if (_frame != null && (differentPage || differentParam || transitionInfo != null))
+        if (_frame != null && (differentPage || differentParam))
         {
             _frame.Tag = clearNavigation;
             var vmBeforeNavigation = _frame.GetPageViewModel();

@@ -1,3 +1,4 @@
+using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Diagnostics;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.Messaging;
@@ -76,7 +77,6 @@ public class BrowserLoginService : IBrowserLoginService
                     if (req.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
                     {
                         SilentLog($"[Route] POST intercepted: {req.Url}");
-                        SilentLog($"[Route]   PostData: {(req.PostData?.Length > 200 ? req.PostData[..200] : req.PostData) ?? "(null)"}");
                     }
 #endif
                     if (req.Method.Equals("POST", StringComparison.OrdinalIgnoreCase)

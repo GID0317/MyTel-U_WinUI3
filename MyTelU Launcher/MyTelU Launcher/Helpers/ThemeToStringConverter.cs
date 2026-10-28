@@ -4,7 +4,7 @@ using Microsoft.UI.Xaml.Data;
 
 namespace MyTelU_Launcher.Helpers
 {
-    public class ThemeToStringConverter : IValueConverter
+    public partial class ThemeToStringConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {

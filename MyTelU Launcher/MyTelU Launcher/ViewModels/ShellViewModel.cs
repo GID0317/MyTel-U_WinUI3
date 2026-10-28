@@ -19,18 +19,18 @@ namespace MyTelU_Launcher.ViewModels
 {
     public partial class ShellViewModel : ObservableRecipient
     {
-        [ObservableProperty]
-        private bool isBackEnabled;
+[ObservableProperty]
+        public partial bool IsBackEnabled { get; set; }
 
-        [ObservableProperty]
-        private object? selected;
+[ObservableProperty]
+        public partial object? Selected { get; set; }
 
-        [ObservableProperty]
-        private BitmapImage? backgroundImage;
+[ObservableProperty]
+        public partial BitmapImage? BackgroundImage { get; set; }
 
         // By default, no update is available (InfoBar collapsed).
-        [ObservableProperty]
-        private bool isUpdateAvailable;
+[ObservableProperty]
+        public partial bool IsUpdateAvailable { get; set; }
 
         private readonly ILocalSettingsService _localSettingsService;
         private readonly AccentColorService _accentColorService;

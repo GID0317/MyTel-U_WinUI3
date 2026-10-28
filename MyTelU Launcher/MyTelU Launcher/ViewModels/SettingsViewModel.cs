@@ -16,22 +16,23 @@ namespace MyTelU_Launcher.ViewModels
     {
         private readonly IThemeSelectorService _themeSelectorService;
         private readonly ILocalSettingsService _localSettingsService;
+        private bool _loadingSettings = true;
 
         [ObservableProperty]
-        private ElementTheme _elementTheme;
+        public partial ElementTheme ElementTheme { get; set; }
 
         [ObservableProperty]
-        private string _versionDescription;
+        public partial string VersionDescription { get; set; }
 
         public string CurrentVersionDescription => $"Current version: {GetShortVersionText()}";
 
         public string AboutVersionText => $"Version {GetShortVersionText()}";
 
         [ObservableProperty]
-        private bool _isCustomImageBGEnabled;
+        public partial bool IsCustomImageBGEnabled { get; set; }
 
         [ObservableProperty]
-        private bool _alwaysOpenCommunityToolsInExternalBrowser;
+        public partial bool AlwaysOpenCommunityToolsInExternalBrowser { get; set; }
 
         // Explicit backing field and property for the custom image path.
         private string _customImagePath;
@@ -60,8 +61,8 @@ namespace MyTelU_Launcher.ViewModels
         {
             _themeSelectorService = themeSelectorService;
             _localSettingsService = localSettingsService;
-            _elementTheme = _themeSelectorService.Theme;
-            _versionDescription = GetVersionDescription();
+            ElementTheme = _themeSelectorService.Theme;
+            VersionDescription = GetVersionDescription();
             // Initialize with default value.
             _customImagePath = string.Empty;
             InitializeSettingsAsync();
@@ -69,20 +70,23 @@ namespace MyTelU_Launcher.ViewModels
 
         private async void InitializeSettingsAsync()
         {
-            _isCustomImageBGEnabled = await _localSettingsService.ReadSettingAsync<bool>("IsCustomImageBGEnabled");
+            IsCustomImageBGEnabled = await _localSettingsService.ReadSettingAsync<bool>("IsCustomImageBGEnabled");
             AlwaysOpenCommunityToolsInExternalBrowser = await _localSettingsService.ReadSettingAsync<bool>(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser);
             // Load any previously saved custom image path.
             CustomImagePath = await _localSettingsService.ReadSettingAsync<string>("CustomBackgroundImagePath");
             OnPropertyChanged(nameof(CustomImagePathDescription));
+            _loadingSettings = false;
         }
 
         partial void OnElementThemeChanged(ElementTheme value)
         {
+            if (_loadingSettings) return;
             _ = _themeSelectorService.SetThemeAsync(value);
         }
 
         partial void OnIsCustomImageBGEnabledChanged(bool value)
         {
+            if (_loadingSettings) return;
             OnIsCustomImageBGEnabledChangedAsync(value);
         }
 
@@ -105,6 +109,7 @@ namespace MyTelU_Launcher.ViewModels
 
         partial void OnAlwaysOpenCommunityToolsInExternalBrowserChanged(bool value)
         {
+            if (_loadingSettings) return;
             _ = _localSettingsService.SaveSettingAsync(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser, value);
         }
 

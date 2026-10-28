@@ -18,37 +18,41 @@ public partial class GradeViewModel : ObservableRecipient,
     private readonly IBrowserLoginService _browserLoginService;
     private readonly INavigationService _navigationService;
     private readonly ILocalSettingsService _localSettingsService;
+    private readonly MobileAcademicService _mobileAcademicService;
+
+    [ObservableProperty] public partial string TakScore { get; set; } = "-";
+    [ObservableProperty] public partial string TakStatus { get; set; } = "Not loaded";
     private string _savedPeriodKey = string.Empty; // "SchoolYear:Semester" persisted across restarts
 
     // ── Observable state ────────────────────────────────────────────────────
 
     [ObservableProperty]
-    private bool _isLoading;
+    public partial bool IsLoading { get; set; }
 
     public bool IsNotLoading => !IsLoading;
 
     [ObservableProperty]
-    private bool _hasError;
+    public partial bool HasError { get; set; }
 
     [ObservableProperty]
-    private string _errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _needsLogin;
+    public partial bool NeedsLogin { get; set; }
 
     [ObservableProperty]
-    private bool _isEmpty;
+    public partial bool IsEmpty { get; set; }
 
     [ObservableProperty]
-    private bool _isOffline;
+    public partial bool IsOffline { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoginWithBrowserCommand))]
     [NotifyCanExecuteChangedFor(nameof(BeginLoginFromOnboardingCommand))]
-    private bool _isBrowserLoginRunning;
+    public partial bool IsBrowserLoginRunning { get; set; }
 
     [ObservableProperty]
-    private bool _isBackgroundRefreshing;
+    public partial bool IsBackgroundRefreshing { get; set; }
 
     partial void OnIsBackgroundRefreshingChanged(bool value)
     {
@@ -83,7 +87,7 @@ public partial class GradeViewModel : ObservableRecipient,
     // ── Cache timestamp ──────────────────────────────────────────────────────
 
     [ObservableProperty]
-    private GradeResponse? _gradeData;
+    public partial GradeResponse? GradeData { get; set; }
 
     public string CacheTimestamp
     {
@@ -109,11 +113,11 @@ public partial class GradeViewModel : ObservableRecipient,
 
     // ── Summary stats ────────────────────────────────────────────────────────
 
-    [ObservableProperty] private int _totalCourses;
-    [ObservableProperty] private int _completedCourses;
-    [ObservableProperty] private int _inProgressCourses;
-    [ObservableProperty] private int _totalCredits;
-    [ObservableProperty] private string _currentGpa = "-";
+    [ObservableProperty] public partial int TotalCourses { get; set; }
+    [ObservableProperty] public partial int CompletedCourses { get; set; }
+    [ObservableProperty] public partial int InProgressCourses { get; set; }
+    [ObservableProperty] public partial int TotalCredits { get; set; }
+    [ObservableProperty] public partial string CurrentGpa { get; set; } = "-";
 
     public string CurrentGpaLabel =>
         SelectedPeriod == null || string.IsNullOrEmpty(SelectedPeriod.SchoolYear) ? "IPK" : "IP";
@@ -123,7 +127,7 @@ public partial class GradeViewModel : ObservableRecipient,
     public ObservableCollection<GradePeriodOption> PeriodOptions { get; } = new();
 
     [ObservableProperty]
-    private GradePeriodOption? _selectedPeriod;
+    public partial GradePeriodOption? SelectedPeriod { get; set; }
 
     private bool _suppressPeriodChange;
     private bool _userHasSelectedPeriod;
@@ -156,7 +160,6 @@ public partial class GradeViewModel : ObservableRecipient,
         await PersistSelectedPeriodAsync(value);
         FeatureFlowLogger.Write("Grade", $"period selected: key={BuildPeriodKey(value)}, persisted={_savedPeriodKey}, label={value.Label}");
         OnPropertyChanged(nameof(CurrentGpaLabel));
-        _bypassCacheOnNextLoad = true;
         await LoadGradesAsync();
     }
 
@@ -168,21 +171,39 @@ public partial class GradeViewModel : ObservableRecipient,
 
     // ── Constructor ──────────────────────────────────────────────────────────
 
-    public GradeViewModel(IGradeService gradeService, IBrowserLoginService browserLoginService, INavigationService navigationService, ILocalSettingsService localSettingsService)
+    public GradeViewModel(IGradeService gradeService, IBrowserLoginService browserLoginService, INavigationService navigationService, ILocalSettingsService localSettingsService, MobileAcademicService mobileAcademicService)
     {
         _gradeService = gradeService;
         _browserLoginService = browserLoginService;
         _navigationService = navigationService;
         _localSettingsService = localSettingsService;
+        _mobileAcademicService = mobileAcademicService;
 
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register<SessionCookiesSavedMessage>(this);
+        WeakReferenceMessenger.Default.Register<BrowserLoginStateMessage>(this);
         // Seed state in case login was already started before this VM was constructed.
         IsBrowserLoginRunning = _browserLoginService.IsRunning;
         // already has a value selected on the first render, before any async work.
         PrePopulatePeriodsFromCache();
 
         IsInitializing = true;
-        _ = InitializeAsync();
+        Initialization = InitializeAsync();
+    }
+
+    private async Task RefreshTakAsync()
+    {
+        try
+        {
+            var cached = await Task.Run(_mobileAcademicService.GetCachedTak);
+            if (cached != null) { TakScore = cached.Score.ToString(); TakStatus = "Cached"; }
+            var summary = await _mobileAcademicService.GetTakAsync();
+            TakScore = summary.Score.ToString();
+            TakStatus = summary.IsCached ? "Cached" : "MyTelU";
+        }
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or InvalidOperationException or InvalidDataException or TaskCanceledException)
+        {
+            TakStatus = TakScore == "-" ? "Unavailable" : "Cached";
+        }
     }
 
     /// <summary>Preloads period options from cache so the ComboBox has a stable initial selection.</summary>
@@ -242,31 +263,34 @@ public partial class GradeViewModel : ObservableRecipient,
 
     private async Task InitializeAsync()
     {
+        IsLoading = true;
+        HasError = false;
+        NeedsLogin = false;
         try
         {
-            // Load persisted period selection before running LoadAcademicYearsAsync so it
-            // can restore the user's choice instead of auto-selecting the current period.
             _savedPeriodKey = await _localSettingsService.ReadSettingAsync<string>("GradeSelectedPeriod") ?? string.Empty;
-
-            // Match Schedule/Attendance behavior: resolve the final selection first,
-            // then load the content for that selection. This avoids the ComboBox and
-            // displayed grade list drifting out of sync during startup.
             await LoadAcademicYearsAsync();
-            await LoadGradesAsync();
+            await Task.WhenAll(LoadGradesAsync(), RefreshTakAsync());
         }
-        finally
+        catch (Exception ex)
         {
-            IsInitializing = false;
+            HasError = true;
+            ErrorMessage = $"Could not initialize grade: {ex.Message}";
+            IsLoading = false;
         }
+        finally { IsInitializing = false; }
     }
+
+    public Task Initialization { get; private set; }
 
     // ── IRecipient ───────────────────────────────────────────────────────────
 
     public void Receive(SessionCookiesSavedMessage message)
     {
-        _bypassCacheOnNextLoad = true;
-        _ = LoadGradesAsync();
-        _ = LoadAcademicYearsAsync();
+        _loadCts?.Cancel();
+        TakScore = "-";
+        TakStatus = "Not loaded";
+        Initialization = InitializeAsync();
     }
 
     // ── Commands ─────────────────────────────────────────────────────────────
@@ -278,8 +302,7 @@ public partial class GradeViewModel : ObservableRecipient,
         await PersistSelectedPeriodAsync(SelectedPeriod);
         FeatureFlowLogger.Write("Grade", $"refresh start: key={BuildPeriodKey(SelectedPeriod)}, persisted={_savedPeriodKey}, label={SelectedPeriod?.Label ?? "(null)"}");
 
-        _bypassCacheOnNextLoad = true;
-        await LoadGradesAsync();
+        await Task.WhenAll(LoadGradesAsync(), RefreshTakAsync());
 
         // Refresh academic year labels — offline path collapses them to "(Cached)" entries.
         if (!NeedsLogin)
@@ -386,16 +409,8 @@ public partial class GradeViewModel : ObservableRecipient,
     // ── Core load logic ──────────────────────────────────────────────────────
 
     private CancellationTokenSource? _loadCts;
-    private bool _bypassCacheOnNextLoad;
 
-    public void CancelLoad()
-    {
-        if (!IsLoading) return;
-        _loadCts?.Cancel();
-        IsLoading = false;
-        if (GradeData != null)
-            IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-    }
+
 
     /// <summary>
     /// Returns a copy of <paramref name="data"/> filtered to <see cref="SelectedPeriod"/>.
@@ -417,260 +432,62 @@ public partial class GradeViewModel : ObservableRecipient,
     [RelayCommand]
     public async Task LoadGradesAsync()
     {
-        FeatureFlowLogger.Write("Grade", $"load start: key={BuildPeriodKey(SelectedPeriod)}, label={SelectedPeriod?.Label ?? "(null)"}, bypass={_bypassCacheOnNextLoad}, online={System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()}");
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var token = _loadCts.Token;
-
-        IsLoading     = true;
-        HasError      = false;
-        NeedsLogin    = false;
-        IsEmpty       = false;
-        IsOffline     = false;
-        ErrorMessage  = string.Empty;
-
+        IsLoading = true;
+        HasError = false;
+        NeedsLogin = false;
+        IsEmpty = false;
+        IsOffline = false;
+        ErrorMessage = string.Empty;
         try
         {
-            bool bypass = _bypassCacheOnNextLoad;
-            _bypassCacheOnNextLoad = false;
-
-            // 1. Check for saved session
-            bool hasSavedSession = await Task.Run(() =>
+            string year = SelectedPeriod?.SchoolYear ?? "";
+            string semester = SelectedPeriod?.Semester ?? "";
+            GradeResponse? data = null;
+            bool online = System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
+            if (online)
             {
-                try
-                {
-                    var json = CookieStore.Load();
-                    if (json == null) return false;
-                    var d = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-                    return d != null && d.ContainsKey("PHPSESSID");
-                }
-                catch { return false; }
-            });
-
-            if (!hasSavedSession)
+                data = await _gradeService.GetGradesAsync(year, semester, token);
+                if (data == null && _browserLoginService.HasSavedCredentials
+                    && await _browserLoginService.TrySilentLoginAsync(token))
+                    data = await _gradeService.GetGradesAsync(year, semester, token);
+            }
+            token.ThrowIfCancellationRequested();
+            if (data == null)
             {
-                if (token.IsCancellationRequested) return;
-
-                if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
-                    && _browserLoginService.HasSavedCredentials)
+                var cached = await Task.Run(_gradeService.GetCachedGrades, token);
+                if (cached != null && (string.IsNullOrEmpty(cached.SchoolYear)
+                    || (cached.SchoolYear == year && cached.Semester == semester)))
                 {
-                    if (_gradeService.HasCachedGrades)
-                    {
-                        var cached = await Task.Run(() => _gradeService.GetCachedGrades());
-                        if (cached != null && !token.IsCancellationRequested)
-                        {
-                            IsLoading = false;
-                            PopulateData(FilterCacheByPeriod(cached));
-                            FeatureFlowLogger.Write("Grade", "served cached grades, starting background reconnect");
-                            _ = BackgroundReconnectAsync(token);
-                            return;
-                        }
-                    }
-
-                    IsBrowserLoginRunning = true;
-                    var ok = await _browserLoginService.TrySilentLoginAsync(token);
-                    IsBrowserLoginRunning = false;
-
-                    if (token.IsCancellationRequested) return;
-
-                    if (!ok)
-                    {
-                        ClearDisplayed();
-                        NeedsLogin = true;
-                        FeatureFlowLogger.Write("Grade", "silent login failed: showing NeedsLogin");
-                        return;
-                    }
-                    FeatureFlowLogger.Write("Grade", "silent login succeeded: continuing with live fetch");
-                    bypass = true;
-                    _ = LoadAcademicYearsAsync();
-                }
-                else
-                {
-                    // Only serve offline cache when the network is actually unavailable.
-                    // If network is available but credentials are gone (explicit logout), go straight to login.
-                    if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
-                        && _gradeService.HasCachedGrades)
-                    {
-                        var cached = await Task.Run(() => _gradeService.GetCachedGrades());
-                        if (cached != null)
-                        {
-                            if (token.IsCancellationRequested) return;
-                            IsOffline = true;
-                            PopulateData(FilterCacheByPeriod(cached));
-                            FeatureFlowLogger.Write("Grade", "offline with cache: showing cached grades");
-                            return;
-                        }
-                    }
-                    ClearDisplayed();
-                    NeedsLogin = true;
-                    return;
+                    data = FilterCacheByPeriod(cached);
+                    IsOffline = true;
                 }
             }
-
-            if (!bypass && _gradeService.HasCachedGrades)
-            {
-                if (token.IsCancellationRequested) return;
-                var cached = await Task.Run(() => _gradeService.GetCachedGrades());
-                if (cached != null)
-                {
-                    if (token.IsCancellationRequested) return;
-                    PopulateData(FilterCacheByPeriod(cached));
-                    FeatureFlowLogger.Write("Grade", "served cached grades, starting background validation");
-                    if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
-                        && _browserLoginService.HasSavedCredentials)
-                        _ = BackgroundValidateAndRefreshAsync(token);
-                    else
-                        IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-                    return;
-                }
-            }
-
-            // 3. Live fetch
-            var schoolYear = SelectedPeriod?.SchoolYear ?? "";
-            var semester   = SelectedPeriod?.Semester ?? "";
-            var data = await _gradeService.GetGradesAsync(schoolYear, semester, token);
-            if (token.IsCancellationRequested) return;
-
+            token.ThrowIfCancellationRequested();
             if (data != null)
-            {
                 PopulateData(data);
-                FeatureFlowLogger.Write("Grade", $"live fetch success: key={schoolYear}:{semester}, grades={data.Grades.Count}");
-            }
             else
             {
-                if (_gradeService.HasCachedGrades)
-                {
-                    var cached = await Task.Run(() => _gradeService.GetCachedGrades());
-                    if (cached != null)
-                    {
-                        // A failed live fetch while online is usually temporary, not true offline mode.
-                        IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-                        PopulateData(FilterCacheByPeriod(cached));
-                        FeatureFlowLogger.Write("Grade", "live fetch failed: fell back to cached grades");
-                        return;
-                    }
-                }
-                HasError     = true;
-                ErrorMessage = "Could not load grades. Check your connection or try refreshing.";
-                FeatureFlowLogger.Write("Grade", "live fetch failed: no cache available");
+                NeedsLogin = !_browserLoginService.HasSavedCredentials;
+                HasError = !NeedsLogin;
+                ErrorMessage = "Could not load grades for this period. Check your connection or sign in again.";
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            if (!token.IsCancellationRequested)
-            {
-                HasError     = true;
-                ErrorMessage = $"Unexpected error: {ex.Message}";
-                Debug.WriteLine($"[GradeViewModel] LoadGradesAsync error: {ex}");
-            }
+            if (!token.IsCancellationRequested) { HasError = true; ErrorMessage = $"Could not load grades: {ex.Message}"; }
         }
         finally
         {
-            if (!token.IsCancellationRequested)
-                IsLoading = false;
+            if (!token.IsCancellationRequested) IsLoading = false;
         }
     }
 
-    private async Task BackgroundReconnectAsync(CancellationToken token)
-    {
-        IsBackgroundRefreshing = true;
-        FeatureFlowLogger.Write("Grade", "background reconnect start");
-        try
-        {
-            var ok = await _browserLoginService.TrySilentLoginAsync(token);
-            if (ok && !token.IsCancellationRequested)
-            {
-                await LoadAcademicYearsAsync();
-                var schoolYear = SelectedPeriod?.SchoolYear ?? "";
-                var semester   = SelectedPeriod?.Semester ?? "";
-                var data = await _gradeService.GetGradesAsync(schoolYear, semester, token);
-                if (data != null && !token.IsCancellationRequested)
-                {
-                    PopulateData(data);
-                    IsOffline = false;
-                    FeatureFlowLogger.Write("Grade", $"background reconnect success: key={schoolYear}:{semester}");
-                }
-                else if (!token.IsCancellationRequested)
-                {
-                    IsOffline = true; // re-auth succeeded but grade fetch failed
-                    FeatureFlowLogger.Write("Grade", "background reconnect failed after relogin");
-                }
-            }
-            else if (!token.IsCancellationRequested)
-            {
-                IsOffline = true; // silent login failed; showing stale cached data
-                FeatureFlowLogger.Write("Grade", "background reconnect failed");
-            }
-        }
-        catch (Exception ex) { Debug.WriteLine($"[GradeViewModel] BackgroundReconnect: {ex.Message}"); if (!token.IsCancellationRequested) IsOffline = true; }
-        finally { IsBackgroundRefreshing = false; }
-    }
 
-    private async Task BackgroundValidateAndRefreshAsync(CancellationToken token)
-    {
-        IsBackgroundRefreshing = true;
-        FeatureFlowLogger.Write("Grade", "background validate start");
-        try
-        {
-            var schoolYear = SelectedPeriod?.SchoolYear ?? "";
-            var semester   = SelectedPeriod?.Semester ?? "";
-            var data = await _gradeService.GetGradesAsync(schoolYear, semester, token);
-            if (token.IsCancellationRequested) return;
-
-            if (data != null)
-            {
-                PopulateData(data);
-                IsOffline = false;
-                FeatureFlowLogger.Write("Grade", $"background validate success without relogin: key={schoolYear}:{semester}");
-                _ = LoadAcademicYearsAsync();
-                return;
-            }
-
-            // null — session expired (or offline). Try silent re-login if credentials exist.
-            if (!_browserLoginService.HasSavedCredentials)
-            {
-                if (Grades.Count > 0)
-                    IsOffline = true;
-                else
-                    NeedsLogin = true;
-                FeatureFlowLogger.Write("Grade", "background validate failed: no saved credentials");
-                return;
-            }
-
-            var ok = await _browserLoginService.TrySilentLoginAsync(token);
-            if (!ok || token.IsCancellationRequested)
-            {
-                if (!token.IsCancellationRequested)
-                {
-                    if (Grades.Count > 0)
-                        IsOffline = true;
-                    else
-                        NeedsLogin = true;
-                }
-                FeatureFlowLogger.Write("Grade", "background validate relogin failed");
-                return;
-            }
-
-            _ = LoadAcademicYearsAsync();
-            data = await _gradeService.GetGradesAsync(schoolYear, semester, token);
-            if (data != null && !token.IsCancellationRequested)
-            {
-                PopulateData(data);
-                IsOffline = false;
-                FeatureFlowLogger.Write("Grade", $"background validate success after relogin: key={schoolYear}:{semester}");
-            }
-            else if (!token.IsCancellationRequested)
-            {
-                if (Grades.Count > 0)
-                    IsOffline = true;
-            }
-        }
-        catch (OperationCanceledException) { /* ignore */ }
-        catch (Exception ex) { Debug.WriteLine($"[GradeViewModel] BackgroundValidate: {ex.Message}"); if (!token.IsCancellationRequested) IsOffline = true; }
-        finally { IsBackgroundRefreshing = false; }
-    }
 
     /// <summary>Returns the most recent period that still has in-progress grades.</summary>
     private static (string SchoolYear, string Semester)? MostRecentInProgressPeriod(IEnumerable<GradeItem>? grades)
@@ -962,4 +779,5 @@ public partial class GradeViewModel : ObservableRecipient,
 }
 
 /// <summary>Combined academic year + semester option for the single period filter ComboBox.</summary>
-public record GradePeriodOption(string SchoolYear, string Semester, string Label);
+[WinRT.GeneratedBindableCustomProperty]
+public partial record GradePeriodOption(string SchoolYear, string Semester, string Label);

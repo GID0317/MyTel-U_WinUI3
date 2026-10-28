@@ -86,6 +86,7 @@
 
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
                         <ComboBox x:Name="SemesterComboBox"
+                                  IsEnabled="{x:Bind ViewModel.IsNotRefreshing, Mode=OneWay}"
                                   ItemsSource="{x:Bind ViewModel.AcademicYearOptions}"
                                   SelectedItem="{x:Bind ViewModel.SelectedAcademicYear, Mode=TwoWay}"
                                   DisplayMemberPath="Text"
@@ -111,6 +112,9 @@
                             <FontIcon Glyph="&#xE712;" FontSize="16"/>
                             <Button.Flyout>
                                 <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutItem Text="Print attendance" Click="PrintAttendance_Click">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE749;"/></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                     <MenuFlyoutItem Text="More attendance information"
                                                     Command="{x:Bind ViewModel.OpenAttendanceInBrowserCommand}">
                                         <MenuFlyoutItem.Icon>
@@ -201,9 +205,7 @@
                     </Grid>
 
                     <Grid x:Name="CourseContentGrid"
-                          Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
-                          animations:Implicit.ShowAnimations="{StaticResource ShowList}"
-                          animations:Implicit.HideAnimations="{StaticResource HideList}">
+                          Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
 
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

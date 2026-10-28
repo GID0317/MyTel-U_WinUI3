@@ -4,7 +4,7 @@ using System;
 
 
 namespace MyTelU_Launcher.Helpers;
-    public class BooleanToVisibilityConverter : IValueConverter
+    public partial class BooleanToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {

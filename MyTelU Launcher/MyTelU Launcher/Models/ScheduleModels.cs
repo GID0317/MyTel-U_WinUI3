@@ -3,7 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace MyTelU_Launcher.Models
 {
-    public class CourseItem
+    [WinRT.GeneratedBindableCustomProperty]
+    public partial class CourseItem
     {
         [JsonPropertyName("day")]
         public string Day { get; set; }
@@ -63,7 +64,7 @@ namespace MyTelU_Launcher.Models
         public List<CourseItem> Courses { get; set; }
 
         [JsonPropertyName("timetable")]
-        public Dictionary<string, object> Timetable { get; set; }
+        public Dictionary<string, Dictionary<string, List<TimetableEntry>>> Timetable { get; set; } = new();
     }
 
     public class SessionStatus
@@ -75,7 +76,18 @@ namespace MyTelU_Launcher.Models
         public string Message { get; set; }
     }
 
-    public class AcademicYearOption
+    public sealed class TimetableEntry
+    {
+        [JsonPropertyName("course_code")] public string CourseCode { get; set; } = string.Empty;
+        [JsonPropertyName("course_name")] public string CourseName { get; set; } = string.Empty;
+        [JsonPropertyName("room")] public string Room { get; set; } = string.Empty;
+        [JsonPropertyName("class")] public string Class { get; set; } = string.Empty;
+        [JsonPropertyName("status")] public string Status { get; set; } = string.Empty;
+        [JsonPropertyName("has_conflict")] public bool HasConflict { get; set; }
+    }
+
+    [WinRT.GeneratedBindableCustomProperty]
+    public partial class AcademicYearOption
     {
         public string Value { get; set; }
         public string Text { get; set; }

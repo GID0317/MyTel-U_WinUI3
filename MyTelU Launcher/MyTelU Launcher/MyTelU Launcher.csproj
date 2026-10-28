@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <Version>4.2.0</Version>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>MyTelU_Launcher</RootNamespace>
@@ -13,6 +14,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWinUI>true</UseWinUI>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CsWinRTAotOptimizerEnabled>Auto</CsWinRTAotOptimizerEnabled>
+    <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
@@ -64,7 +68,7 @@
     <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
     <GenerateTestArtifacts>false</GenerateTestArtifacts>
     <PlaywrightPlatform>win-x64</PlaywrightPlatform>
-    <PublishProfile>Properties\PublishProfiles\win-x64.pubxml</PublishProfile>
+    <PublishProfile>Properties\PublishProfiles\win-x64-aot.pubxml</PublishProfile>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -74,6 +78,7 @@
 
   <ItemGroup>
     <Content Include="Icon_App.ico" />
+    <Content Include="Assets\Logo_TelkomUniversity.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -88,7 +93,6 @@
     <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
-    <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.WinUI.Managed" />
     <PackageReference Include="System.Drawing.Common" />
@@ -97,6 +101,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\BrowserLoginService.cs"/>
     <ProjectReference Include="..\MyTelU Launcher.Core\MyTelU Launcher.Core.csproj" />
     <ProjectReference Include="..\ColorThief\ColorThief\ColorThief.csproj" />
   </ItemGroup>
@@ -107,6 +112,21 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="_WidgetBuildOutput" />
     </Exec>
     <Message Text="$(_WidgetBuildOutput)" Importance="low" />
+  </Target>
+
+  <Target Name="BuildAuthenticationHost" BeforeTargets="BeforeBuild">
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\MyTelU.AuthenticationHost\MyTelU.AuthenticationHost.csproj&quot; -c $(Configuration) -r $(RuntimeIdentifier) /p:Platform=$(Platform) --self-contained true"/>
+  </Target>
+
+  <Target Name="CollectAuthenticationFiles" BeforeTargets="AssignTargetPaths;GetPackageFiles">
+    <ItemGroup>
+      <_AuthenticationFiles Include="$(MSBuildThisFileDirectory)..\MyTelU.AuthenticationHost\bin\$(Platform)\$(Configuration)\net10.0-windows10.0.26100.0\$(RuntimeIdentifier)\publish\**\*"/>
+      <Content Include="@(_AuthenticationFiles)">
+        <Link>AuthenticationHost\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Visible>false</Visible>
+      </Content>
+    </ItemGroup>
   </Target>
 
   <Target Name="CollectWidgetFiles" BeforeTargets="AssignTargetPaths;GetPackageFiles">

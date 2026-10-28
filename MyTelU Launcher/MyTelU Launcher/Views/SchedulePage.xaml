@@ -8,6 +8,7 @@
     xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
     xmlns:helpers="using:MyTelU_Launcher.Helpers"
     xmlns:models="using:MyTelU_Launcher.Models"
+    xmlns:tabular="using:Microsoft.UI.Xaml.Controls.Tabular"
     xmlns:local="using:MyTelU_Launcher.Views"
     xmlns:ctControls="using:CommunityToolkit.WinUI.Controls"
     xmlns:animations="using:CommunityToolkit.WinUI.Animations"
@@ -39,6 +40,9 @@
                     <SolidColorBrush x:Key="BadgeUpcomingBrush"   Color="#0055B3"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
+            <DataTemplate x:Key="ScheduleColumnHeaderTemplate">
+                <TextBlock Text="{Binding}" FontWeight="SemiBold" Foreground="{ThemeResource AccentButtonForeground}"/>
+            </DataTemplate>
             <helpers:BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
             <Style x:Key="DisabledDayStyle" TargetType="ctControls:SegmentedItem">
                 <Setter Property="IsEnabled" Value="False"/>
@@ -316,6 +320,12 @@
                             <FontIcon Glyph="&#xE712;" FontSize="16"/>
                             <Button.Flyout>
                                 <MenuFlyout Placement="Bottom">
+                                    <MenuFlyoutItem Text="Print schedule" Click="PrintSchedule_Click">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE749;"/></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Print study plan (KSM)" Click="PrintStudyPlan_Click">
+                                        <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
                                     <MenuFlyoutItem Text="More schedule information"
                                                    Command="{x:Bind ViewModel.OpenScheduleInBrowserCommand}">
                                         <MenuFlyoutItem.Icon>
@@ -415,15 +425,13 @@
                         <!-- ── Content: hidden while loading OR empty, animates in after ── -->
                         <Grid x:Name="CourseContentGrid"
                               Visibility="{x:Bind ViewModel.IsNotLoadingAndNotEmpty, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
-                              animations:Implicit.ShowAnimations="{StaticResource ShowTransitions}"
-                              animations:Implicit.HideAnimations="{StaticResource HideTransitions}">
+                              >
 
                         <!-- ── LIST VIEW ── -->
                         <ScrollViewer
                               VerticalScrollBarVisibility="Auto"
                               Visibility="{x:Bind ViewModel.IsListLayout, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
-                              animations:Implicit.ShowAnimations="{StaticResource ShowTransitions}"
-                              animations:Implicit.HideAnimations="{StaticResource HideTransitions}">
+                              >
                     <ItemsControl ItemsSource="{x:Bind ViewModel.Courses, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:CourseItem">
@@ -496,107 +504,63 @@
                 </ScrollViewer>
 
                         <!-- ── TABLE VIEW (all days as columns, courses stacked) ── -->
-                        <ScrollViewer
-                              HorizontalScrollMode="Enabled"
-                              HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollMode="Disabled"
-                              VerticalScrollBarVisibility="Hidden"
-                              Visibility="{x:Bind ViewModel.IsTableLayout, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
-                              animations:Implicit.ShowAnimations="{StaticResource ShowTransitions}"
-                              animations:Implicit.HideAnimations="{StaticResource HideTransitions}">
-                            <ItemsControl ItemsSource="{x:Bind ViewModel.CoursesByDay, Mode=OneWay}"
-                                          Margin="0,0,0,16">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="4"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:DayGroup">
-                                        <Border Width="210" VerticalAlignment="Top"
-                                                CornerRadius="8"
->
-                                            <StackPanel>
-                                                <!-- Day header strip -->
-                                                <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                        CornerRadius="8" Height="40" Margin="0,0,0,8">
-                                                    <TextBlock Text="{x:Bind Day}"
-                                                               FontSize="13" FontWeight="Bold"
-                                                               Foreground="{ThemeResource TimetableHeaderTextBrush}"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
+                        <tabular:TableView
+                            ItemsSource="{x:Bind ViewModel.AllCourses, Mode=OneWay}"
+                            Visibility="{x:Bind ViewModel.IsTableLayout, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
+                            AutomationProperties.Name="Class schedule">
+                            <tabular:TableView.Resources>
+                                <ResourceDictionary>
+                                    <ResourceDictionary.ThemeDictionaries>
+                                        <ResourceDictionary x:Key="HighContrast">
+                                            <StaticResource x:Key="TabularSurfaceHeaderBackgroundBrush" ResourceKey="SystemColorWindowColorBrush"/>
+                                            <StaticResource x:Key="AccentButtonForeground" ResourceKey="SystemColorWindowTextColorBrush"/>
+                                            <StaticResource x:Key="SortIndicatorForeground" ResourceKey="SystemColorWindowTextColorBrush"/>
+                                        </ResourceDictionary>
+                                    </ResourceDictionary.ThemeDictionaries>
+                                    <SolidColorBrush x:Key="TabularSurfaceHeaderBackgroundBrush"
+                                        Color="{Binding Color, Source={ThemeResource AccentFillColorDefaultBrush}}"/>
+                                    <SolidColorBrush x:Key="SortIndicatorForeground"
+                                        Color="{Binding Color, Source={ThemeResource AccentButtonForeground}}"/>
+                                </ResourceDictionary>
+                            </tabular:TableView.Resources>
+                            <tabular:TableView.Columns>
+                                <tabular:TableViewTextColumn Header="Day" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding Day}" Width="95"/>
+                                <tabular:TableViewTextColumn Header="Time" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding Time}" Width="120"/>
+                                <tabular:TableViewTextColumn Header="Code" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding CourseCode}" Width="110"/>
+                                <tabular:TableViewTextColumn Header="Course" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding CourseName}" Width="*"/>
+                                <tabular:TableViewTextColumn Header="Room" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding Room}" Width="110"/>
+                                <tabular:TableViewTextColumn Header="Class" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding Class}" Width="100"/>
+                                <tabular:TableViewTextColumn Header="Lecturer" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" Binding="{Binding Lecturer}" Width="90"/>
+                                <tabular:TableViewTemplateColumn Header="Status" HeaderTemplate="{StaticResource ScheduleColumnHeaderTemplate}" SortMemberPath="BadgeLabel" Width="110">
+                                    <tabular:TableViewTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="models:CourseItem">
+                                            <Grid Padding="8,4">
+                                                <Border Padding="5,2" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                        Background="{ThemeResource BadgeOngoingBrush}"
+                                                        Visibility="{x:Bind IsOngoing, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="ONGOING" FontSize="9" FontWeight="Bold" Foreground="{ThemeResource BadgeTextBrush}"/>
                                                 </Border>
-
-                                                <!-- Course cards -->
-                                                <ItemsControl ItemsSource="{x:Bind Courses}"
-                                                              Padding="0,0,0,4">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="models:CourseItem">
-                                                            <Border Margin="0,0,0,3.5" Padding="10,8"
-                                                                    CornerRadius="6"
-                                                                    Height="160"
-                                                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                                                    BorderThickness="1">
-                                                                <StackPanel Spacing="3">
-                                                                    <TextBlock TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis">
-                                                                        <Run Text="{x:Bind CourseCode}" FontWeight="Bold" FontSize="12"/>
-                                                                        <Run Text=" - " FontWeight="Bold" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                                                        <Run Text="{x:Bind CourseName}" FontWeight="Bold" FontSize="12"/>
-                                                                    </TextBlock>
-                                                                    <TextBlock Text="{x:Bind Time}"
-                                                                               FontSize="11" Opacity="0.6"
-                                                                               FontWeight="SemiBold"/>
-                                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
-                                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                            <FontIcon Glyph="&#xE707;" FontSize="10" Opacity="0.7"/>
-                                                                            <TextBlock Text="{x:Bind Room}" FontSize="10" Opacity="0.7"/>
-                                                                        </StackPanel>
-                                                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                                                            <FontIcon Glyph="&#xE716;" FontSize="10" Opacity="0.7"/>
-                                                                            <TextBlock Text="{x:Bind Class}" FontSize="10" Opacity="0.7"/>
-                                                                        </StackPanel>
-                                                                    </StackPanel>
-                                                                    <TextBlock Text="{x:Bind Lecturer}"
-                                                                               FontSize="10" Opacity="0.5"
-                                                                               TextTrimming="CharacterEllipsis"
-                                                                               MaxLines="2"
-                                                                               TextWrapping="Wrap"/>
-                                                                    <!-- Status badges -->
-                                                                    <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-                                                                        <Border Padding="5,2" CornerRadius="4"
-                                                                                Background="{ThemeResource BadgeOngoingBrush}"
-                                                                                Visibility="{x:Bind IsOngoing, Converter={StaticResource BoolToVisibility}}">
-                                                                            <TextBlock Text="ONGOING" FontSize="9" FontWeight="Bold" Foreground="{ThemeResource BadgeTextBrush}"/>
-                                                                        </Border>
-                                                                        <Border Padding="5,2" CornerRadius="4"
-                                                                                Background="{ThemeResource BadgeUpcomingBrush}"
-                                                                                Visibility="{x:Bind IsUpcoming, Converter={StaticResource BoolToVisibility}}">
-                                                                            <TextBlock Text="UPCOMING" FontSize="9" FontWeight="Bold" Foreground="{ThemeResource BadgeTextBrush}"/>
-                                                                        </Border>
-                                                                        <Border Padding="5,2" CornerRadius="4"
-                                                                                Background="{ThemeResource BadgeFinishedBrush}"
-                                                                                Visibility="{x:Bind IsFinished, Converter={StaticResource BoolToVisibility}}">
-                                                                            <TextBlock Text="FINISHED" FontSize="9" FontWeight="Bold" Foreground="{ThemeResource BadgeTextBrush}"/>
-                                                                        </Border>
-                                                                    </StackPanel>
-                                                                </StackPanel>
-                                                            </Border>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                                                <Border Padding="5,2" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                        Background="{ThemeResource BadgeUpcomingBrush}"
+                                                        Visibility="{x:Bind IsUpcoming, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="UPCOMING" FontSize="9" FontWeight="Bold" Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                </Border>
+                                                <Border Padding="5,2" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                                        Background="{ThemeResource BadgeFinishedBrush}"
+                                                        Visibility="{x:Bind IsFinished, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="FINISHED" FontSize="9" FontWeight="Bold" Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </tabular:TableViewTemplateColumn.CellTemplate>
+                                </tabular:TableViewTemplateColumn>
+                            </tabular:TableView.Columns>
+                        </tabular:TableView>
 
                         <!-- ── TIMETABLE VIEW (single-day, columns = per-hour sessions) ── -->
                         <Grid CornerRadius="8"
                               Visibility="{x:Bind ViewModel.IsTimetableLayout, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"
-                              animations:Implicit.ShowAnimations="{StaticResource ShowTransitions}"
-                              animations:Implicit.HideAnimations="{StaticResource HideTransitions}">
+                              >
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>

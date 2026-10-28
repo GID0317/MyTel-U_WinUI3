@@ -1,3 +1,4 @@
+using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -77,7 +78,7 @@ public class GradeService : IGradeService, IDisposable
 
         try
         {
-            using var client = BuildHttpClient(ajax: true);
+            using var client = BuildHttpClient(ajax: false);
 
             var pageResp = await client.GetAsync(ScorePageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!pageResp.IsSuccessStatusCode)
@@ -151,9 +152,10 @@ public class GradeService : IGradeService, IDisposable
 
         try
         {
+            using var pageClient = BuildHttpClient(ajax: false);
+            using var pageResponse = await pageClient.GetAsync(ScorePageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!pageResponse.IsSuccessStatusCode) return LoadComponentCache(cacheKeys) ?? new();
             using var client = BuildHttpClient(ajax: true);
-
-            await client.GetAsync(ScorePageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
 
             var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {

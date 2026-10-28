@@ -37,31 +37,31 @@ public partial class ScheduleViewModel : ObservableRecipient,
     private async Task BeginLoginFromOnboardingAsync() => await LoginWithBrowserAsync();
 
     [ObservableProperty]
-    private bool _isLoading;
+    public partial bool IsLoading { get; set; }
 
     // Derived: notified whenever IsLoading flips so XAML bindings update.
     public bool IsNotLoading => !IsLoading;
 
     [ObservableProperty]
-    private bool _hasError;
+    public partial bool HasError { get; set; }
 
     [ObservableProperty]
-    private string _errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private ScheduleResponse? _schedule;
+    public partial ScheduleResponse? Schedule { get; set; }
 
     [ObservableProperty]
-    private bool _needsLogin;
+    public partial bool NeedsLogin { get; set; }
 
     [ObservableProperty]
-    private bool _isEmpty;
+    public partial bool IsEmpty { get; set; }
 
     /// <summary>
     /// True when the displayed schedule comes from the local cache because no live fetch succeeded.
     /// </summary>
     [ObservableProperty]
-    private bool _isOffline;
+    public partial bool IsOffline { get; set; }
 
     /// <summary>
     /// Human-readable age of the cached schedule shown when IsOffline is true.
@@ -92,20 +92,20 @@ public partial class ScheduleViewModel : ObservableRecipient,
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoginWithBrowserCommand))]
     [NotifyCanExecuteChangedFor(nameof(BeginLoginFromOnboardingCommand))]
-    private bool _isBrowserLoginRunning;
+    public partial bool IsBrowserLoginRunning { get; set; }
 
     [ObservableProperty]
-    private bool _isReconnecting;
+    public partial bool IsReconnecting { get; set; }
 
     partial void OnIsReconnectingChanged(bool value)
         => OnPropertyChanged(nameof(LoadingStatusText));
 
     /// <summary>Text shown inside the loading overlay. Changes to "Reconnecting…" during silent login.</summary>
-    public string LoadingStatusText => _isReconnecting ? "Reconnecting…" : "Loading schedule…";
+    public string LoadingStatusText => IsReconnecting ? "Reconnecting…" : "Loading schedule…";
 
-    /// <summary>True while a silent re-login + live fetch run in the background after serving cached data.</summary>
+    /// <summary>True while refreshing an expired session before retrying the live request.</summary>
     [ObservableProperty]
-    private bool _isBackgroundRefreshing;
+    public partial bool IsBackgroundRefreshing { get; set; }
 
     partial void OnIsBackgroundRefreshingChanged(bool value)
     {
@@ -113,15 +113,15 @@ public partial class ScheduleViewModel : ObservableRecipient,
         OnPropertyChanged(nameof(IsNotRefreshing));
     }
 
-    /// <summary>True when any refresh is happening — full load OR background reconnect. Bind refresh buttons to this.</summary>
+    /// <summary>True while a load or session refresh is in progress.</summary>
     public bool IsRefreshing    => IsLoading || IsBackgroundRefreshing;
     public bool IsNotRefreshing => !IsRefreshing;
 
     [ObservableProperty]
-    private bool _isListLayout = true;
+    public partial bool IsListLayout { get; set; } = true;
 
     [ObservableProperty]
-    private bool _isTableLayout = false;
+    public partial bool IsTableLayout { get; set; } = false;
 
     partial void OnIsListLayoutChanged(bool value)
     {
@@ -140,55 +140,55 @@ public partial class ScheduleViewModel : ObservableRecipient,
     public string CurrentLayoutIcon => IsListLayout ? "\uE8FD" : IsTableLayout ? "\uE8A1" : "\uECA5";
 
     [ObservableProperty]
-    private string _classReminderLabel = "Reminder";
+    public partial string ClassReminderLabel { get; set; } = "Reminder";
 
     [ObservableProperty]
-    private string _classReminderIconGlyph = "\uE7ED";
+    public partial string ClassReminderIconGlyph { get; set; } = "\uE7ED";
 
     [ObservableProperty]
-    private bool _isClassReminderDisabled = true;
+    public partial bool IsClassReminderDisabled { get; set; } = true;
 
     [ObservableProperty]
-    private bool _isClassReminder5Minutes;
+    public partial bool IsClassReminder5Minutes { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminder10Minutes;
+    public partial bool IsClassReminder10Minutes { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminder20Minutes;
+    public partial bool IsClassReminder20Minutes { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminder30Minutes;
+    public partial bool IsClassReminder30Minutes { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminder1Hour;
+    public partial bool IsClassReminder1Hour { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundDefault = true;
+    public partial bool IsClassReminderSoundDefault { get; set; } = true;
 
     [ObservableProperty]
-    private bool _isClassReminderSoundAlarm;
+    public partial bool IsClassReminderSoundAlarm { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundIm;
+    public partial bool IsClassReminderSoundIm { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundMail;
+    public partial bool IsClassReminderSoundMail { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundSms;
+    public partial bool IsClassReminderSoundSms { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundLoopingAlarm;
+    public partial bool IsClassReminderSoundLoopingAlarm { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundLoopingAlarm2;
+    public partial bool IsClassReminderSoundLoopingAlarm2 { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundLoopingAlarm3;
+    public partial bool IsClassReminderSoundLoopingAlarm3 { get; set; }
 
     [ObservableProperty]
-    private bool _isClassReminderSoundLoopingCall;
+    public partial bool IsClassReminderSoundLoopingCall { get; set; }
 
     [RelayCommand] private void SetListLayout()      { IsListLayout = true;  IsTableLayout = false; }
     [RelayCommand] private void SetTableLayout()     { IsListLayout = false; IsTableLayout = true;  }
@@ -235,10 +235,9 @@ public partial class ScheduleViewModel : ObservableRecipient,
     }
 
     [ObservableProperty]
-    private string _selectedDay = string.Empty;
+    public partial string SelectedDay { get; set; } = string.Empty;
 
     private bool _suppressDayChange;
-    private bool _bypassCacheOnNextLoad;
     private string _previousDay = string.Empty;
 
     // 1 = forward (tapped day is later in the week), -1 = backward
@@ -297,7 +296,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     public bool IsInitialLoading => IsLoading && Courses.Count == 0;
 
     [ObservableProperty]
-    private AcademicYearOption? _selectedAcademicYear;
+    public partial AcademicYearOption? SelectedAcademicYear { get; set; }
 
     private bool _suppressAcademicYearChange;
 
@@ -307,7 +306,6 @@ public partial class ScheduleViewModel : ObservableRecipient,
         _scheduleService.SaveAcademicYear(value.YearCode, value.SemesterCode);
         FeatureFlowLogger.Write("Schedule", $"academic-year selected: {value.Value} | {value.Text}");
 
-        _bypassCacheOnNextLoad = true;
         await LoadScheduleAsync();
     }
 
@@ -393,6 +391,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     }
 
     private List<CourseItem> _allSorted = new();
+    public IReadOnlyList<CourseItem> AllCourses => _allSorted;
 
     public ObservableCollection<CourseItem>      Courses              { get; } = new();
     public ObservableCollection<DayGroup>        CoursesByDay         { get; } = new();
@@ -402,7 +401,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     public ObservableCollection<TimetableCourseRow> TimetableCourseRows  { get; } = new();
 
     [ObservableProperty]
-    private DaySegmentItem? _selectedDayItem;
+    public partial DaySegmentItem? SelectedDayItem { get; set; }
 
     partial void OnSelectedDayItemChanged(DaySegmentItem? value)
     {
@@ -419,11 +418,12 @@ public partial class ScheduleViewModel : ObservableRecipient,
         _browserLoginService = browserLoginService;
         _classReminderService = classReminderService;
 
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register<SessionCookiesSavedMessage>(this);
+        WeakReferenceMessenger.Default.Register<BrowserLoginStateMessage>(this);
         // Seed state in case login was already started before this VM was constructed.
         IsBrowserLoginRunning = _browserLoginService.IsRunning;
         // Running both concurrently against the same session can cause one to fail.
-        _ = InitializeAsync();
+        Initialization = InitializeAsync();
     }
 
     public Task RescheduleClassRemindersAsync()
@@ -541,15 +541,24 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     private async Task InitializeAsync()
     {
-        // 1. Fire cached schedule load immediately so UI populates
-        var scheduleTask = LoadScheduleAsync();
-
-        // 2. Fetch academic years in parallel (network bound)
-        var yearsTask = LoadAcademicYearsAsync();
-        var reminderTask = LoadClassReminderStateAsync();
-
-        await Task.WhenAll(scheduleTask, yearsTask, reminderTask);
+        IsLoading = true;
+        HasError = false;
+        NeedsLogin = false;
+        try
+        {
+            await LoadAcademicYearsAsync();
+            await LoadClassReminderStateAsync();
+            await LoadScheduleAsync();
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Could not initialize schedule: {ex.Message}";
+            IsLoading = false;
+        }
     }
+
+    public Task Initialization { get; private set; }
 
     [RelayCommand(CanExecute = nameof(CanLoginWithBrowser))]
     private async Task LoginWithBrowserAsync()
@@ -613,207 +622,64 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     private CancellationTokenSource? _loadCts;
 
-    /// <summary>
-    /// Cancels any in-progress load and immediately marks the page as not-loading.
-    /// Call this when navigating back to the page mid-refresh so the existing
-    /// cached data is visible instead of an overlay blocking interaction.
-    /// </summary>
-    public void CancelLoad()
-    {
-        if (!IsLoading) return;
-        _loadCts?.Cancel();
-        IsLoading = false;
-        // Restore the offline indicator so the InfoBar reappears if we're still offline.
-        if (Schedule != null)
-            IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-    }
-
     [RelayCommand]
     public async Task LoadScheduleAsync()
     {
-        // Cancel any pending load (e.g. user switched academic year while loading)
-        FeatureFlowLogger.Write("Schedule", $"load start: selected={SelectedAcademicYear?.Value ?? "(null)"}, bypass={_bypassCacheOnNextLoad}, online={_scheduleService.IsNetworkAvailable()}");
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var token = _loadCts.Token;
-
         IsLoading = true;
         HasError = false;
         NeedsLogin = false;
         IsEmpty = false;
         IsOffline = false;
         ErrorMessage = string.Empty;
-
         try
         {
-            bool bypass = _bypassCacheOnNextLoad;
-            _bypassCacheOnNextLoad = false;
-
-            // ── 1. No session → try silent login, then show login screen ──
-            bool hasSavedSession = await Task.Run(() => _scheduleService.HasSavedSession);
-            if (!hasSavedSession)
+            if (SelectedAcademicYear is { } selected)
+                _scheduleService.SaveAcademicYear(selected.YearCode, selected.SemesterCode);
+            ScheduleResponse? data = null;
+            if (_scheduleService.IsNetworkAvailable())
             {
-                if (token.IsCancellationRequested) return;
-
-                if (_scheduleService.IsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
-                {
-                    if (_scheduleService.HasCachedSchedule)
-                    {
-                        // Show cached data immediately, reconnect silently in the background.
-                        var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
-                        if (cached != null && !token.IsCancellationRequested)
-                        {
-                            IsLoading = false;
-                            PopulateScheduleData(cached);
-                            FeatureFlowLogger.Write("Schedule", "served cached schedule, starting background reconnect");
-                            _ = BackgroundReconnectScheduleAsync(token);
-                            return;
-                        }
-                    }
-
-                    IsReconnecting = true;
-                    var ok = await _browserLoginService.TrySilentLoginAsync(token);
-                    IsReconnecting = false;
-                    if (token.IsCancellationRequested) return;
-
-                    if (!ok)
-                    {
-                        ClearDisplayedScheduleData();
-                        NeedsLogin = true;
-                        FeatureFlowLogger.Write("Schedule", "silent login failed: showing NeedsLogin");
-                        return;
-                    }
-                    FeatureFlowLogger.Write("Schedule", "silent login succeeded: continuing with live fetch");
-                    bypass = true;
-                }
-                else
-                {
-                    // If credentials are gone but the device is still online, go straight to login.
-                    if (!_scheduleService.IsNetworkAvailable() && _scheduleService.HasCachedSchedule)
-                    {
-                        var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
-                        if (cached != null)
-                        {
-                            if (token.IsCancellationRequested) return;
-                            IsOffline = true;
-                            PopulateScheduleData(cached);
-                            FeatureFlowLogger.Write("Schedule", "offline with cache: showing cached schedule");
-                            return;
-                        }
-                    }
-                    ClearDisplayedScheduleData();
-                    NeedsLogin = true;
-                    return;
-                }
-            }
-
-            if (!bypass && _scheduleService.HasCachedSchedule)
-            {
-                if (token.IsCancellationRequested) return;
-                // DPAPI decrypt runs synchronously, so keep it off the UI thread.
-                var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
-                if (cached != null)
-                {
-                    if (token.IsCancellationRequested) return;
-                    PopulateScheduleData(cached);
-                    if (_scheduleService.IsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
-                        _ = BackgroundValidateAndRefreshScheduleAsync(token);
-                    else
-                        IsOffline = !_scheduleService.IsNetworkAvailable();
-                    return;
-                }
-            }
-
-            var sessionStatus = await _scheduleService.ValidateSessionAsync();
-            if (token.IsCancellationRequested) return;
-
-            if (sessionStatus == SessionValidationResult.NoSession)
-            {
-                if (_scheduleService.IsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
+                data = await _scheduleService.GetLiveScheduleAsync(token);
+                if (data == null && _browserLoginService.HasSavedCredentials)
                 {
                     IsReconnecting = true;
-                    var ok = await _browserLoginService.TrySilentLoginAsync(token);
-                    IsReconnecting = false;
-                    if (token.IsCancellationRequested) return;
-
-                    if (ok)
-                    {
-                        var refreshed = await _scheduleService.GetScheduleAsync(token);
-                        if (token.IsCancellationRequested) return;
-                        if (refreshed != null)
-                        {
-                            PopulateScheduleData(refreshed);
-                            return;
-                        }
-                    }
+                    if (await _browserLoginService.TrySilentLoginAsync(token))
+                        data = await _scheduleService.GetLiveScheduleAsync(token);
                 }
-
-                if (_scheduleService.HasCachedSchedule)
-                {
-                    var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
-                    if (cached != null)
-                    {
-                        IsOffline = true;
-                        PopulateScheduleData(cached);
-                        WeakReferenceMessenger.Default.Send(new SessionExpiredMessage());
-                        FeatureFlowLogger.Write("Schedule", "session expired: fell back to cached schedule");
-                        return;
-                    }
-                }
-                ClearDisplayedScheduleData();
-                NeedsLogin = true;
-                return;
             }
-            if (sessionStatus == SessionValidationResult.NetworkError)
+            token.ThrowIfCancellationRequested();
+            if (data == null)
             {
-                // Explicit or implicit offline: fall back to cache and show the InfoBar.
-                if (_scheduleService.HasCachedSchedule)
+                var cached = await Task.Run(_scheduleService.GetCachedSchedule, token);
+                string? expected = SelectedAcademicYear == null ? null
+                    : $"{SelectedAcademicYear.YearCode}/{SelectedAcademicYear.SemesterCode}";
+                if (cached != null && (expected == null || cached.AcademicYear == expected))
                 {
-                    var cached = await Task.Run(() => _scheduleService.GetCachedSchedule());
-                    if (cached != null)
-                    {
-                        IsOffline = true;
-                        PopulateScheduleData(cached);
-                        FeatureFlowLogger.Write("Schedule", "network error: fell back to cached schedule");
-                        return;
-                    }
+                    data = cached;
+                    IsOffline = true;
                 }
-
-                HasError = true;
-                ErrorMessage = "You’re offline and there’s no cached schedule yet. Connect and try again.";
-                return;
             }
-
-            var schedule = await _scheduleService.GetScheduleAsync(token);
-            if (token.IsCancellationRequested) return;
-
-            if (schedule != null)
-            {
-                PopulateScheduleData(schedule);
-                FeatureFlowLogger.Write("Schedule", $"live fetch success: selected={SelectedAcademicYear?.Value ?? "(all)"}, courses={schedule.Courses.Count}");
-            }
+            token.ThrowIfCancellationRequested();
+            if (data != null)
+                PopulateScheduleData(data);
             else
             {
-                if (token.IsCancellationRequested) return;
-                
-                HasError = true;
-                ErrorMessage = "Could not load schedule data. Try refreshing.";
-                FeatureFlowLogger.Write("Schedule", "live fetch failed: no cache available");
+                NeedsLogin = !_browserLoginService.HasSavedCredentials;
+                HasError = !NeedsLogin;
+                ErrorMessage = "Could not load the schedule for this period. Check your connection or sign in again.";
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            HasError = true;
-            ErrorMessage = $"Error: {ex.Message}";
+            if (!token.IsCancellationRequested) { HasError = true; ErrorMessage = $"Could not load the schedule: {ex.Message}"; }
         }
         finally
         {
-            if (!token.IsCancellationRequested)
-                IsLoading = false;
+            if (!token.IsCancellationRequested) { IsReconnecting = false; IsLoading = false; }
         }
     }
 
@@ -824,129 +690,10 @@ public partial class ScheduleViewModel : ObservableRecipient,
     private async Task RefreshScheduleAsync()
     {
         FeatureFlowLogger.Write("Schedule", $"refresh start: selected={SelectedAcademicYear?.Value ?? "(null)"}");
-        _bypassCacheOnNextLoad = true;
         await LoadScheduleAsync();
 
         if (!NeedsLogin)
             _ = LoadAcademicYearsAsync();
-    }
-
-    /// <summary>Refreshes cached schedule data in the background after the page has already rendered.</summary>
-    private async Task BackgroundReconnectScheduleAsync(CancellationToken token)
-    {
-        IsBackgroundRefreshing = true;
-        FeatureFlowLogger.Write("Schedule", "background reconnect start");
-        try
-        {
-            var ok = await _browserLoginService.TrySilentLoginAsync(token);
-            if (!ok || token.IsCancellationRequested)
-            {
-                if (!token.IsCancellationRequested)
-                {
-                    if (_scheduleService.IsNetworkAvailable())
-                        NeedsLogin = true;   // online but auth failed — prompt relog
-                    else
-                        IsOffline = true;    // actually offline
-                }
-                FeatureFlowLogger.Write("Schedule", "background reconnect failed");
-                return;
-            }
-
-            var live = await _scheduleService.GetScheduleAsync(token);
-            if (live != null && !token.IsCancellationRequested)
-            {
-                PopulateScheduleData(live);
-                FeatureFlowLogger.Write("Schedule", "background reconnect success");
-            }
-        }
-        catch (OperationCanceledException) { /* ignore */ }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[BackgroundReconnect] Schedule: {ex.Message}");
-            if (!token.IsCancellationRequested) IsOffline = true;
-        }
-        finally
-        {
-            IsBackgroundRefreshing = false;
-        }
-    }
-
-    /// <summary>Refreshes cached schedule data in the background when saved cookies might be stale.</summary>
-    private async Task BackgroundValidateAndRefreshScheduleAsync(CancellationToken token)
-    {
-        IsBackgroundRefreshing = true;
-        FeatureFlowLogger.Write("Schedule", "background validate start");
-        try
-        {
-#if DEBUG
-            var _bgLogFile = AppDataStore.GetFilePath("silent_login.log");
-            void BgLog(string msg)
-            {
-                DiagnosticLogging.AppendLine(_bgLogFile, $"[{DateTime.Now:HH:mm:ss.fff}] [BGValidate] {msg}", 200_000);
-            }
-            BgLog("=== BackgroundValidateAndRefreshScheduleAsync started ===");
-#endif
-            var sessionStatus = await _scheduleService.ValidateSessionAsync();
-            if (token.IsCancellationRequested) return;
-#if DEBUG
-            BgLog($"ValidateSessionAsync returned {sessionStatus}");
-#endif
-            if (sessionStatus == SessionValidationResult.NetworkError)
-            {
-                IsOffline = true;
-                FeatureFlowLogger.Write("Schedule", "background validate: network error");
-                return;
-            }
-
-            if (sessionStatus == SessionValidationResult.NoSession)
-            {
-                if (!_browserLoginService.HasSavedCredentials)
-                {
-#if DEBUG
-                    BgLog("No saved credentials — showing NeedsLogin");
-#endif
-                    NeedsLogin = true;
-                    FeatureFlowLogger.Write("Schedule", "background validate: no saved credentials");
-                    return;
-                }
-#if DEBUG
-                BgLog("Session expired — starting silent login");
-#endif
-                var ok = await _browserLoginService.TrySilentLoginAsync(token);
-                if (!ok || token.IsCancellationRequested)
-                {
-                    if (!token.IsCancellationRequested)
-                    {
-                        if (_scheduleService.IsNetworkAvailable())
-                            NeedsLogin = true;
-                        else
-                            IsOffline = true;
-                    }
-                    return;
-                }
-                FeatureFlowLogger.Write("Schedule", "background validate: relogin succeeded");
-            }
-
-            var live = await _scheduleService.GetScheduleAsync(token);
-#if DEBUG
-            BgLog($"GetLiveScheduleAsync returned {(live == null ? "null" : "data")}");
-#endif
-            if (live != null && !token.IsCancellationRequested)
-            {
-                PopulateScheduleData(live);
-                FeatureFlowLogger.Write("Schedule", "background validate success");
-            }
-        }
-        catch (OperationCanceledException) { /* ignore */ }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[BackgroundValidate] Schedule: {ex.Message}");
-            if (!token.IsCancellationRequested) IsOffline = true;
-        }
-        finally
-        {
-            IsBackgroundRefreshing = false;
-        }
     }
 
     /// <summary>Populates all VM collections from a <see cref="ScheduleResponse"/>.</summary>
@@ -1012,6 +759,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
             Courses.Add(course);
 
         _allSorted = sorted;
+        OnPropertyChanged(nameof(AllCourses));
         _ = RescheduleClassRemindersAsync();
 
         var days = sorted
@@ -1115,6 +863,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
         TimetableTimeHeaders.Clear();
         TimetableCourseRows.Clear();
         _allSorted = new();
+        OnPropertyChanged(nameof(AllCourses));
         _suppressDayChange = true;
         SelectedDay = string.Empty;
         _suppressDayChange = false;
@@ -1201,8 +950,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
 
     public void Receive(SessionCookiesSavedMessage message)
     {
-        // Session cookies saved (browser login completed) — reload everything.
-        // InitializeAsync first fetches academic years, then the schedule.
-        _ = InitializeAsync();
+        _loadCts?.Cancel();
+        Initialization = InitializeAsync();
     }
 }

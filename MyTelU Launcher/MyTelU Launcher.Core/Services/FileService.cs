@@ -8,12 +8,6 @@ namespace MyTelU_Launcher.Core.Services;
 
 public class FileService : IFileService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = false
-    };
-
     public T Read<T>(string folderPath, string fileName)
     {
         var path = Path.Combine(folderPath, fileName);
@@ -28,7 +22,7 @@ public class FileService : IFileService
                     using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     using var streamReader = new StreamReader(fileStream);
                     var json = streamReader.ReadToEnd();
-                    return JsonSerializer.Deserialize<T>(json, JsonOptions);
+                    return Json.Deserialize<T>(json);
                 }
                 catch (IOException)
                 {
@@ -49,7 +43,7 @@ public class FileService : IFileService
             Directory.CreateDirectory(folderPath);
         }
 
-        var fileContent = JsonSerializer.Serialize(content, JsonOptions);
+        var fileContent = Json.Serialize(content);
         var path = Path.Combine(folderPath, fileName);
         
         // Retry logic for file locking issues

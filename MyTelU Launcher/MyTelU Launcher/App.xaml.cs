@@ -44,6 +44,7 @@ public partial class App : Application
 
     public App()
     {
+        MyTelU_Launcher.Core.Helpers.Json.Options.TypeInfoResolver = AppJsonContext.Default;
         DiagnosticLogging.ApplyRuntimeConfiguration();
 
         InitializeComponent();
@@ -98,6 +99,9 @@ public partial class App : Application
                 services.AddTransient<AttendanceViewModel>();
                 services.AddTransient<AttendancePage>();
                 services.AddSingleton<IGradeService, GradeService>();
+                services.AddSingleton<AcademicPrintService>();
+                services.AddSingleton<MobileAcademicService>();
+                services.AddSingleton<StudyPlanService>();
                 services.AddTransient<GradeViewModel>();
                 services.AddTransient<GradePage>();
                 services.AddTransient<ShellPage>();
@@ -139,7 +143,7 @@ public partial class App : Application
         {
             // Log error and use a fallback version.
             System.Diagnostics.Debug.WriteLine("Failed to get package version: " + ex.Message);
-            AppVersion = new Version(4, 1, 0, 0);
+            AppVersion = typeof(App).Assembly.GetName().Version!;
         }
 
         base.OnLaunched(args);

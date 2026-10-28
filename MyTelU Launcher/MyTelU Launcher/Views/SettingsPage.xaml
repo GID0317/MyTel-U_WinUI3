@@ -11,8 +11,7 @@
     xmlns:behaviors="using:MyTelU_Launcher.Behaviors"
     behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
     NavigationCacheMode="Required"
-    mc:Ignorable="d"
-    DataContext="{Binding ViewModel, RelativeSource={RelativeSource Self}}">
+    mc:Ignorable="d">
 
     <Page.Resources>
         <!-- Converter for friendly theme names -->
@@ -138,7 +137,7 @@
                 <TextBlock FontWeight="SemiBold" Text="About" Margin="3,10,5,5"/>
 
                 <controls:SettingsExpander Header="MyTel-U Launcher" 
-                                           Description="Copyright © GID Under MIT License. All rights reserved."
+                                           Description="Copyright © GID. Licensed under the MIT License."
                                            IsExpanded="True"
                                            Margin="0,0,0,0">
                     <controls:SettingsExpander.HeaderIcon>
@@ -149,7 +148,7 @@
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="{x:Bind ViewModel.AboutVersionText, Mode=OneWay}" />
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Header="Send a Feedback, File a bug or contribute to the project">
+                        <controls:SettingsCard Header="Send feedback, report a bug, or contribute">
                             <HyperlinkButton Content="Go to the page"
                                              NavigateUri="https://github.com/GID0317/MyTel-U_WinUI3/issues/new/choose" />
                         </controls:SettingsCard>
@@ -157,19 +156,26 @@
                             <HyperlinkButton Content="Go to the page"
                                              NavigateUri="https://github.com/GID0317/MyTel-U_WinUI3" />
                         </controls:SettingsCard>
-                        <controls:SettingsCard Header="Open Source contributors">
+                        <controls:SettingsCard Header="Open-source contributors">
                             <HyperlinkButton Content="Go to the page"
                                               NavigateUri="https://github.com/GID0317/MyTel-U_WinUI3/graphs/contributors" />
                         </controls:SettingsCard>
                         <controls:SettingsCard HorizontalContentAlignment="Left"
                                                  ContentAlignment="Left">
                             <StackPanel Margin="-12,0,0,0" Orientation="Vertical">
-                                <TextBlock Text="Dependencies  references" Padding="10,5,0,5"/>
-                                    <HyperlinkButton Content="Windows App SDK 1.8.5 (Microsoft)" NavigateUri="https://github.com/microsoft/WindowsAppSDK"/>
-                                    <HyperlinkButton Content="Win UI Library (Microsoft)" NavigateUri="https://learn.microsoft.com/en-us/windows/apps/winui/winui3/"/>
-                                    <HyperlinkButton Content="Windows Community Toolkit (Microsoft)" NavigateUri="https://github.com/CommunityToolkit/Windows"/>
+                                <TextBlock Text="Dependencies and acknowledgments" Padding="10,5,0,5"/>
+                                <HyperlinkButton Content=".NET 10.0.14 LTS (Microsoft)" NavigateUri="https://dotnet.microsoft.com/download/dotnet/10.0"/>
+                                <HyperlinkButton Content="Windows App SDK / WinUI 3: 2.5.4-experimental" NavigateUri="https://github.com/microsoft/WindowsAppSDK"/>
+                                <HyperlinkButton Content="Windows SDK Build Tools 10.0.28000.2705" NavigateUri="https://www.nuget.org/packages/Microsoft.Windows.SDK.BuildTools/10.0.28000.2705"/>
+                                <HyperlinkButton Content="Windows Community Toolkit 8.2.251219" NavigateUri="https://github.com/CommunityToolkit/Windows"/>
+                                <HyperlinkButton Content="MVVM Toolkit 8.4.2" NavigateUri="https://github.com/CommunityToolkit/dotnet"/>
+                                <HyperlinkButton Content="Microsoft.Extensions Hosting / Dependency Injection 10.0.14" NavigateUri="https://github.com/dotnet/runtime"/>
+                                <HyperlinkButton Content="System.Drawing.Common / ProtectedData 10.0.14" NavigateUri="https://github.com/dotnet/runtime"/>
+                                <HyperlinkButton Content="Playwright for .NET 1.64.1 (Microsoft)" NavigateUri="https://github.com/microsoft/playwright-dotnet"/>
+                                <HyperlinkButton Content="Html Agility Pack 1.13.1" NavigateUri="https://github.com/zzzprojects/html-agility-pack"/>
+                                <HyperlinkButton Content="XAML Behaviors 3.0.1 (Microsoft)" NavigateUri="https://github.com/microsoft/XamlBehaviors"/>
                                 <HyperlinkButton Content="ColorThief (CollapseLauncher)" NavigateUri="https://github.com/CollapseLauncher/ColorThief"/>
-                                    <HyperlinkButton Content="WinUIEx (dotMorten)" NavigateUri="https://github.com/dotMorten/WinUIEx"/>
+                                <HyperlinkButton Content="WinUIEx 2.9.3 (dotMorten)" NavigateUri="https://github.com/dotMorten/WinUIEx"/>
                             </StackPanel>
                         </controls:SettingsCard>
                         <controls:SettingsCard Header="Disclaimer: This application is not affiliated with Telkom University by any means and is completely open-sourced.">

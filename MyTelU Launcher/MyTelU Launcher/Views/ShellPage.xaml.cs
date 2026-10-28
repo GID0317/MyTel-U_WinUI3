@@ -1,9 +1,12 @@
 ﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Imaging;
+using System.Numerics;
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.Services;
+using MyTelU_Launcher.Models;
 using MyTelU_Launcher.ViewModels;
 using Windows.System;
 
@@ -21,11 +24,17 @@ namespace MyTelU_Launcher.Views
             get;
         }
 
+        private StudentProfile? _accountProfile;
+        private CancellationTokenSource? _accountLoad;
+
         public ShellPage(ShellViewModel viewModel)
         {
             Current = this;
             ViewModel = viewModel;
             InitializeComponent();
+
+            AccountButton.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(AccountButton_PointerPressed), true);
+            AccountButton.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler(AccountButton_ResetScale), true);
 
             // Set up main navigation.
             ViewModel.NavigationService.Frame = NavigationFrame;
@@ -34,8 +43,17 @@ namespace MyTelU_Launcher.Views
             App.MainWindow.ExtendsContentIntoTitleBar = true;
             App.MainWindow.SetTitleBar(AppTitleBar);
             App.MainWindow.Activated += MainWindow_Activated;
-            AppTitleBarText.Text = "AppDisplayName".GetLocalized();
+            AppTitleBar.Title = "AppDisplayName".GetLocalized();
         }
+
+        private void AccountButton_PointerEntered(object sender, PointerRoutedEventArgs e)
+            => AccountButton.Scale = new Vector3(0.94f, 0.94f, 1f);
+
+        private void AccountButton_PointerPressed(object sender, PointerRoutedEventArgs e)
+            => AccountButton.Scale = new Vector3(0.88f, 0.88f, 1f);
+
+        private void AccountButton_ResetScale(object sender, PointerRoutedEventArgs e)
+            => AccountButton.Scale = Vector3.One;
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
@@ -51,6 +69,9 @@ namespace MyTelU_Launcher.Views
 
             NavigationFrame.Navigated += NavigationFrame_Navigated;
 
+            var cachedProfile = await Task.Run(App.GetService<MobileAcademicService>().GetCachedProfile);
+            if (cachedProfile != null) DisplayAccount(cachedProfile);
+
             // Optional: Trigger the update check on page load.
             await ViewModel.CheckForUpdatesAsync();
         }
@@ -64,18 +85,102 @@ namespace MyTelU_Launcher.Views
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
-            App.AppTitlebar = AppTitleBarText as UIElement;
+            App.AppTitlebar = AppTitleBar;
         }
 
-        private void NavigationViewControl_DisplayModeChanged(NavigationView sender, NavigationViewDisplayModeChangedEventArgs args)
+        private void TitleBar_BackRequested(Microsoft.UI.Xaml.Controls.TitleBar sender, object args)
         {
-            AppTitleBar.Margin = new Thickness()
+            ViewModel.NavigationService.GoBack();
+        }
+
+        private void TitleBar_PaneToggleRequested(Microsoft.UI.Xaml.Controls.TitleBar sender, object args)
+        {
+            NavigationViewControl.IsPaneOpen = !NavigationViewControl.IsPaneOpen;
+        }
+
+        private async void AccountFlyout_Opening(object sender, object e)
+        {
+            bool signedIn = App.GetService<IBrowserLoginService>().HasSavedCredentials;
+            AccountSignOut.IsEnabled = signedIn || _accountProfile != null;
+            AccountKtm.IsEnabled = signedIn || _accountProfile != null;
+            AccountSignIn.Visibility = signedIn ? Visibility.Collapsed : Visibility.Visible;
+            if (!signedIn)
             {
-                Left = sender.CompactPaneLength * (sender.DisplayMode == NavigationViewDisplayMode.Minimal ? 2 : 1),
-                Top = AppTitleBar.Margin.Top,
-                Right = AppTitleBar.Margin.Right,
-                Bottom = AppTitleBar.Margin.Bottom
-            };
+                if (_accountProfile == null) AccountMenuHeader.Description = "Not signed in";
+                return;
+            }
+            if (_accountProfile is { IsCached: false }) return;
+
+            _accountLoad?.Cancel();
+            _accountLoad?.Dispose();
+            _accountLoad = new CancellationTokenSource();
+            var token = _accountLoad.Token;
+            AccountMenuHeader.IsBusy = true;
+            try
+            {
+                var profile = await App.GetService<MobileAcademicService>().GetProfileAsync(token);
+                if (!token.IsCancellationRequested) DisplayAccount(profile);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+            catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or InvalidOperationException or InvalidDataException or TaskCanceledException)
+            {
+                AccountMenuHeader.Description = "Could not refresh your profile. Connect to the internet or sign in again.";
+            }
+            finally
+            {
+                if (!token.IsCancellationRequested) AccountMenuHeader.IsBusy = false;
+            }
+        }
+
+        private void AccountFlyout_Closed(object sender, object e)
+        {
+            _accountLoad?.Cancel();
+            AccountMenuHeader.IsBusy = false;
+        }
+
+        private void DisplayAccount(StudentProfile profile)
+        {
+            _accountProfile = profile;
+            AccountMenuHeader.DisplayName = profile.FullName;
+            AccountMenuHeader.Description = $"{profile.StudentId}\n{profile.StudyProgram}";
+            AccountAvatar.DisplayName = profile.FullName;
+            if (Uri.TryCreate(profile.Photo, UriKind.Absolute, out var photo)
+                && photo.Scheme == Uri.UriSchemeHttps
+                && (photo.Host == "telkomuniversity.ac.id" || photo.Host.EndsWith(".telkomuniversity.ac.id", StringComparison.OrdinalIgnoreCase)))
+                AccountAvatar.ProfilePicture = AccountMenuHeader.ProfilePicture = new BitmapImage(photo);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AccountMenuHeader,
+                $"Student account, {profile.FullName}, {profile.StudentId}, {profile.StudyProgram}");
+            ToolTipService.SetToolTip(AccountMenuHeader, profile.IsCached ? "Saved profile information" : null);
+        }
+
+        private async void AccountSignIn_Click(object sender, RoutedEventArgs e)
+        {
+            AccountFlyout.Hide();
+            ViewModel.NavigationService.NavigateTo(typeof(ScheduleViewModel).FullName!);
+            await App.GetService<ScheduleViewModel>().LoginWithBrowserCommand.ExecuteAsync(null);
+        }
+
+        private async void AccountSignOut_Click(object sender, RoutedEventArgs e)
+        {
+            AccountFlyout.Hide();
+            await App.GetService<ScheduleViewModel>().RequestClearSessionAsync();
+            if (!App.GetService<IBrowserLoginService>().HasSavedCredentials)
+            {
+                _accountProfile = null;
+                AccountAvatar.ProfilePicture = AccountMenuHeader.ProfilePicture = null;
+                AccountAvatar.DisplayName = string.Empty;
+                AccountMenuHeader.DisplayName = "Student profile";
+                AccountMenuHeader.Description = "Not signed in";
+                ViewModel.NavigationService.NavigateTo(typeof(ScheduleViewModel).FullName!, clearNavigation: true);
+            }
+        }
+
+        private async void AccountKtm_Click(object sender, RoutedEventArgs e)
+        {
+            AccountFlyout.Hide();
+            var dialog = new StudentProfileDialog { XamlRoot = XamlRoot, Title = "KTM Digital" };
+            App.GetService<AccentColorService>().ApplyToContentDialog(dialog);
+            await dialog.ShowAsync();
         }
 
         private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)

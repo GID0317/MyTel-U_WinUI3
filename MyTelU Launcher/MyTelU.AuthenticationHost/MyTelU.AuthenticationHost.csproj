@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <Platforms>x64;ARM64</Platforms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SelfContained>true</SelfContained>
+    <PublishAot>false</PublishAot>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishSingleFile>false</PublishSingleFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm"/>
+    <PackageReference Include="Microsoft.Playwright"/>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
+    <ProjectReference Include="..\MyTelU Launcher.Core\MyTelU Launcher.Core.csproj"/>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\MyTelU Launcher\Services\BrowserLoginService.cs" Link="BrowserLoginService.cs"/>
+    <Compile Include="..\MyTelU Launcher\Services\AppDataStore.cs" Link="AppDataStore.cs"/>
+    <Compile Include="..\MyTelU Launcher\Services\CookieStore.cs" Link="CookieStore.cs"/>
+    <Compile Include="..\MyTelU Launcher\Services\CredentialStore.cs" Link="CredentialStore.cs"/>
+    <Compile Include="..\MyTelU Launcher\Services\SecureFileStore.cs" Link="SecureFileStore.cs"/>
+    <Compile Include="..\MyTelU Launcher\Services\SecureSettingsStore.cs" Link="SecureSettingsStore.cs"/>
+    <Compile Include="..\MyTelU Launcher\Helpers\DiagnosticLogging.cs" Link="DiagnosticLogging.cs"/>
+    <Compile Include="..\MyTelU Launcher\Helpers\FeatureFlowLogger.cs" Link="FeatureFlowLogger.cs"/>
+    <Compile Include="..\MyTelU Launcher\Helpers\SessionCookiesSavedMessage.cs" Link="SessionCookiesSavedMessage.cs"/>
+  </ItemGroup>
+</Project>

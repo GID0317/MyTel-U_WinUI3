@@ -1,3 +1,4 @@
+using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -21,7 +22,11 @@ internal static class CredentialStore
     /// <summary>Encrypts the credentials and writes them to disk.</summary>
     public static void Save(string username, string password)
     {
-        var json   = JsonSerializer.Serialize(new { username, password });
+        var json   = JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["username"] = username,
+            ["password"] = password
+        });
         var plain  = Encoding.UTF8.GetBytes(json);
         var cipher = ProtectedData.Protect(plain, s_entropy, DataProtectionScope.CurrentUser);
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);

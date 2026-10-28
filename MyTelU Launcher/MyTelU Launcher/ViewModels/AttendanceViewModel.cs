@@ -21,33 +21,33 @@ public partial class AttendanceViewModel : ObservableRecipient,
     // ── Observable state ────────────────────────────────────────────────────
 
     [ObservableProperty]
-    private bool _isLoading;
+    public partial bool IsLoading { get; set; }
 
     public bool IsNotLoading => !IsLoading;
 
     [ObservableProperty]
-    private bool _hasError;
+    public partial bool HasError { get; set; }
 
     [ObservableProperty]
-    private string _errorMessage = string.Empty;
+    public partial string ErrorMessage { get; set; } = string.Empty;
 
     [ObservableProperty]
-    private bool _needsLogin;
+    public partial bool NeedsLogin { get; set; }
 
     [ObservableProperty]
-    private bool _isEmpty;
+    public partial bool IsEmpty { get; set; }
 
     [ObservableProperty]
-    private bool _isOffline;
+    public partial bool IsOffline { get; set; }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LoginWithBrowserCommand))]
     [NotifyCanExecuteChangedFor(nameof(BeginLoginFromOnboardingCommand))]
-    private bool _isBrowserLoginRunning;
+    public partial bool IsBrowserLoginRunning { get; set; }
 
-    /// <summary>True while a silent re-login + live fetch run in the background after serving cached data.</summary>
+    /// <summary>True while refreshing an expired session.</summary>
     [ObservableProperty]
-    private bool _isBackgroundRefreshing;
+    public partial bool IsBackgroundRefreshing { get; set; }
 
     partial void OnIsBackgroundRefreshingChanged(bool value)
     {
@@ -55,29 +55,29 @@ public partial class AttendanceViewModel : ObservableRecipient,
         OnPropertyChanged(nameof(IsNotRefreshing));
     }
 
-    /// <summary>True when any refresh is happening — full load OR background reconnect. Bind refresh buttons to this.</summary>
+    /// <summary>True while a load or session refresh is in progress.</summary>
     public bool IsRefreshing    => IsLoading || IsBackgroundRefreshing;
     public bool IsNotRefreshing => !IsRefreshing;
 
     [ObservableProperty]
-    private AttendanceResponse? _attendanceData;
+    public partial AttendanceResponse? AttendanceData { get; set; }
 
     // ── Summary stats (bound to XAML) ────────────────────────────────────────
 
     [ObservableProperty]
-    private int _totalCourses;
+    public partial int TotalCourses { get; set; }
 
     [ObservableProperty]
-    private int _totalAttended;
+    public partial int TotalAttended { get; set; }
 
     [ObservableProperty]
-    private int _totalSessionsCount;
+    public partial int TotalSessionsCount { get; set; }
 
     [ObservableProperty]
-    private int _atRiskCount;
+    public partial int AtRiskCount { get; set; }
 
     [ObservableProperty]
-    private int _warningCount;
+    public partial int WarningCount { get; set; }
 
     // ── Derived ─────────────────────────────────────────────────────────────
 
@@ -132,7 +132,7 @@ public partial class AttendanceViewModel : ObservableRecipient,
     // ── Academic year selection ──────────────────────────────────────────────
 
     [ObservableProperty]
-    private AcademicYearOption? _selectedAcademicYear;
+    public partial AcademicYearOption? SelectedAcademicYear { get; set; }
 
     private bool _suppressAcademicYearChange;
 
@@ -140,7 +140,6 @@ public partial class AttendanceViewModel : ObservableRecipient,
     {
         if (_suppressAcademicYearChange || value == null) return;
         FeatureFlowLogger.Write("Attendance", $"academic-year selected: {value.Value} | {value.Text}");
-        _bypassCacheOnNextLoad = true;
         await LoadAttendanceAsync();
     }
 
@@ -158,18 +157,32 @@ public partial class AttendanceViewModel : ObservableRecipient,
         _browserLoginService = browserLoginService;
         _navigationService = navigationService;
 
-        WeakReferenceMessenger.Default.RegisterAll(this);
+        WeakReferenceMessenger.Default.Register<SessionCookiesSavedMessage>(this);
+        WeakReferenceMessenger.Default.Register<BrowserLoginStateMessage>(this);
         // Seed state in case login was already started before this VM was constructed.
         IsBrowserLoginRunning = _browserLoginService.IsRunning;
-        _ = InitializeAsync();
+        Initialization = InitializeAsync();
     }
 
     private async Task InitializeAsync()
     {
-        var attendanceTask = LoadAttendanceAsync();
-        var yearsTask = LoadAcademicYearsAsync();
-        await Task.WhenAll(attendanceTask, yearsTask);
+        IsLoading = true;
+        HasError = false;
+        NeedsLogin = false;
+        try
+        {
+            await LoadAcademicYearsAsync();
+            await LoadAttendanceAsync();
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Could not initialize attendance: {ex.Message}";
+            IsLoading = false;
+        }
     }
+
+    public Task Initialization { get; private set; }
 
     // ── Commands ────────────────────────────────────────────────────────────
 
@@ -260,209 +273,59 @@ public partial class AttendanceViewModel : ObservableRecipient,
     }
 
     private CancellationTokenSource? _loadCts;
-    private bool _bypassCacheOnNextLoad;
-
-    /// <summary>
-    /// Cancels any in-progress load and immediately marks the page as not-loading.
-    /// Call this when navigating back to the page mid-refresh so the existing
-    /// cached data is visible instead of an overlay blocking interaction.
-    /// </summary>
-    public void CancelLoad()
-    {
-        if (!IsLoading) return;
-        _loadCts?.Cancel();
-        IsLoading = false;
-        // Restore the offline indicator so the InfoBar reappears if we're still offline.
-        if (AttendanceData != null)
-            IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-    }
 
     [RelayCommand]
     public async Task LoadAttendanceAsync()
     {
-        FeatureFlowLogger.Write("Attendance", $"load start: selected={SelectedAcademicYear?.Value ?? "(null)"}, bypass={_bypassCacheOnNextLoad}, online={System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()}");
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var token = _loadCts.Token;
-
         IsLoading = true;
         HasError = false;
         NeedsLogin = false;
         IsEmpty = false;
         IsOffline = false;
         ErrorMessage = string.Empty;
-
         try
         {
-            bool bypass = _bypassCacheOnNextLoad;
-            _bypassCacheOnNextLoad = false;
-
-            // 1. No session → show login
-            bool hasSavedSession = await Task.Run(() =>
+            string? year = SelectedAcademicYear?.Value;
+            AttendanceResponse? data = null;
+            if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
             {
-                try
-                {
-                    var json = CookieStore.Load();
-                    if (json == null) return false;
-                    var d = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-                    return d != null && d.ContainsKey("PHPSESSID");
-                }
-                catch { return false; }
-            });
-
-            if (!hasSavedSession)
+                data = await _attendanceService.GetAttendanceAsync(year, token);
+                if (data == null && _browserLoginService.HasSavedCredentials
+                    && await _browserLoginService.TrySilentLoginAsync(token))
+                    data = await _attendanceService.GetAttendanceAsync(year, token);
+            }
+            token.ThrowIfCancellationRequested();
+            if (data == null)
             {
-                if (token.IsCancellationRequested) return;
-
-                if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
-                    && _browserLoginService.HasSavedCredentials)
+                var cached = await Task.Run(_attendanceService.GetCachedAttendance, token);
+                if (cached != null && (year == null || cached.AcademicYear == year))
                 {
-                    if (_attendanceService.HasCachedAttendance)
-                    {
-                        // Show cached data immediately, then reconnect silently in background.
-                        var cached = await Task.Run(() => _attendanceService.GetCachedAttendance());
-                        if (cached != null && !token.IsCancellationRequested)
-                        {
-                            IsLoading = false; // hide overlay before populating
-                            PopulateData(cached);
-                            FeatureFlowLogger.Write("Attendance", "served cached attendance, starting background reconnect");
-                            _ = BackgroundReconnectAttendanceAsync(token);
-                            return;
-                        }
-                    }
-
-                    IsBrowserLoginRunning = true;
-                    var ok = await _browserLoginService.TrySilentLoginAsync(token);
-                    IsBrowserLoginRunning = false;
-
-                    if (token.IsCancellationRequested) return;
-
-                    if (!ok)
-                    {
-                        FeatureFlowLogger.Write("Attendance", "silent login failed: showing NeedsLogin");
-                        ClearDisplayed();
-                        NeedsLogin = true;
-                        return;
-                    }
-                    FeatureFlowLogger.Write("Attendance", "silent login succeeded: continuing with live fetch");
-                    bypass = true;
-                    _ = LoadAcademicYearsAsync();
-                }
-                else
-                {
-                    // If credentials are gone but the device is still online, go straight to login.
-                    if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
-                        && _attendanceService.HasCachedAttendance)
-                    {
-                        var cached = await Task.Run(() => _attendanceService.GetCachedAttendance());
-                        if (cached != null)
-                        {
-                            if (token.IsCancellationRequested) return;
-                            IsOffline = true;
-                            PopulateData(cached);
-                            FeatureFlowLogger.Write("Attendance", "offline with cache: showing cached attendance");
-                            return;
-                        }
-                    }
-                    ClearDisplayed();
-                    NeedsLogin = true;
-                    return;
+                    data = cached;
+                    IsOffline = true;
                 }
             }
-
-            if (!bypass && _attendanceService.HasCachedAttendance)
-            {
-                if (token.IsCancellationRequested) return;
-                var cached = await Task.Run(() => _attendanceService.GetCachedAttendance());
-                if (cached != null)
-                {
-                    if (token.IsCancellationRequested) return;
-                    PopulateData(cached);
-                    FeatureFlowLogger.Write("Attendance", "served cached attendance, starting background validation");
-                    if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable() && _browserLoginService.HasSavedCredentials)
-                        _ = BackgroundValidateAndRefreshAttendanceAsync(token);
-                    else
-                        IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-                    return;
-                }
-            }
-
-            // 3. Live fetch
-            var schoolYear = SelectedAcademicYear?.Value;
-            var data = await _attendanceService.GetAttendanceAsync(schoolYear, token);
-            if (token.IsCancellationRequested) return;
-
-            if (data == null
-                && bypass
-                && System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
-                && _browserLoginService.HasSavedCredentials)
-            {
-                FeatureFlowLogger.Write("Attendance", "manual refresh live fetch failed: trying silent relogin");
-                bool reloginOk;
-                IsBrowserLoginRunning = true;
-                try
-                {
-                    reloginOk = await _browserLoginService.TrySilentLoginAsync(token);
-                }
-                finally
-                {
-                    IsBrowserLoginRunning = false;
-                }
-
-                if (token.IsCancellationRequested) return;
-
-                if (reloginOk)
-                {
-                    _ = LoadAcademicYearsAsync();
-                    data = await _attendanceService.GetAttendanceAsync(schoolYear, token);
-                    FeatureFlowLogger.Write("Attendance", data != null
-                        ? "manual refresh retry success after relogin"
-                        : "manual refresh retry failed after relogin");
-                }
-                else
-                {
-                    FeatureFlowLogger.Write("Attendance", "manual refresh relogin failed");
-                }
-            }
-
+            token.ThrowIfCancellationRequested();
             if (data != null)
-            {
                 PopulateData(data);
-                FeatureFlowLogger.Write("Attendance", $"live fetch success: selected={schoolYear ?? "(all)"}, courses={data.Courses.Count}");
-            }
             else
             {
-                if (token.IsCancellationRequested) return;
-
-                // Fall back to cache
-                if (_attendanceService.HasCachedAttendance)
-                {
-                    var cached = await Task.Run(() => _attendanceService.GetCachedAttendance());
-                    if (cached != null)
-                    {
-                        IsOffline = !System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
-                        PopulateData(cached);
-                        FeatureFlowLogger.Write("Attendance", "live fetch failed: fell back to cached attendance");
-                        return;
-                    }
-                }
-
-                HasError = true;
-                ErrorMessage = "Could not load attendance data. Check your connection or try refreshing.";
-                FeatureFlowLogger.Write("Attendance", "live fetch failed: no cache available");
+                NeedsLogin = !_browserLoginService.HasSavedCredentials;
+                HasError = !NeedsLogin;
+                ErrorMessage = "Could not load attendance for this period. Check your connection or sign in again.";
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
         catch (Exception ex)
         {
-            HasError = true;
-            ErrorMessage = $"Error: {ex.Message}";
+            if (!token.IsCancellationRequested) { HasError = true; ErrorMessage = $"Could not load attendance: {ex.Message}"; }
         }
         finally
         {
-            if (!token.IsCancellationRequested)
-                IsLoading = false;
+            if (!token.IsCancellationRequested) IsLoading = false;
         }
     }
 
@@ -470,7 +333,6 @@ public partial class AttendanceViewModel : ObservableRecipient,
     private async Task RefreshAttendanceAsync()
     {
         FeatureFlowLogger.Write("Attendance", $"refresh start: selected={SelectedAcademicYear?.Value ?? "(null)"}");
-        _bypassCacheOnNextLoad = true;
         await LoadAttendanceAsync();
 
         // Always refresh the dropdown — offline path collapses it to the cached entry.
@@ -490,118 +352,6 @@ public partial class AttendanceViewModel : ObservableRecipient,
             return Task.FromResult<AttendanceCourseDetail?>(null);
 
         return _attendanceService.GetCourseDetailAsync(course.CourseId.Value, ct);
-    }
-    /// <summary>Refreshes cached attendance in the background after a silent re-login.</summary>
-    private async Task BackgroundReconnectAttendanceAsync(CancellationToken token)
-    {
-        IsBackgroundRefreshing = true;
-        FeatureFlowLogger.Write("Attendance", "background reconnect start");
-        try
-        {
-            var ok = await _browserLoginService.TrySilentLoginAsync(token);
-            if (!ok || token.IsCancellationRequested)
-            {
-                if (!token.IsCancellationRequested)
-                {
-                    // GetIsNetworkAvailable() returns true even on WiFi with no internet,
-                    // so don't use it to gate NeedsLogin. If cached data is already showing,
-                    // keep it visible and just flag as offline instead of showing the login screen.
-                    if (Courses.Count > 0)
-                        IsOffline = true;
-                    else
-                        NeedsLogin = true;
-                }
-                return;
-            }
-
-            _ = LoadAcademicYearsAsync();
-            var schoolYear = SelectedAcademicYear?.Value;
-            var live = await _attendanceService.GetAttendanceAsync(schoolYear, token);
-            if (live != null && !token.IsCancellationRequested)
-            {
-                PopulateData(live);
-                FeatureFlowLogger.Write("Attendance", $"background reconnect success: selected={schoolYear ?? "(all)"}");
-            }
-        }
-        catch (OperationCanceledException) { /* ignore */ }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[BackgroundReconnect] Attendance: {ex.Message}");
-            if (!token.IsCancellationRequested) IsOffline = true;
-        }
-        finally
-        {
-            IsBackgroundRefreshing = false;
-        }
-    }
-
-    /// <summary>Refreshes cached attendance in the background when saved cookies might be stale.</summary>
-    private async Task BackgroundValidateAndRefreshAttendanceAsync(CancellationToken token)
-    {
-        IsBackgroundRefreshing = true;
-        FeatureFlowLogger.Write("Attendance", "background validate start");
-        try
-        {
-            var schoolYear = SelectedAcademicYear?.Value;
-            var live = await _attendanceService.GetAttendanceAsync(schoolYear, token);
-            if (token.IsCancellationRequested) return;
-
-            if (live != null)
-            {
-                PopulateData(live);
-                IsOffline = false;
-                FeatureFlowLogger.Write("Attendance", $"background validate success without relogin: selected={schoolYear ?? "(all)"}");
-                return;
-            }
-
-            // null — session expired (or offline). Try silent login if we have credentials.
-            if (!_browserLoginService.HasSavedCredentials)
-            {
-                if (Courses.Count > 0)
-                    IsOffline = true;  // data is showing; don't replace it with a login screen
-                else
-                    NeedsLogin = true;
-                FeatureFlowLogger.Write("Attendance", "background validate failed: no saved credentials");
-                return;
-            }
-
-            var ok = await _browserLoginService.TrySilentLoginAsync(token);
-            if (!ok || token.IsCancellationRequested)
-            {
-                if (!token.IsCancellationRequested)
-                {
-                    if (Courses.Count > 0)
-                        IsOffline = true;  // data is showing; don't replace it with a login screen
-                    else
-                        NeedsLogin = true;
-                }
-                FeatureFlowLogger.Write("Attendance", "background validate relogin failed");
-                return;
-            }
-
-            _ = LoadAcademicYearsAsync();
-            live = await _attendanceService.GetAttendanceAsync(schoolYear, token);
-            if (live != null && !token.IsCancellationRequested)
-            {
-                PopulateData(live);
-                IsOffline = false;
-                FeatureFlowLogger.Write("Attendance", $"background validate success after relogin: selected={schoolYear ?? "(all)"}");
-            }
-            else if (!token.IsCancellationRequested && Courses.Count > 0)
-            {
-                IsOffline = true;
-            }
-        }
-        catch (OperationCanceledException) { /* ignore */ }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[BackgroundValidate] Attendance: {ex.Message}");
-            if (!token.IsCancellationRequested) IsOffline = true;
-        }
-        finally
-        {
-            IsBackgroundRefreshing = false;
-        }
     }
     // ── Data population ─────────────────────────────────────────────────────
 
@@ -745,6 +495,7 @@ public partial class AttendanceViewModel : ObservableRecipient,
 
     public void Receive(SessionCookiesSavedMessage message)
     {
-        _ = InitializeAsync();
+        _loadCts?.Cancel();
+        Initialization = InitializeAsync();
     }
 }

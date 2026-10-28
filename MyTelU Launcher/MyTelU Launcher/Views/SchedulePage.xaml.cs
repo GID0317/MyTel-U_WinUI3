@@ -17,7 +17,7 @@ using MyTelU_Launcher.Services;
 namespace MyTelU_Launcher.Views
 {
     /// <summary>Disables SegmentedItem containers for days that have no courses.</summary>
-    public class DaySegmentStyleSelector : StyleSelector
+    public partial class DaySegmentStyleSelector : StyleSelector
     {
         public Style? DisabledStyle { get; set; }
 
@@ -36,6 +36,50 @@ namespace MyTelU_Launcher.Views
         }
 
         private bool _isSubscribedToAccentUpdates = false;
+        private bool _hasNavigated;
+
+        protected override async void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            await ViewModel.Initialization;
+            if (_hasNavigated)
+                await ViewModel.LoadScheduleAsync();
+            _hasNavigated = true;
+        }
+
+        private async void PrintStudyPlan_Click(object sender, RoutedEventArgs e)
+        {
+            var item = (MenuFlyoutItem)sender;
+            item.IsEnabled = false;
+            try
+            {
+                var plan = await App.GetService<StudyPlanService>().LoadAsync();
+                await App.GetService<AcademicPrintService>().PrintAsync(XamlRoot, "Kartu Studi Mahasiswa (KSM)",
+                    $"{plan.FullName} | {plan.StudentId} | {plan.Period} | {(plan.IsCached ? "Cached data" : "iGracias")} | {plan.FetchTime}",
+                    ["Course", "SKS", "Class", "Schedule"], [3, 0.5, 1, 2],
+                    plan.Courses.Select(c => new[] { c.Course, c.Credits.ToString(), c.Class, c.Schedule }));
+            }
+            catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or InvalidDataException or InvalidOperationException or TaskCanceledException)
+            {
+                var dialog = new ContentDialog
+                {
+                    XamlRoot = XamlRoot, Title = "Could not load study plan",
+                    Content = "Connect to the internet and sign in to iGracias again, then try printing your study plan.",
+                    CloseButtonText = "Close"
+                };
+                App.GetService<AccentColorService>().ApplyToContentDialog(dialog);
+                await dialog.ShowAsync();
+            }
+            finally { item.IsEnabled = true; }
+        }
+
+        private async void PrintSchedule_Click(object sender, RoutedEventArgs e)
+        {
+            string subtitle = $"{ViewModel.SelectedAcademicYear?.Text} | {(ViewModel.IsOffline ? "Cached data" : "Loaded data")}";
+            await App.GetService<AcademicPrintService>().PrintAsync(XamlRoot, "Class schedule", subtitle,
+                ["Day", "Time", "Code", "Course", "Room", "Class", "Lecturer"], [0.9, 1.1, 1, 2.4, 1, 1, 0.8],
+                ViewModel.AllCourses.Select(c => new[] { c.Day, c.Time, c.CourseCode, c.CourseName, c.Room, c.Class, c.Lecturer }));
+        }
 
         public SchedulePage()
         {
