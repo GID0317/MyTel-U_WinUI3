@@ -56,7 +56,7 @@
                     </ComboBox>
                 </controls:SettingsCard>
 
-                <controls:SettingsExpander Description="Use custom background image by picking an image from directory" 
+                <controls:SettingsExpander Description="Use custom background image by picking an image from directory"
                            Header="Custom background image" 
                            IsExpanded="True">
                     <controls:SettingsExpander.HeaderIcon>
@@ -84,6 +84,16 @@
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
+
+                <controls:SettingsCard Header="Hide profile picture"
+                                       Description="Use a person icon instead of your photo or initials in the title bar and account menu">
+                    <controls:SettingsCard.HeaderIcon>
+                        <ui:FontIcon Glyph="&#xE77B;"/>
+                    </controls:SettingsCard.HeaderIcon>
+                    <ToggleSwitch x:Name="HideProfilePictureToggle"
+                                  AutomationProperties.Name="Hide profile picture"
+                                  IsOn="{x:Bind ViewModel.HideProfilePicture, Mode=TwoWay}"/>
+                </controls:SettingsCard>
 
                 <controls:SettingsCard x:Name="CommunityToolsBrowserSettingsCard"
                                        Header="Community Tools"
@@ -141,7 +151,11 @@
                                            IsExpanded="True"
                                            Margin="0,0,0,0">
                     <controls:SettingsExpander.HeaderIcon>
-                        <ui:ImageIcon Source="ms-appx:///Assets/Icon_App.png" />
+                        <ui:ImageIcon>
+                            <ui:ImageIcon.Source>
+                                <BitmapImage UriSource="ms-appx:///Assets/Icon_App.png" DecodePixelWidth="64"/>
+                            </ui:ImageIcon.Source>
+                        </ui:ImageIcon>
                     </controls:SettingsExpander.HeaderIcon>
                     <TextBlock IsTextSelectionEnabled="True"
                                SelectionHighlightColor="{ThemeResource AccentFillColorDefaultBrush}"

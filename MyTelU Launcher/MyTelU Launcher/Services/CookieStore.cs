@@ -43,7 +43,7 @@ internal static class CookieStore
         if (!File.Exists(_cookiesFile)) return null;
         try
         {
-            var bytes = File.ReadAllBytes(_cookiesFile);
+            var bytes = SecureFileStore.ReadEncryptedBytes(_cookiesFile);
             try
             {
                 var plain = ProtectedData.Unprotect(bytes, s_entropy, DataProtectionScope.CurrentUser);

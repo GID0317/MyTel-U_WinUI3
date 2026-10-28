@@ -494,7 +494,7 @@ namespace TY4EHelper.Widgets
             if (!File.Exists(_cookiesFile)) return null;
             try
             {
-                var bytes = File.ReadAllBytes(_cookiesFile);
+                var bytes = MyTelU_Launcher.Services.SecureFileStore.ReadEncryptedBytes(_cookiesFile);
                 var entropy = "MyTelU-iGracias-cookies-v1"u8.ToArray();
                 try
                 {
@@ -503,8 +503,7 @@ namespace TY4EHelper.Widgets
                 }
                 catch (CryptographicException)
                 {
-                    var text = Encoding.UTF8.GetString(bytes).Trim();
-                    return text.StartsWith("{") ? text : null;
+                    return null;
                 }
             }
             catch
@@ -514,39 +513,13 @@ namespace TY4EHelper.Widgets
         }
 
         private static string? LoadSecureFile(string path)
-        {
-            if (!File.Exists(path)) return null;
-            try
-            {
-                var bytes = File.ReadAllBytes(path);
-                var entropy = "MyTelU-secure-store-v1"u8.ToArray();
-                try
-                {
-                    var plain = ProtectedData.Unprotect(bytes, entropy, DataProtectionScope.CurrentUser);
-                    return Encoding.UTF8.GetString(plain);
-                }
-                catch (CryptographicException)
-                {
-                    var text = Encoding.UTF8.GetString(bytes).Trim();
-                    return (text.StartsWith("{") || text.StartsWith("[")) ? text : null;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-        }
+            => MyTelU_Launcher.Services.SecureFileStore.Load(path);
 
         private static void SaveSecureFile(string path, string json)
         {
             try
             {
-                var cipher = ProtectedData.Protect(
-                    Encoding.UTF8.GetBytes(json),
-                    "MyTelU-secure-store-v1"u8.ToArray(),
-                    DataProtectionScope.CurrentUser);
-                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                File.WriteAllBytes(path, cipher);
+                MyTelU_Launcher.Services.SecureFileStore.Save(path, json);
             }
             catch
             {
@@ -557,8 +530,9 @@ namespace TY4EHelper.Widgets
         {
             try
             {
-                if (!File.Exists(_settingsFile)) return new();
-                var d = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(_settingsFile));
+                var json = LoadSecureFile(_settingsFile);
+                if (json == null) return new();
+                var d = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 return d ?? new();
             }
             catch
@@ -571,8 +545,7 @@ namespace TY4EHelper.Widgets
         {
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_settingsFile)!);
-                File.WriteAllText(_settingsFile, JsonSerializer.Serialize(settings));
+                SaveSecureFile(_settingsFile, JsonSerializer.Serialize(settings));
             }
             catch
             {
@@ -662,6 +635,8 @@ namespace TY4EHelper.Widgets
                 }
 
                 string schoolYear = $"{yearCode}/{semCode}";
+                using var session = await MyTelU_Launcher.Services.IGraciasSessionGate.EnterAsync(
+                    Path.GetDirectoryName(WidgetAppDataStore.DirectoryPath)!);
 
                 var cookieContainer = new CookieContainer();
                 var handler = new HttpClientHandler { CookieContainer = cookieContainer };

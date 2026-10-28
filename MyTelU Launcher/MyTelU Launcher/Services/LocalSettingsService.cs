@@ -49,7 +49,14 @@ public class LocalSettingsService : ILocalSettingsService
     {
         if (!_isInitialized)
         {
-            _settings = await Task.Run(() => _fileService.Read<IDictionary<string, string>>(_applicationDataFolder, _localsettingsFile)) ?? new Dictionary<string, string>();
+            try
+            {
+                _settings = await Task.Run(() => _fileService.Read<IDictionary<string, string>>(_applicationDataFolder, _localsettingsFile)) ?? new Dictionary<string, string>();
+            }
+            catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidDataException)
+            {
+                _settings = new Dictionary<string, string>();
+            }
 
             _isInitialized = true;
         }

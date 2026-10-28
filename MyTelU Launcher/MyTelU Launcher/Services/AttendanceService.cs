@@ -113,6 +113,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildHttpClient(ajax: true);
             var studentId = GetSavedStudentId() ?? "";
 
@@ -168,6 +169,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildHttpClient(ajax: false);
             var resp = await client.GetAsync(PresenceUrl, ct);
             if (!resp.IsSuccessStatusCode) return new();
@@ -217,6 +219,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
     {
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildHttpClient(ajax: false);
             var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {

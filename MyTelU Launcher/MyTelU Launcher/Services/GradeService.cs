@@ -56,6 +56,7 @@ public class GradeService : IGradeService, IDisposable
 
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildHttpClient(ajax: false);
             var resp = await client.GetAsync(ScorePageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode) return new();
@@ -78,6 +79,7 @@ public class GradeService : IGradeService, IDisposable
 
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildHttpClient(ajax: false);
 
             var pageResp = await client.GetAsync(ScorePageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -152,6 +154,7 @@ public class GradeService : IGradeService, IDisposable
 
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var pageClient = BuildHttpClient(ajax: false);
             using var pageResponse = await pageClient.GetAsync(ScorePageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!pageResponse.IsSuccessStatusCode) return LoadComponentCache(cacheKeys) ?? new();

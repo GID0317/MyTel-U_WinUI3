@@ -34,6 +34,9 @@ namespace MyTelU_Launcher.ViewModels
         [ObservableProperty]
         public partial bool AlwaysOpenCommunityToolsInExternalBrowser { get; set; }
 
+        [ObservableProperty]
+        public partial bool HideProfilePicture { get; set; }
+
         // Explicit backing field and property for the custom image path.
         private string _customImagePath;
         public string CustomImagePath
@@ -72,6 +75,7 @@ namespace MyTelU_Launcher.ViewModels
         {
             IsCustomImageBGEnabled = await _localSettingsService.ReadSettingAsync<bool>("IsCustomImageBGEnabled");
             AlwaysOpenCommunityToolsInExternalBrowser = await _localSettingsService.ReadSettingAsync<bool>(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser);
+            HideProfilePicture = await _localSettingsService.ReadSettingAsync<bool>(AppSettingKeys.HideProfilePicture);
             // Load any previously saved custom image path.
             CustomImagePath = await _localSettingsService.ReadSettingAsync<string>("CustomBackgroundImagePath");
             OnPropertyChanged(nameof(CustomImagePathDescription));
@@ -111,6 +115,13 @@ namespace MyTelU_Launcher.ViewModels
         {
             if (_loadingSettings) return;
             _ = _localSettingsService.SaveSettingAsync(AppSettingKeys.AlwaysOpenCommunityToolsInExternalBrowser, value);
+        }
+
+        partial void OnHideProfilePictureChanged(bool value)
+        {
+            if (_loadingSettings) return;
+            WeakReferenceMessenger.Default.Send(new HideProfilePictureChangedMessage(value));
+            _ = _localSettingsService.SaveSettingAsync(AppSettingKeys.HideProfilePicture, value);
         }
 
         public async void ResetTools()

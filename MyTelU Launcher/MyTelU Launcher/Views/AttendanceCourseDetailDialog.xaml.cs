@@ -6,6 +6,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
 using MyTelU_Launcher.Models;
 
+// SettingsExpander forwards this list to native ItemsRepeater through an object property.
+[assembly: WinRT.GeneratedWinRTExposedExternalType(typeof(List<AttendanceSessionDetail>))]
+
 namespace MyTelU_Launcher.Views;
 
 public sealed partial class AttendanceCourseDetailDialog : ContentDialog

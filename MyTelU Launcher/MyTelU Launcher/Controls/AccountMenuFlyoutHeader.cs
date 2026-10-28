@@ -12,6 +12,9 @@ public sealed partial class AccountMenuFlyoutHeader : MenuFlyoutItem
     public static readonly DependencyProperty DescriptionProperty = DependencyProperty.Register(
         nameof(Description), typeof(string), typeof(AccountMenuFlyoutHeader), new PropertyMetadata("Not signed in"));
 
+    public static readonly DependencyProperty AvatarDisplayNameProperty = DependencyProperty.Register(
+        nameof(AvatarDisplayName), typeof(string), typeof(AccountMenuFlyoutHeader), new PropertyMetadata(string.Empty));
+
     public static readonly DependencyProperty ProfilePictureProperty = DependencyProperty.Register(
         nameof(ProfilePicture), typeof(ImageSource), typeof(AccountMenuFlyoutHeader), new PropertyMetadata(null));
 
@@ -28,6 +31,12 @@ public sealed partial class AccountMenuFlyoutHeader : MenuFlyoutItem
     {
         get => (string)GetValue(DisplayNameProperty);
         set => SetValue(DisplayNameProperty, value);
+    }
+
+    public string AvatarDisplayName
+    {
+        get => (string)GetValue(AvatarDisplayNameProperty);
+        set => SetValue(AvatarDisplayNameProperty, value);
     }
 
     public string Description

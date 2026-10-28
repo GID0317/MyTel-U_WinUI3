@@ -112,6 +112,7 @@ public class ScheduleService : IScheduleService, IDisposable
         if (!HasSavedSession) return SessionValidationResult.NoSession;
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath);
             // The registration page only returns the full markup when the AJAX header is absent.
             using var client = BuildPageHttpClient();
             var resp = await client.GetAsync("https://igracias.telkomuniversity.ac.id/registration/?pageid=17985");
@@ -204,6 +205,7 @@ public class ScheduleService : IScheduleService, IDisposable
             }
 
             string schoolYear = $"{yearCode}/{semCode}";
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client  = BuildHttpClient();
 
             // The DataTables response has the fields shown in the UI.
@@ -433,6 +435,7 @@ public class ScheduleService : IScheduleService, IDisposable
 
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildPageHttpClient();
             var response = await client.GetAsync("https://igracias.telkomuniversity.ac.id/registration/?pageid=17985", ct);
             if (!response.IsSuccessStatusCode)
@@ -489,6 +492,7 @@ public class ScheduleService : IScheduleService, IDisposable
         try
         {
             Log("Fetching page with BuildPageHttpClient...");
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath);
             // The registration page only returns the dropdown when the AJAX header is absent.
             using var client = BuildPageHttpClient();
             var url = "https://igracias.telkomuniversity.ac.id/registration/?pageid=17985";

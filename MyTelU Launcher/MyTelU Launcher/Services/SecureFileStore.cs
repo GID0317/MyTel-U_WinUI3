@@ -10,7 +10,19 @@ namespace MyTelU_Launcher.Services;
 /// </summary>
 internal static class SecureFileStore
 {
+    internal const int MaximumFileSize = 16 * 1024 * 1024;
     private static readonly byte[] s_entropy = "MyTelU-secure-store-v1"u8.ToArray();
+
+    internal static byte[] ReadEncryptedBytes(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (stream.Length == 0 || stream.Length > MaximumFileSize)
+            throw new InvalidDataException("Encrypted data file exceeds the supported size.");
+
+        var bytes = new byte[(int)stream.Length];
+        stream.ReadExactly(bytes);
+        return bytes;
+    }
 
     public static void Save(string path, string json)
     {
@@ -29,7 +41,7 @@ internal static class SecureFileStore
         if (!File.Exists(path)) return null;
         try
         {
-            var bytes = File.ReadAllBytes(path);
+            var bytes = ReadEncryptedBytes(path);
             try
             {
                 var plain = ProtectedData.Unprotect(bytes, s_entropy, DataProtectionScope.CurrentUser);

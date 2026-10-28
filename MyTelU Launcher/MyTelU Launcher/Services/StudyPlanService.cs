@@ -16,6 +16,7 @@ public sealed class StudyPlanService
         int generation = Volatile.Read(ref _generation);
         try
         {
+            using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = ScheduleService.BuildPageHttpClient();
             using var response = await client.GetAsync("https://igracias.telkomuniversity.ac.id/registration/index.php?pageid=705", ct);
             response.EnsureSuccessStatusCode();

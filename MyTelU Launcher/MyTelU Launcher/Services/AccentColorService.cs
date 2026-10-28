@@ -1,16 +1,13 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using ColorThiefDotNet;
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using MyTelU_Launcher.Contracts.Services;
-using Windows.Storage;
 using Windows.UI;
-using Drawing = System.Drawing;
 
 namespace MyTelU_Launcher.Services;
 
@@ -79,7 +76,7 @@ public class AccentColorService
             
             var quantizedColor = await Task.Run(async () =>
             {
-                using var bitmap = await LoadImageAsync(imagePath);
+                using var bitmap = await AccentImageLoader.LoadAsync(imagePath);
                 
                 System.Diagnostics.Debug.WriteLine($"Image Dimensions: {bitmap.Width}x{bitmap.Height} pixels");
                 
@@ -646,69 +643,4 @@ public class AccentColorService
         return p;
     }
 
-    private async Task<Drawing.Bitmap> LoadImageAsync(string path)
-    {
-        try
-        {
-            // Read into memory first so the file is not left locked.
-            var bytes = await File.ReadAllBytesAsync(path);
-            using var ms = new MemoryStream(bytes);
-            
-            using var tempBitmap = new Drawing.Bitmap(ms);
-            return new Drawing.Bitmap(tempBitmap);
-        }
-        catch (Exception ex) when (ex is ArgumentException || ex is System.Runtime.InteropServices.ExternalException)
-        {
-            System.Diagnostics.Debug.WriteLine($"GDI+ load failed for {path} ({ex.Message}). Trying WinRT fallback...");
-            
-            try
-            {
-                var file = await StorageFile.GetFileFromPathAsync(path);
-                using var stream = await file.OpenAsync(FileAccessMode.Read);
-                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
-                
-                var transform = new Windows.Graphics.Imaging.BitmapTransform();
-                var pixelData = await decoder.GetPixelDataAsync(
-                    Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
-                    Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied,
-                    transform,
-                    Windows.Graphics.Imaging.ExifOrientationMode.IgnoreExifOrientation,
-                    Windows.Graphics.Imaging.ColorManagementMode.DoNotColorManage);
-                
-                var pixels = pixelData.DetachPixelData();
-                var width = (int)decoder.PixelWidth;
-                var height = (int)decoder.PixelHeight;
-                
-                var bitmap = new Drawing.Bitmap(width, height, Drawing.Imaging.PixelFormat.Format32bppArgb);
-                
-                var bounds = new Drawing.Rectangle(0, 0, width, height);
-                var mapData = bitmap.LockBits(bounds, Drawing.Imaging.ImageLockMode.WriteOnly, bitmap.PixelFormat);
-                
-                var stride = mapData.Stride;
-                var rowBytes = width * 4;
-                
-                if (stride == rowBytes)
-                {
-                    System.Runtime.InteropServices.Marshal.Copy(pixels, 0, mapData.Scan0, pixels.Length);
-                }
-                else
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        var sourceIndex = y * rowBytes;
-                        var destPtr = IntPtr.Add(mapData.Scan0, y * stride);
-                        System.Runtime.InteropServices.Marshal.Copy(pixels, sourceIndex, destPtr, rowBytes);
-                    }
-                }
-                
-                bitmap.UnlockBits(mapData);
-                return bitmap;
-            }
-            catch (Exception ex2)
-            {
-                System.Diagnostics.Debug.WriteLine($"WinRT fallback also failed: {ex2.Message}");
-                throw;
-            }
-        }
-    }
 }

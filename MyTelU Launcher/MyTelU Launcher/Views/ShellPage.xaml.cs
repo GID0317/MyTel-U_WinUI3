@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.Numerics;
+using CommunityToolkit.Mvvm.Messaging;
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.Services;
@@ -26,6 +27,7 @@ namespace MyTelU_Launcher.Views
 
         private StudentProfile? _accountProfile;
         private CancellationTokenSource? _accountLoad;
+        private bool _hideProfilePicture;
 
         public ShellPage(ShellViewModel viewModel)
         {
@@ -35,6 +37,12 @@ namespace MyTelU_Launcher.Views
 
             AccountButton.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(AccountButton_PointerPressed), true);
             AccountButton.AddHandler(UIElement.PointerReleasedEvent, new PointerEventHandler(AccountButton_ResetScale), true);
+            WeakReferenceMessenger.Default.Register<HideProfilePictureChangedMessage>(this, static (recipient, message) =>
+            {
+                var shell = (ShellPage)recipient;
+                shell._hideProfilePicture = message.Value;
+                shell.UpdateAccountPicture();
+            });
 
             // Set up main navigation.
             ViewModel.NavigationService.Frame = NavigationFrame;
@@ -69,6 +77,8 @@ namespace MyTelU_Launcher.Views
 
             NavigationFrame.Navigated += NavigationFrame_Navigated;
 
+            _hideProfilePicture = await App.GetService<ILocalSettingsService>().ReadSettingAsync<bool>(AppSettingKeys.HideProfilePicture);
+            UpdateAccountPicture();
             var cachedProfile = await Task.Run(App.GetService<MobileAcademicService>().GetCachedProfile);
             if (cachedProfile != null) DisplayAccount(cachedProfile);
 
@@ -143,14 +153,22 @@ namespace MyTelU_Launcher.Views
             _accountProfile = profile;
             AccountMenuHeader.DisplayName = profile.FullName;
             AccountMenuHeader.Description = $"{profile.StudentId}\n{profile.StudyProgram}";
-            AccountAvatar.DisplayName = profile.FullName;
-            if (Uri.TryCreate(profile.Photo, UriKind.Absolute, out var photo)
-                && photo.Scheme == Uri.UriSchemeHttps
-                && (photo.Host == "telkomuniversity.ac.id" || photo.Host.EndsWith(".telkomuniversity.ac.id", StringComparison.OrdinalIgnoreCase)))
-                AccountAvatar.ProfilePicture = AccountMenuHeader.ProfilePicture = new BitmapImage(photo);
+            UpdateAccountPicture();
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AccountMenuHeader,
                 $"Student account, {profile.FullName}, {profile.StudentId}, {profile.StudyProgram}");
             ToolTipService.SetToolTip(AccountMenuHeader, profile.IsCached ? "Saved profile information" : null);
+        }
+
+        private void UpdateAccountPicture()
+        {
+            AccountAvatar.ProfilePicture = AccountMenuHeader.ProfilePicture = null;
+            AccountAvatar.Initials = string.Empty;
+            AccountAvatar.DisplayName = AccountMenuHeader.AvatarDisplayName =
+                _hideProfilePicture ? string.Empty : _accountProfile?.FullName ?? string.Empty;
+            if (!_hideProfilePicture && Uri.TryCreate(_accountProfile?.Photo, UriKind.Absolute, out var photo)
+                && photo.Scheme == Uri.UriSchemeHttps
+                && (photo.Host == "telkomuniversity.ac.id" || photo.Host.EndsWith(".telkomuniversity.ac.id", StringComparison.OrdinalIgnoreCase)))
+                AccountAvatar.ProfilePicture = AccountMenuHeader.ProfilePicture = new BitmapImage(photo);
         }
 
         private async void AccountSignIn_Click(object sender, RoutedEventArgs e)
@@ -167,8 +185,7 @@ namespace MyTelU_Launcher.Views
             if (!App.GetService<IBrowserLoginService>().HasSavedCredentials)
             {
                 _accountProfile = null;
-                AccountAvatar.ProfilePicture = AccountMenuHeader.ProfilePicture = null;
-                AccountAvatar.DisplayName = string.Empty;
+                UpdateAccountPicture();
                 AccountMenuHeader.DisplayName = "Student profile";
                 AccountMenuHeader.Description = "Not signed in";
                 ViewModel.NavigationService.NavigateTo(typeof(ScheduleViewModel).FullName!, clearNavigation: true);

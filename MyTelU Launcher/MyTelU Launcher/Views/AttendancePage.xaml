@@ -115,19 +115,11 @@
                                     <MenuFlyoutItem Text="Print attendance" Click="PrintAttendance_Click">
                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE749;"/></MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator/>
                                     <MenuFlyoutItem Text="More attendance information"
                                                     Command="{x:Bind ViewModel.OpenAttendanceInBrowserCommand}">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8A7;"/>
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator/>
-                                    <MenuFlyoutItem Text="Sign out and clear data"
-                                                    Command="{x:Bind ViewModel.RequestClearSessionCommand}"
-                                                    Foreground="{ThemeResource SystemFillColorCriticalBrush}">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xF3B1;"
-                                                      Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>

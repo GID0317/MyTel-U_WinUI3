@@ -30,6 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\MyTelU Launcher\Services\SecureFileStore.cs" Link="SecureFileStore.cs" />
+    <Compile Include="..\MyTelU Launcher\Services\IGraciasSessionGate.cs" Link="IGraciasSessionGate.cs" />
     <Content Include="GalihKoper_Widget.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

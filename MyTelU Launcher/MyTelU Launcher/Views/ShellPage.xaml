@@ -26,7 +26,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <PersonPicture Width="36" Height="36" VerticalAlignment="Top"
-                                           DisplayName="{TemplateBinding DisplayName}"
+                                           DisplayName="{TemplateBinding AvatarDisplayName}"
                                            ProfilePicture="{TemplateBinding ProfilePicture}"/>
                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                 <TextBlock Style="{ThemeResource BodyStrongTextBlockStyle}"
@@ -71,7 +71,11 @@
                   IsPaneToggleButtonVisible="True"
                   PaneToggleRequested="TitleBar_PaneToggleRequested">
             <TitleBar.IconSource>
-                <BitmapIconSource UriSource="ms-appx:///Assets/Icon_App.png" ShowAsMonochrome="False"/>
+                <ImageIconSource>
+                    <ImageIconSource.ImageSource>
+                        <BitmapImage UriSource="ms-appx:///Assets/Icon_App.png" DecodePixelWidth="64"/>
+                    </ImageIconSource.ImageSource>
+                </ImageIconSource>
             </TitleBar.IconSource>
             <TitleBar.RightHeader>
                 <Button x:Name="AccountButton" Width="32" Height="32" Padding="0" CornerRadius="16" BorderThickness="0"

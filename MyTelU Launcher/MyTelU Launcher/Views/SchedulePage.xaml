@@ -326,19 +326,11 @@
                                     <MenuFlyoutItem Text="Print study plan (KSM)" Click="PrintStudyPlan_Click">
                                         <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8A5;"/></MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
+                                    <MenuFlyoutSeparator/>
                                     <MenuFlyoutItem Text="More schedule information"
                                                    Command="{x:Bind ViewModel.OpenScheduleInBrowserCommand}">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8A7;"/>
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
-                                    <MenuFlyoutSeparator/>
-                                    <MenuFlyoutItem Text="Sign out and clear data"
-                                                   Command="{x:Bind ViewModel.RequestClearSessionCommand}"
-                                                   Foreground="{ThemeResource SystemFillColorCriticalBrush}">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xF3B1;" 
-                                                      Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>

@@ -41,9 +41,9 @@ internal static class CredentialStore
         if (!File.Exists(_path)) return (null, null);
         try
         {
-            var cipher = File.ReadAllBytes(_path);
+            var cipher = SecureFileStore.ReadEncryptedBytes(_path);
             var plain  = ProtectedData.Unprotect(cipher, s_entropy, DataProtectionScope.CurrentUser);
-            var doc    = JsonDocument.Parse(plain);
+            using var doc = JsonDocument.Parse(plain);
             return (
                 doc.RootElement.GetProperty("username").GetString(),
                 doc.RootElement.GetProperty("password").GetString()

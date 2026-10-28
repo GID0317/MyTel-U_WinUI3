@@ -19,7 +19,9 @@ public class FileService : IFileService
             {
                 try
                 {
-                    using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    using var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    if (fileStream.Length > 16 * 1024 * 1024)
+                        throw new InvalidDataException("Settings file exceeds the supported size.");
                     using var streamReader = new StreamReader(fileStream);
                     var json = streamReader.ReadToEnd();
                     return Json.Deserialize<T>(json);
