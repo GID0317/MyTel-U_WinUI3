@@ -291,7 +291,7 @@ public partial class AttendanceViewModel : ObservableRecipient,
         {
             string? year = SelectedAcademicYear?.Value;
             AttendanceResponse? data = null;
-            if (System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
+            if (InternetConnection.IsAvailable)
             {
                 data = await _attendanceService.GetAttendanceAsync(year, token);
                 if (data == null && _browserLoginService.HasSavedCredentials
@@ -333,11 +333,7 @@ public partial class AttendanceViewModel : ObservableRecipient,
     private async Task RefreshAttendanceAsync()
     {
         FeatureFlowLogger.Write("Attendance", $"refresh start: selected={SelectedAcademicYear?.Value ?? "(null)"}");
-        await LoadAttendanceAsync();
-
-        // Always refresh the dropdown — offline path collapses it to the cached entry.
-        if (!NeedsLogin)
-            _ = LoadAcademicYearsAsync();
+        await InitializeAsync();
     }
 
     /// <summary>
@@ -397,50 +393,60 @@ public partial class AttendanceViewModel : ObservableRecipient,
     private async Task LoadAcademicYearsAsync()
     {
         var options = await _attendanceService.FetchAvailableSemestersAsync();
+        if (options.Count == 0 && InternetConnection.IsAvailable
+            && _browserLoginService.HasSavedCredentials
+            && await _browserLoginService.TrySilentLoginAsync())
+            options = await _attendanceService.FetchAvailableSemestersAsync();
 
-        AcademicYearOptions.Clear();
-        if (options.Count == 0)
+        string? selectedPeriod = SelectedAcademicYear?.Value;
+        _suppressAcademicYearChange = true;
+        try
         {
-            // Fallback from currently loaded data
-            if (AttendanceData != null && !string.IsNullOrWhiteSpace(AttendanceData.AcademicYear))
+            AcademicYearOptions.Clear();
+            if (options.Count == 0)
             {
-                var parts = AttendanceData.AcademicYear.Split('/');
-                if (parts.Length == 2)
+                // Fallback from currently loaded data
+                if (AttendanceData != null && !string.IsNullOrWhiteSpace(AttendanceData.AcademicYear))
                 {
-                    var fb = new AcademicYearOption
+                    var parts = AttendanceData.AcademicYear.Split('/');
+                    if (parts.Length == 2)
                     {
-                        Value = AttendanceData.AcademicYear,
-                        Text = $"{FormatAcademicYearLabel(parts[0], parts[1])} (Cached)",
-                        YearCode = parts[0],
-                        SemesterCode = parts[1],
-                        IsSelected = true,
-                    };
-                    AcademicYearOptions.Add(fb);
-                    _suppressAcademicYearChange = true;
-                    SelectedAcademicYear = fb;
-                    _suppressAcademicYearChange = false;
+                        var fb = new AcademicYearOption
+                        {
+                            Value = AttendanceData.AcademicYear,
+                            Text = $"{FormatAcademicYearLabel(parts[0], parts[1])} (Cached)",
+                            YearCode = parts[0],
+                            SemesterCode = parts[1],
+                            IsSelected = true,
+                        };
+                        AcademicYearOptions.Add(fb);
+                        SelectedAcademicYear = fb;
+                    }
                 }
+                return;
             }
-            return;
+
+            foreach (var opt in options)
+                AcademicYearOptions.Add(opt);
+
+            // Select current or first
+            var toSelect = options.FirstOrDefault(o => o.Value == selectedPeriod)
+                ?? options.FirstOrDefault(o => o.IsSelected) ?? options.FirstOrDefault();
+
+            // If we have loaded data, try to match it
+            if (selectedPeriod == null && AttendanceData != null && !string.IsNullOrWhiteSpace(AttendanceData.AcademicYear))
+            {
+                var match = options.FirstOrDefault(o => o.Value == AttendanceData.AcademicYear);
+                if (match != null) toSelect = match;
+            }
+
+            if (toSelect != null)
+            {
+                SelectedAcademicYear = toSelect;
+            }
         }
-
-        foreach (var opt in options)
-            AcademicYearOptions.Add(opt);
-
-        // Select current or first
-        var toSelect = options.FirstOrDefault(o => o.IsSelected) ?? options.FirstOrDefault();
-
-        // If we have loaded data, try to match it
-        if (AttendanceData != null && !string.IsNullOrWhiteSpace(AttendanceData.AcademicYear))
+        finally
         {
-            var match = options.FirstOrDefault(o => o.Value == AttendanceData.AcademicYear);
-            if (match != null) toSelect = match;
-        }
-
-        if (toSelect != null)
-        {
-            _suppressAcademicYearChange = true;
-            SelectedAcademicYear = toSelect;
             _suppressAcademicYearChange = false;
         }
     }

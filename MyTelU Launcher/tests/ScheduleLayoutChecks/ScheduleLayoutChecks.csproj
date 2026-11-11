@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ScheduleBuildDir Condition="'$(ScheduleBuildDir)' == ''">$(MSBuildThisFileDirectory)..\..\MyTelU Launcher\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\</ScheduleBuildDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <Reference Include="MyTelU Launcher">
+      <HintPath>$(ScheduleBuildDir)MyTelU Launcher.dll</HintPath>
+    </Reference>
+    <None Include="..\..\MyTelU Launcher\Views\SchedulePage.xaml" Link="SchedulePage.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="RequireAppBuild" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(ScheduleBuildDir)MyTelU Launcher.dll')" Text="Build the launcher first, or set ScheduleBuildDir to its managed build output folder." />
+  </Target>
+</Project>

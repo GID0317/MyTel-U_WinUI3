@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using CommunityToolkit.WinUI.Animations;
 using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI;
@@ -58,6 +59,46 @@ public sealed partial class AttendancePage : Page
         dialog.SetDetail(detail);
 
         await showTask;
+    }
+
+    private async void ScanAttendanceCamera_Click(object sender, RoutedEventArgs e)
+        => await ShowScanAttendanceAsync(ScanAttendanceDialog.InputMethod.Camera);
+
+    private async void ScanAttendanceImage_Click(object sender, RoutedEventArgs e)
+        => await ShowScanAttendanceAsync(ScanAttendanceDialog.InputMethod.Image);
+
+    private async void ScanAttendanceLink_Click(object sender, RoutedEventArgs e)
+        => await ShowScanAttendanceAsync(ScanAttendanceDialog.InputMethod.Link);
+
+    private async Task ShowScanAttendanceAsync(ScanAttendanceDialog.InputMethod inputMethod)
+    {
+        string? imagePath = null;
+        if (inputMethod == ScanAttendanceDialog.InputMethod.Image)
+        {
+            try
+            {
+                imagePath = await ScanAttendanceDialog.PickImagePathAsync(XamlRoot);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or ArgumentException)
+            {
+                var errorDialog = new ContentDialog
+                {
+                    XamlRoot = XamlRoot,
+                    Title = "Could not open the image picker",
+                    CloseButtonText = "Close"
+                };
+                App.GetService<AccentColorService>().ApplyToContentDialog(errorDialog);
+                await errorDialog.ShowAsync();
+                return;
+            }
+            if (imagePath == null) return;
+        }
+
+        var dialog = new ScanAttendanceDialog(inputMethod, imagePath) { XamlRoot = XamlRoot };
+        App.GetService<AccentColorService>().ApplyToContentDialog(dialog);
+        await dialog.ShowAsync();
+        if (dialog.AttendanceSubmitted)
+            await ViewModel.LoadAttendanceAsync();
     }
 
     private async void PrintAttendance_Click(object sender, RoutedEventArgs e)

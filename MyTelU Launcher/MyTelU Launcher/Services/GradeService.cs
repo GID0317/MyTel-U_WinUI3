@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.Json;
 using HtmlAgilityPack;
@@ -52,7 +51,7 @@ public class GradeService : IGradeService, IDisposable
 
     public async Task<List<AcademicYearOption>> FetchAcademicYearsAsync(CancellationToken ct = default)
     {
-        if (!HasSavedSession()) return new();
+        if (!InternetConnection.IsAvailable || !HasSavedSession()) return [];
 
         try
         {
@@ -146,7 +145,7 @@ public class GradeService : IGradeService, IDisposable
     {
         var cacheKeys = GetComponentCacheKeys(grade);
 
-        if (!NetworkInterface.GetIsNetworkAvailable())
+        if (!InternetConnection.IsAvailable)
             return LoadComponentCache(cacheKeys) ?? new();
 
         if (!HasSavedSession())

@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Xaml.Input;
 using MyTelU_Launcher.Contracts.Services;
 using MyTelU_Launcher.Helpers;
 using MyTelU_Launcher.ViewModels;
@@ -37,6 +38,25 @@ namespace MyTelU_Launcher.Views
 
         private bool _isSubscribedToAccentUpdates = false;
         private bool _hasNavigated;
+
+        private void WeekView_Loaded(object sender, RoutedEventArgs e)
+        {
+            var viewer = (ScrollViewer)sender;
+            viewer.RemoveHandler(UIElement.PointerWheelChangedEvent, new PointerEventHandler(WeekView_PointerWheelChanged));
+            viewer.AddHandler(UIElement.PointerWheelChangedEvent, new PointerEventHandler(WeekView_PointerWheelChanged), true);
+        }
+
+        private void WeekView_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+        {
+            var viewer = (ScrollViewer)sender;
+            var pointer = e.GetCurrentPoint(viewer).Properties;
+            if (pointer.IsHorizontalMouseWheel || viewer.ScrollableHeight > 0.5 || viewer.ScrollableWidth <= 0)
+                return;
+
+            var offset = Math.Clamp(viewer.HorizontalOffset - pointer.MouseWheelDelta, 0, viewer.ScrollableWidth);
+            viewer.ChangeView(offset, null, null, true);
+            e.Handled = true;
+        }
 
         protected override async void OnNavigatedTo(Microsoft.UI.Xaml.Navigation.NavigationEventArgs e)
         {

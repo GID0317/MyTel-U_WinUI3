@@ -148,6 +148,12 @@
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE9F9;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItemHeader Content="Community"/>
+                <NavigationViewItem Content="Timeline" helpers:NavigationHelper.NavigateTo="MyTelU_Launcher.ViewModels.TimelineViewModel">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE8BD;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <!-- Main Content Area -->

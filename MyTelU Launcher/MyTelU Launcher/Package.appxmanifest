@@ -15,12 +15,12 @@
   <Identity
     Name="DeNesisTeam.MyTelULauncher"
     Publisher="CN=DeNesis"
-    Version="4.2.0.0" />
+    Version="4.3.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="d24d1284-7289-41dc-91e2-3ce23a83e406" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>MyTel‑U Launcher</DisplayName>
+    <DisplayName>MyTel-U</DisplayName>
     <PublisherDisplayName>DeNesis Team</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -117,6 +117,7 @@
 
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="webcam" />
   </Capabilities>
 
   <genTemplate:Metadata>

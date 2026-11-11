@@ -118,26 +118,25 @@ public partial class ScheduleViewModel : ObservableRecipient,
     public bool IsNotRefreshing => !IsRefreshing;
 
     [ObservableProperty]
-    public partial bool IsListLayout { get; set; } = true;
+    [NotifyPropertyChangedFor(nameof(IsListLayout))]
+    [NotifyPropertyChangedFor(nameof(IsTableLayout))]
+    [NotifyPropertyChangedFor(nameof(IsWeekLayout))]
+    [NotifyPropertyChangedFor(nameof(IsTimetableLayout))]
+    [NotifyPropertyChangedFor(nameof(CurrentLayoutIcon))]
+    public partial ScheduleLayout SelectedLayout { get; set; } = ScheduleLayout.List;
 
-    [ObservableProperty]
-    public partial bool IsTableLayout { get; set; } = false;
+    public bool IsListLayout => SelectedLayout == ScheduleLayout.List;
+    public bool IsTableLayout => SelectedLayout == ScheduleLayout.Table;
+    public bool IsWeekLayout => SelectedLayout == ScheduleLayout.Week;
+    public bool IsTimetableLayout => SelectedLayout == ScheduleLayout.Timeline;
 
-    partial void OnIsListLayoutChanged(bool value)
+    public string CurrentLayoutIcon => SelectedLayout switch
     {
-        OnPropertyChanged(nameof(IsTimetableLayout));
-        OnPropertyChanged(nameof(CurrentLayoutIcon));
-    }
-
-    partial void OnIsTableLayoutChanged(bool value)
-    {
-        OnPropertyChanged(nameof(IsTimetableLayout));
-        OnPropertyChanged(nameof(CurrentLayoutIcon));
-    }
-
-    public bool IsTimetableLayout => !IsListLayout && !IsTableLayout;
-
-    public string CurrentLayoutIcon => IsListLayout ? "\uE8FD" : IsTableLayout ? "\uE8A1" : "\uECA5";
+        ScheduleLayout.List => "\uE8FD",
+        ScheduleLayout.Table => "\uE8A1",
+        ScheduleLayout.Week => "\uE8F5",
+        _ => "\uECA5"
+    };
 
     [ObservableProperty]
     public partial string ClassReminderLabel { get; set; } = "Reminder";
@@ -190,9 +189,10 @@ public partial class ScheduleViewModel : ObservableRecipient,
     [ObservableProperty]
     public partial bool IsClassReminderSoundLoopingCall { get; set; }
 
-    [RelayCommand] private void SetListLayout()      { IsListLayout = true;  IsTableLayout = false; }
-    [RelayCommand] private void SetTableLayout()     { IsListLayout = false; IsTableLayout = true;  }
-    [RelayCommand] private void SetTimetableLayout() { IsListLayout = false; IsTableLayout = false; }
+    [RelayCommand] private void SetListLayout()      => SelectedLayout = ScheduleLayout.List;
+    [RelayCommand] private void SetTableLayout()     => SelectedLayout = ScheduleLayout.Table;
+    [RelayCommand] private void SetWeekLayout()      => SelectedLayout = ScheduleLayout.Week;
+    [RelayCommand] private void SetTimetableLayout() => SelectedLayout = ScheduleLayout.Timeline;
 
     [RelayCommand]
     private void OpenScheduleInBrowser()
@@ -321,72 +321,80 @@ public partial class ScheduleViewModel : ObservableRecipient,
 #endif
 
         var options = await _scheduleService.FetchAcademicYearsAsync();
+        if (options.Count == 0 && _scheduleService.IsNetworkAvailable()
+            && _browserLoginService.HasSavedCredentials
+            && await _browserLoginService.TrySilentLoginAsync())
+            options = await _scheduleService.FetchAcademicYearsAsync();
 #if DEBUG
         DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] options count={options?.Count ?? -1}", 100_000);
 #endif
 
-        AcademicYearOptions.Clear();
-        if (options == null || options.Count == 0)
+        _suppressAcademicYearChange = true;
+        try
         {
-            var (fallbackYear, fallbackSem) = _scheduleService.GetSavedAcademicYear();
-            if (!string.IsNullOrEmpty(fallbackYear) && !string.IsNullOrEmpty(fallbackSem))
+            AcademicYearOptions.Clear();
+            if (options == null || options.Count == 0)
             {
-                var fallback = new AcademicYearOption
+                var (fallbackYear, fallbackSem) = _scheduleService.GetSavedAcademicYear();
+                if (!string.IsNullOrEmpty(fallbackYear) && !string.IsNullOrEmpty(fallbackSem))
                 {
-                    Value = $"{fallbackYear}/{fallbackSem}",
-                    Text = $"{FormatAcademicYearLabel(fallbackYear, fallbackSem)} (Current) (Cached)",
-                    YearCode = fallbackYear,
-                    SemesterCode = fallbackSem,
-                    IsSelected = true
-                };
+                    var fallback = new AcademicYearOption
+                    {
+                        Value = $"{fallbackYear}/{fallbackSem}",
+                        Text = $"{FormatAcademicYearLabel(fallbackYear, fallbackSem)} (Current) (Cached)",
+                        YearCode = fallbackYear,
+                        SemesterCode = fallbackSem,
+                        IsSelected = true
+                    };
 
-                AcademicYearOptions.Add(fallback);
-                _suppressAcademicYearChange = true;
-                SelectedAcademicYear = fallback;
-                _suppressAcademicYearChange = false;
+                    AcademicYearOptions.Add(fallback);
+                    SelectedAcademicYear = fallback;
 #if DEBUG
-                DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] Using cached academic year fallback '{fallback.Text}'", 100_000);
+                    DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] Using cached academic year fallback '{fallback.Text}'", 100_000);
+#endif
+                }
+                else
+                {
+#if DEBUG
+                    DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No options and no saved year to show", 100_000);
+#endif
+                }
+                return;
+            }
+
+            foreach (var opt in options)
+                AcademicYearOptions.Add(opt);
+
+            // Prefer the user's saved preference; fall back to iGracias current.
+            var (savedYear, savedSem) = _scheduleService.GetSavedAcademicYear();
+
+            AcademicYearOption? toSelect = null;
+            if (!string.IsNullOrEmpty(savedYear) && !string.IsNullOrEmpty(savedSem))
+                toSelect = options.FirstOrDefault(o =>
+                    string.Equals(o.YearCode,     savedYear, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(o.SemesterCode, savedSem,  StringComparison.OrdinalIgnoreCase));
+
+            toSelect ??= options.FirstOrDefault(o => o.IsSelected) ?? options.FirstOrDefault();
+
+            if (toSelect != null)
+            {
+                // Restore the selection without triggering a schedule reload.
+                SelectedAcademicYear = toSelect;
+                FeatureFlowLogger.Write("Schedule", $"academic-years resolved: selected={toSelect.Value} | {toSelect.Text}, options={options.Count}");
+#if DEBUG
+                DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] SelectedAcademicYear set to '{toSelect.Text}'", 100_000);
 #endif
             }
             else
             {
 #if DEBUG
-                DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No options and no saved year to show", 100_000);
+                DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No year selected (toSelect was null)", 100_000);
 #endif
             }
-            return;
         }
-
-        foreach (var opt in options)
-            AcademicYearOptions.Add(opt);
-
-        // Prefer the user's saved preference; fall back to iGracias current.
-        var (savedYear, savedSem) = _scheduleService.GetSavedAcademicYear();
-
-        AcademicYearOption? toSelect = null;
-        if (!string.IsNullOrEmpty(savedYear) && !string.IsNullOrEmpty(savedSem))
-            toSelect = options.FirstOrDefault(o =>
-                string.Equals(o.YearCode,     savedYear, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(o.SemesterCode, savedSem,  StringComparison.OrdinalIgnoreCase));
-
-        toSelect ??= options.FirstOrDefault(o => o.IsSelected) ?? options.FirstOrDefault();
-
-        if (toSelect != null)
+        finally
         {
-            // Restore the selection without triggering a schedule reload.
-            _suppressAcademicYearChange = true;
-            SelectedAcademicYear = toSelect;
             _suppressAcademicYearChange = false;
-            FeatureFlowLogger.Write("Schedule", $"academic-years resolved: selected={toSelect.Value} | {toSelect.Text}, options={options.Count}");
-#if DEBUG
-        DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] SelectedAcademicYear set to '{toSelect.Text}'", 100_000);
-#endif
-        }
-        else
-        {
-#if DEBUG
-        DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] [VM] No year selected (toSelect was null)", 100_000);
-#endif
         }
     }
 
@@ -690,10 +698,7 @@ public partial class ScheduleViewModel : ObservableRecipient,
     private async Task RefreshScheduleAsync()
     {
         FeatureFlowLogger.Write("Schedule", $"refresh start: selected={SelectedAcademicYear?.Value ?? "(null)"}");
-        await LoadScheduleAsync();
-
-        if (!NeedsLogin)
-            _ = LoadAcademicYearsAsync();
+        await InitializeAsync();
     }
 
     /// <summary>Populates all VM collections from a <see cref="ScheduleResponse"/>.</summary>
@@ -778,6 +783,9 @@ public partial class ScheduleViewModel : ObservableRecipient,
         var canonicalDays = isIndonesian
             ? new[] { "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu" }
             : new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+
+        if (days.Any(d => DayOrder.TryGetValue(d, out var order) && order == 6))
+            canonicalDays = [.. canonicalDays, isIndonesian ? "Minggu" : "Sunday"];
 
         foreach (var cd in canonicalDays)
             AllDayItems.Add(new DaySegmentItem

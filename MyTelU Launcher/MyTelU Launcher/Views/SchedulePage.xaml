@@ -303,6 +303,14 @@
                                             <FontIcon Glyph="&#xE8A1;"/>
                                         </RadioMenuFlyoutItem.Icon>
                                     </RadioMenuFlyoutItem>
+                                    <RadioMenuFlyoutItem Text="Week"
+                                                        GroupName="LayoutGroup"
+                                                        IsChecked="{x:Bind ViewModel.IsWeekLayout, Mode=OneWay}"
+                                                        Command="{x:Bind ViewModel.SetWeekLayoutCommand}">
+                                        <RadioMenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE8F5;"/>
+                                        </RadioMenuFlyoutItem.Icon>
+                                    </RadioMenuFlyoutItem>
                                     <RadioMenuFlyoutItem Text="Timeline"
                                                         GroupName="LayoutGroup"
                                                         IsChecked="{x:Bind ViewModel.IsTimetableLayout, Mode=OneWay}"
@@ -495,7 +503,91 @@
                     </ItemsControl>
                 </ScrollViewer>
 
-                        <!-- ── TABLE VIEW (all days as columns, courses stacked) ── -->
+                        <!-- Week view is created only when selected, keeping inactive cards out of memory. -->
+                        <ScrollViewer x:Name="WeekView"
+                                      Loaded="WeekView_Loaded"
+                                      x:Load="{x:Bind ViewModel.IsWeekLayout, Mode=OneWay}"
+                                      HorizontalScrollMode="Enabled" HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
+                                      AutomationProperties.Name="Weekly class schedule">
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.CoursesByDay, Mode=OneWay}" Margin="0,0,0,4">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:DayGroup">
+                                        <StackPanel Width="224" Spacing="4" VerticalAlignment="Top">
+                                            <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                    CornerRadius="{ThemeResource ControlCornerRadius}" Padding="8,4">
+                                                <TextBlock Text="{x:Bind Day}" FontWeight="SemiBold"
+                                                           Foreground="{ThemeResource AccentButtonForeground}"
+                                                           HorizontalAlignment="Center"/>
+                                            </Border>
+                                            <ItemsControl ItemsSource="{x:Bind Courses}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:CourseItem">
+                                                        <Border Margin="0,0,0,4" Padding="8" CornerRadius="8"
+                                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                                            <StackPanel Spacing="4">
+                                                                <StackPanel Spacing="4">
+                                                                    <TextBlock Text="{x:Bind CourseCode}" FontSize="12" FontWeight="SemiBold"
+                                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                                    <TextBlock Text="{x:Bind CourseName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                                    <TextBlock Text="{x:Bind Time}" FontSize="12" TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <Grid ColumnSpacing="8" RowSpacing="4">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="16"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                        <RowDefinition Height="Auto"/>
+                                                                    </Grid.RowDefinitions>
+                                                                    <FontIcon Glyph="&#xE707;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                                    <TextBlock Grid.Column="1" Text="{x:Bind Room}" FontSize="12" TextWrapping="Wrap"/>
+                                                                    <FontIcon Grid.Row="1" Glyph="&#xE716;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind Class}" FontSize="12" TextWrapping="Wrap"/>
+                                                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind Lecturer}" FontSize="12" TextWrapping="Wrap"
+                                                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                                                </Grid>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <Border Padding="5,2" CornerRadius="4" Background="{ThemeResource BadgeOngoingBrush}"
+                                                                            Visibility="{x:Bind IsOngoing, Converter={StaticResource BoolToVisibility}}">
+                                                                        <TextBlock Text="ONGOING" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                                    </Border>
+                                                                    <Border Padding="5,2" CornerRadius="4" Background="{ThemeResource BadgeUpcomingBrush}"
+                                                                            Visibility="{x:Bind IsUpcoming, Converter={StaticResource BoolToVisibility}}">
+                                                                        <TextBlock Text="UPCOMING" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                                    </Border>
+                                                                    <Border Padding="5,2" CornerRadius="4" Background="{ThemeResource BadgeFinishedBrush}"
+                                                                            Visibility="{x:Bind IsFinished, Converter={StaticResource BoolToVisibility}}">
+                                                                        <TextBlock Text="FINISHED" FontSize="9" FontWeight="SemiBold" Foreground="{ThemeResource BadgeTextBrush}"/>
+                                                                    </Border>
+                                                                    <FontIcon Glyph="&#xE814;" FontSize="14" Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                                              Visibility="{x:Bind HasConflict, Converter={StaticResource BoolToVisibility}}"
+                                                                              AutomationProperties.Name="Schedule conflict detected"
+                                                                              ToolTipService.ToolTip="Schedule conflict detected"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="No classes" FontSize="12" HorizontalAlignment="Center" Margin="0,8"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       Visibility="{x:Bind HasNoCourses, Converter={StaticResource BoolToVisibility}}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- Table view -->
                         <tabular:TableView
                             ItemsSource="{x:Bind ViewModel.AllCourses, Mode=OneWay}"
                             Visibility="{x:Bind ViewModel.IsTableLayout, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"

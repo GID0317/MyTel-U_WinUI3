@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <Version>4.2.0</Version>
+    <Version>4.3.0</Version>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>MyTelU_Launcher</RootNamespace>
@@ -79,6 +79,7 @@
   <ItemGroup>
     <Content Include="Icon_App.ico" />
     <Content Include="Assets\Logo_TelkomUniversity.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Assets\Licenses\ZXing.Net.LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -98,6 +99,7 @@
     <PackageReference Include="System.Drawing.Common" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="WinUIEx" />
+    <PackageReference Include="ZXing.Net" />
   </ItemGroup>
 
   <ItemGroup>
@@ -108,7 +110,7 @@
 
   <Target Name="BuildWidgetProject" BeforeTargets="BeforeBuild">
     <Message Text="Building TY4EHelper.Widgets..." Importance="high" />
-    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\TY4EHelper.Widgets.csproj&quot; -r win-x64 -c $(Configuration) /p:Platform=$(Platform) /p:SelfContained=$(WidgetSelfContained) /p:WindowsAppSDKSelfContained=$(WidgetWindowsAppSDKSelfContained) --no-restore" ContinueOnError="false" ConsoleToMSBuild="true">
+    <Exec Command="dotnet build &quot;$(MSBuildThisFileDirectory)..\TY4EHelper.Widgets\TY4EHelper.Widgets.csproj&quot; -r win-x64 -c $(Configuration) /p:Platform=$(Platform) /p:SelfContained=$(WidgetSelfContained) /p:WindowsAppSDKSelfContained=$(WidgetWindowsAppSDKSelfContained)" ContinueOnError="false" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="_WidgetBuildOutput" />
     </Exec>
     <Message Text="$(_WidgetBuildOutput)" Importance="low" />

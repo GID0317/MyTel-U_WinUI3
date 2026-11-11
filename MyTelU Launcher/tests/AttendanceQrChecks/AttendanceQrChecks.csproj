@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ZXing.Net" />
+    <PackageReference Include="HtmlAgilityPack" />
+    <Compile Include="..\..\MyTelU Launcher\Services\AttendanceQrService.cs" Link="AttendanceQrService.cs" />
+    <Compile Include="..\..\MyTelU Launcher\Models\AttendanceSubmissionResult.cs" Link="AttendanceSubmissionResult.cs" />
+    <None Include="..\..\MyTelU Launcher\Views\ScanAttendanceDialog.xaml" Link="ScanAttendanceDialog.xaml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\MyTelU Launcher\Views\AttendancePage.xaml" Link="AttendancePage.xaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

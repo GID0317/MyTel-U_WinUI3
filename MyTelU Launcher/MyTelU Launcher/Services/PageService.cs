@@ -18,6 +18,7 @@ public class PageService : IPageService
         Configure<ScheduleViewModel, SchedulePage>();
         Configure<AttendanceViewModel, AttendancePage>();
         Configure<GradeViewModel, GradePage>();
+        Configure<TimelineViewModel, TimelinePage>();
         Configure<OpenCommunityToolsViewModel, OpenCommunityToolsPage>();
         Configure<WebViewerViewModel, WebViewerPage>();
         Configure<SettingsViewModel, SettingsPage>();

@@ -10,6 +10,7 @@ public static class FrameExtensions
         Views.SchedulePage page => page.ViewModel,
         Views.AttendancePage page => page.ViewModel,
         Views.GradePage page => page.ViewModel,
+        Views.TimelinePage page => page.ViewModel,
         Views.OpenCommunityToolsPage page => page.ViewModel,
         Views.WebViewerPage page => page.ViewModel,
         Views.SettingsPage page => page.ViewModel,

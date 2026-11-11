@@ -1,6 +1,5 @@
 using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Diagnostics;
-using System.Net.NetworkInformation;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Net;
@@ -87,7 +86,7 @@ public class ScheduleService : IScheduleService, IDisposable
     public ScheduleResponse? GetCachedSchedule() => LoadCache();
 
     public bool IsNetworkAvailable() =>
-        NetworkInterface.GetIsNetworkAvailable();
+        InternetConnection.IsAvailable;
 
     public void ClearSession()
     {
@@ -480,6 +479,8 @@ public class ScheduleService : IScheduleService, IDisposable
 
     public async Task<List<AcademicYearOption>> FetchAcademicYearsAsync()
     {
+        if (!IsNetworkAvailable()) return [];
+
 #if DEBUG
         var logFile = Path.Combine(_appDataDir, "academic_years_debug.log");
         void Log(string msg) => DiagnosticLogging.AppendLine(logFile, $"[{DateTime.Now:HH:mm:ss}] {msg}", 100_000);

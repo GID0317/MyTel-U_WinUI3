@@ -6,7 +6,7 @@ using Json = MyTelU_Launcher.Core.Helpers.Json;
 
 namespace MyTelU_Launcher.Services;
 
-public sealed class MobileAcademicService : IDisposable
+public sealed partial class MobileAcademicService : IDisposable
 {
     private readonly object _cacheGate = new();
     private int _generation;
@@ -78,6 +78,22 @@ public sealed class MobileAcademicService : IDisposable
         }
     }
 
+    public async Task<AttendanceSubmissionResult> SubmitAttendanceAsync(string qrValue, CancellationToken ct = default)
+    {
+        AttendanceQrService.ValidateQrValue(qrValue);
+        int generation = Volatile.Read(ref _generation);
+        var session = await LoginAsync(ct);
+        ct.ThrowIfCancellationRequested();
+        Task<AttendanceSubmissionResult> submission;
+        lock (_cacheGate)
+        {
+            if (_generation != generation)
+                throw new InvalidOperationException("The account session has changed. Sign in again before submitting attendance.");
+            submission = AttendanceQrService.SubmitAsync(_http, session.Token, qrValue, ct);
+        }
+        return await submission;
+    }
+
     private async Task<(StudentProfile Profile, string Token)> LoginAsync(CancellationToken ct)
     {
         int generation = Volatile.Read(ref _generation);
@@ -127,7 +143,11 @@ public sealed class MobileAcademicService : IDisposable
 
     public void ResetSession()
     {
-        lock (_cacheGate) _generation++;
+        lock (_cacheGate)
+        {
+            _generation++;
+            _timelineToken = null;
+        }
         _http.CancelPendingRequests();
     }
 

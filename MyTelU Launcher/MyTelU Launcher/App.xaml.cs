@@ -104,6 +104,8 @@ public partial class App : Application
                 services.AddSingleton<StudyPlanService>();
                 services.AddTransient<GradeViewModel>();
                 services.AddTransient<GradePage>();
+                services.AddTransient<TimelineViewModel>();
+                services.AddTransient<TimelinePage>();
                 services.AddTransient<ShellPage>();
                 services.AddTransient<ShellViewModel>();
 

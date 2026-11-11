@@ -183,9 +183,6 @@ public partial class GradeViewModel : ObservableRecipient,
         WeakReferenceMessenger.Default.Register<BrowserLoginStateMessage>(this);
         // Seed state in case login was already started before this VM was constructed.
         IsBrowserLoginRunning = _browserLoginService.IsRunning;
-        // already has a value selected on the first render, before any async work.
-        PrePopulatePeriodsFromCache();
-
         IsInitializing = true;
         Initialization = InitializeAsync();
     }
@@ -196,6 +193,11 @@ public partial class GradeViewModel : ObservableRecipient,
         {
             var cached = await Task.Run(_mobileAcademicService.GetCachedTak);
             if (cached != null) { TakScore = cached.Score.ToString(); TakStatus = "Cached"; }
+            if (!InternetConnection.IsAvailable)
+            {
+                if (cached == null) TakStatus = "Unavailable";
+                return;
+            }
             var summary = await _mobileAcademicService.GetTakAsync();
             TakScore = summary.Score.ToString();
             TakStatus = summary.IsCached ? "Cached" : "MyTelU";
@@ -207,9 +209,8 @@ public partial class GradeViewModel : ObservableRecipient,
     }
 
     /// <summary>Preloads period options from cache so the ComboBox has a stable initial selection.</summary>
-    private void PrePopulatePeriodsFromCache()
+    private void PrePopulatePeriodsFromCache(GradeResponse? cached)
     {
-        var cached = _gradeService.GetCachedGrades();
         if (cached == null || cached.Grades.Count == 0) return;
 
         _suppressPeriodChange = true;
@@ -269,8 +270,10 @@ public partial class GradeViewModel : ObservableRecipient,
         try
         {
             _savedPeriodKey = await _localSettingsService.ReadSettingAsync<string>("GradeSelectedPeriod") ?? string.Empty;
+            var cached = await Task.Run(_gradeService.GetCachedGrades);
+            if (PeriodOptions.Count == 0) PrePopulatePeriodsFromCache(cached);
             await LoadAcademicYearsAsync();
-            await Task.WhenAll(LoadGradesAsync(), RefreshTakAsync());
+            await Task.WhenAll(LoadGradesAsync(cached), RefreshTakAsync());
         }
         catch (Exception ex)
         {
@@ -302,10 +305,8 @@ public partial class GradeViewModel : ObservableRecipient,
         await PersistSelectedPeriodAsync(SelectedPeriod);
         FeatureFlowLogger.Write("Grade", $"refresh start: key={BuildPeriodKey(SelectedPeriod)}, persisted={_savedPeriodKey}, label={SelectedPeriod?.Label ?? "(null)"}");
 
-        await Task.WhenAll(LoadGradesAsync(), RefreshTakAsync());
-
-        // Refresh academic year labels — offline path collapses them to "(Cached)" entries.
-        if (!NeedsLogin)
+        IsLoading = true;
+        try
         {
             await LoadAcademicYearsAsync();
 
@@ -319,7 +320,9 @@ public partial class GradeViewModel : ObservableRecipient,
                 _suppressPeriodChange = false;
                 FeatureFlowLogger.Write("Grade", $"refresh restored selection: key={BuildPeriodKey(restored)}, label={restored.Label}");
             }
+            await Task.WhenAll(LoadGradesAsync(), RefreshTakAsync());
         }
+        finally { IsLoading = false; }
     }
 
     [RelayCommand(CanExecute = nameof(CanLoginWithBrowser))]
@@ -430,7 +433,9 @@ public partial class GradeViewModel : ObservableRecipient,
     }
 
     [RelayCommand]
-    public async Task LoadGradesAsync()
+    public Task LoadGradesAsync() => LoadGradesAsync(null);
+
+    private async Task LoadGradesAsync(GradeResponse? startupCache)
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
@@ -447,7 +452,7 @@ public partial class GradeViewModel : ObservableRecipient,
             string year = SelectedPeriod?.SchoolYear ?? "";
             string semester = SelectedPeriod?.Semester ?? "";
             GradeResponse? data = null;
-            bool online = System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable();
+            bool online = InternetConnection.IsAvailable;
             if (online)
             {
                 data = await _gradeService.GetGradesAsync(year, semester, token);
@@ -458,7 +463,7 @@ public partial class GradeViewModel : ObservableRecipient,
             token.ThrowIfCancellationRequested();
             if (data == null)
             {
-                var cached = await Task.Run(_gradeService.GetCachedGrades, token);
+                var cached = startupCache ?? await Task.Run(_gradeService.GetCachedGrades, token);
                 if (cached != null && (string.IsNullOrEmpty(cached.SchoolYear)
                     || (cached.SchoolYear == year && cached.Semester == semester)))
                 {
@@ -544,6 +549,10 @@ public partial class GradeViewModel : ObservableRecipient,
         try
         {
             var years = await _gradeService.FetchAcademicYearsAsync();
+            if (years.Count == 0 && InternetConnection.IsAvailable
+                && _browserLoginService.HasSavedCredentials
+                && await _browserLoginService.TrySilentLoginAsync())
+                years = await _gradeService.FetchAcademicYearsAsync();
             FeatureFlowLogger.Write("Grade", $"academic-years load: live-count={years.Count}, saved={_savedPeriodKey}");
 
             _suppressPeriodChange = true;

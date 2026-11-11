@@ -2,7 +2,6 @@ using JsonSerializer = MyTelU_Launcher.Core.Helpers.Json;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
@@ -105,7 +104,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
     public async Task<AttendanceCourseDetail?> GetCourseDetailAsync(int courseId, CancellationToken ct = default)
     {
-        if (!NetworkInterface.GetIsNetworkAvailable())
+        if (!InternetConnection.IsAvailable)
             return LoadDetailCache(courseId);
 
         if (!HasSavedSession())
@@ -165,7 +164,7 @@ public partial class AttendanceService : IAttendanceService, IDisposable
 
     public async Task<List<AcademicYearOption>> FetchAvailableSemestersAsync(CancellationToken ct = default)
     {
-        if (!HasSavedSession()) return new();
+        if (!InternetConnection.IsAvailable || !HasSavedSession()) return [];
 
         try
         {
