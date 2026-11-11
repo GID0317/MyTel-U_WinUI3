@@ -11,6 +11,7 @@
     </ContentDialog.Resources>
     <StackPanel Spacing="12">
         <TextBox x:Name="PostContent" Header="Post text" AcceptsReturn="True" TextWrapping="Wrap"
+                 SelectionHighlightColor="{ThemeResource TextControlSelectionHighlightColor}"
                  MinHeight="110" MaxHeight="180" TextChanged="PostContent_TextChanged"/>
         <TextBlock x:Name="PostCount" HorizontalAlignment="Right" Style="{ThemeResource CaptionTextBlockStyle}"
                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

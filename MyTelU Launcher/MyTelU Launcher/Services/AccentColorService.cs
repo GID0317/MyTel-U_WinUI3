@@ -252,6 +252,17 @@ public class AccentColorService
                 SetResource(resources, "AccentButtonBorderBrushPointerOver", accentHoverBrush);
                 SetResource(resources, "AccentButtonBorderBrushPressed",     accentPressedBrush);
 
+                SetResource(resources, "SelectorBarItemPillFill",            accentBrush);
+                SetResource(resources, "SelectorBarItemDisabledPillFill",    accentDisabledBrush);
+                SetResource(resources, "PagerControlSelectionIndicatorForeground", accentBrush);
+                SetResource(resources, "ToggleButtonBackgroundChecked",              accentBrush);
+                SetResource(resources, "ToggleButtonBackgroundCheckedPointerOver",   accentHoverBrush);
+                SetResource(resources, "ToggleButtonBackgroundCheckedPressed",       accentPressedBrush);
+                SetResource(resources, "ToggleButtonBackgroundCheckedDisabled",      accentDisabledBrush);
+                SetResource(resources, "ToggleButtonForegroundChecked",              buttonTextBrush);
+                SetResource(resources, "ToggleButtonForegroundCheckedPointerOver",   buttonTextBrush);
+                SetResource(resources, "ToggleButtonForegroundCheckedPressed",       buttonTextBrush);
+
                 var checkGlyphBrush = isLightTheme ? new SolidColorBrush(Colors.White) : new SolidColorBrush(Colors.Black);
                 SetResource(resources, "CheckBoxCheckGlyphForegroundChecked",              checkGlyphBrush);
                 SetResource(resources, "CheckBoxCheckGlyphForegroundCheckedPointerOver",   checkGlyphBrush);
@@ -280,8 +291,9 @@ public class AccentColorService
                 SetResource(resources, "SliderThumbBackgroundPointerOver",accentHoverBrush);
                 SetResource(resources, "SliderThumbBackgroundPressed",    accentPressedBrush);
 
-                // Leave the default focus border alone so focus visuals stay readable.
-                SetResource(resources, "TextControlSelectionHighlightColor", color);
+                // Selection keeps the normal text foreground, unlike an accent button.
+                var selectionBrush = new SolidColorBrush(EnsureLightness(color, isLightTheme ? 0.78 : 0.29, isLightTheme));
+                SetResource(resources, "TextControlSelectionHighlightColor", selectionBrush);
 
                 SetResource(resources, "ComboBoxItemPillFillBrush",                   accentBrush);
                 SetResource(resources, "ComboBoxItemPillFillBrushPointerOver",        accentHoverBrush);
@@ -464,6 +476,15 @@ public class AccentColorService
             "AccentFillColorSecondaryBrush",
             "AccentFillColorTertiaryBrush",
             "AccentFillColorDisabledBrush",
+            "SelectorBarItemPillFill",
+            "SelectorBarItemDisabledPillFill",
+            "ToggleButtonBackgroundChecked",
+            "ToggleButtonBackgroundCheckedPointerOver",
+            "ToggleButtonBackgroundCheckedPressed",
+            "ToggleButtonBackgroundCheckedDisabled",
+            "ToggleButtonForegroundChecked",
+            "ToggleButtonForegroundCheckedPointerOver",
+            "ToggleButtonForegroundCheckedPressed",
             "SystemControlHighlightAccentBrush",
             "SystemControlHighlightAccent2Brush",
             "SystemControlHighlightAccent3Brush",
