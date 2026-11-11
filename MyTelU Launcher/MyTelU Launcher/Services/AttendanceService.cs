@@ -170,48 +170,49 @@ public partial class AttendanceService : IAttendanceService, IDisposable
         {
             using var session = await IGraciasSessionGate.EnterAsync(AppDataStore.RootDirectoryPath, ct);
             using var client = BuildHttpClient(ajax: false);
-            var resp = await client.GetAsync(PresenceUrl, ct);
-            if (!resp.IsSuccessStatusCode) return new();
-
-            var html = await resp.Content.ReadAsStringAsync(ct);
-            if (string.IsNullOrWhiteSpace(html) || html.Length < 500) return new();
-
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
-
-            var select = doc.DocumentNode.SelectSingleNode("//select[@id='changeSemester']");
-            if (select == null) return new();
-
-            var options = new List<AcademicYearOption>();
-            foreach (var opt in select.SelectNodes(".//option") ?? Enumerable.Empty<HtmlNode>())
-            {
-                var value = opt.GetAttributeValue("value", "");
-                var text = opt.InnerText.Trim();
-                var isSelected = opt.GetAttributeValue("selected", null) != null;
-
-                if (string.IsNullOrEmpty(value)) continue;
-
-                var parts = value.Split('/');
-                if (parts.Length == 2)
-                {
-                    options.Add(new AcademicYearOption
-                    {
-                        Value = value,
-                        Text = isSelected ? $"{text} (Current)" : text,
-                        YearCode = parts[0],
-                        SemesterCode = parts[1],
-                        IsSelected = isSelected,
-                    });
-                }
-            }
-
-            return options;
+            return await ReadAvailableSemestersAsync(client, ct);
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[AttendanceService] FetchAvailableSemestersAsync error: {ex.Message}");
             return new();
         }
+    }
+
+    internal static async Task<List<AcademicYearOption>> ReadAvailableSemestersAsync(HttpClient client, CancellationToken ct)
+    {
+        using var resp = await client.GetAsync(PresenceUrl, ct);
+        if (!resp.IsSuccessStatusCode) return [];
+
+        var html = await resp.Content.ReadAsStringAsync(ct);
+        if (string.IsNullOrWhiteSpace(html) || html.Length < 500) return [];
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var select = doc.DocumentNode.SelectSingleNode("//select[@id='changeSemester']");
+        if (select == null) return [];
+
+        var options = new List<AcademicYearOption>();
+        foreach (var opt in select.SelectNodes(".//option") ?? Enumerable.Empty<HtmlNode>())
+        {
+            var value = opt.GetAttributeValue("value", "");
+            var parts = value.Split('/');
+            if (parts.Length != 2) continue;
+
+            var text = opt.InnerText.Trim();
+            var isSelected = opt.GetAttributeValue("selected", null) != null;
+            options.Add(new AcademicYearOption
+            {
+                Value = value,
+                Text = isSelected ? $"{text} (Current)" : text,
+                YearCode = parts[0],
+                SemesterCode = parts[1],
+                IsSelected = isSelected,
+            });
+        }
+
+        return options;
     }
 
     private async Task<string?> FetchPresenceHtmlAsync(string schoolYear, CancellationToken ct)

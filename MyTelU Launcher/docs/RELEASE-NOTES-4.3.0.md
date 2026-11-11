@@ -32,6 +32,7 @@ MyTel-U 4.3.0 brings the Telutizen Timeline to Windows, adds QR attendance, and 
 
 ## What's Fixed?
 
+- **Fixed** Schedule now restores older semesters missing from the iGracias dropdown when the account still has schedule data for those terms.
 - **Fixed** The Scan presensi tab indicator, Timeline pager, and active Like buttons now use the app accent instead of the Windows accent. Selected text in Timeline dialogs uses a contrasting shade of the app accent.
 - **Fixed** Schedule, Attendance, and Grades could wait on network requests before showing saved data. When Windows reports no internet access, these pages now skip online requests and use previously loaded data where available.
 - **Fixed** Schedule and Attendance refreshes now resolve the academic period before fetching data and avoid duplicate requests when the period picker is rebuilt.

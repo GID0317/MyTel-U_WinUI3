@@ -61,6 +61,7 @@ public class ScheduleService : IScheduleService, IDisposable
     private static readonly string _settingsFile = Path.Combine(_appDataDir, "settings.json");
 
     private readonly HttpClient _httpClient = new();
+    private (string StudentId, string OldestYear, List<AcademicYearOption> Periods)? _historicalPeriods;
 
     public bool IsServerRunning => true;
     public Task StartServerAsync() => Task.CompletedTask;
@@ -90,6 +91,7 @@ public class ScheduleService : IScheduleService, IDisposable
 
     public void ClearSession()
     {
+        _historicalPeriods = null;
         App.GetService<MobileAcademicService>().ResetSession();
         App.GetService<StudyPlanService>().ResetSession();
         AppDataStore.ClearAll();
@@ -283,7 +285,7 @@ public class ScheduleService : IScheduleService, IDisposable
         parts.Add($"schoolYear={Uri.EscapeDataString(schoolYear)}");
 
         var url  = "https://igracias.telkomuniversity.ac.id/libraries/ajax/ajax.schedule.php?" + string.Join("&", parts);
-        var resp = await client.GetAsync(url, ct);
+        using var resp = await client.GetAsync(url, ct);
         if (!resp.IsSuccessStatusCode) return null;
 
         var body = await resp.Content.ReadAsStringAsync();
@@ -559,73 +561,7 @@ public class ScheduleService : IScheduleService, IDisposable
                 }
             }
 
-            // Older years sometimes come back with missing semester entries, so probe them directly.
-            if (options.Count > 0)
-            {
-                var semesterNames = new Dictionary<string, string>
-                {
-                    { "1", "GANJIL" }, { "2", "GENAP" }, { "3", "ANTARA" }
-                };
-
-                var validYearCodes = options
-                    .Where(o => o.YearCode.Length == 4)
-                    .Select(o => o.YearCode)
-                    .Distinct()
-                    .ToList();
-
-                if (validYearCodes.Count > 0)
-                {
-                    var oldestYear     = validYearCodes.Min()!;
-                    var yearLabel      = $"20{oldestYear[..2]}/20{oldestYear[2..]}";
-                    var existingValues = new HashSet<string>(options.Select(o => o.Value));
-
-                    var patches = new List<AcademicYearOption>();
-                    foreach (var smCode in new[] { "1", "2", "3" })
-                    {
-                        var val = $"{oldestYear}/{smCode}";
-                        if (existingValues.Contains(val)) continue;
-
-                        try
-                        {
-                            var probeUrl = $"https://igracias.telkomuniversity.ac.id/registration/?pageid=17985&sch={oldestYear}&sm={smCode}";
-                            Log($"  Gap-fill probe: {probeUrl}");
-                            using var probeClient = BuildPageHttpClient();
-                            var probeResp = await probeClient.GetAsync(probeUrl);
-                            if (probeResp.IsSuccessStatusCode)
-                            {
-                                var probeBody = await probeResp.Content.ReadAsStringAsync();
-                                Log($"  Gap-fill probe {val}: HTTP {(int)probeResp.StatusCode}, length={probeBody.Length}");
-                                if (probeBody.Length > 10000)
-                                {
-                                    patches.Add(new AcademicYearOption
-                                    {
-                                        Value        = val,
-                                        Text         = $"{yearLabel} - {semesterNames[smCode]}",
-                                        YearCode     = oldestYear,
-                                        SemesterCode = smCode,
-                                        IsSelected   = false
-                                    });
-                                    Log($"  Gap-fill: added missing semester {val}");
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log($"  Gap-fill probe failed for {val}: {ex.Message}");
-                        }
-                    }
-
-                    if (patches.Count > 0)
-                    {
-                        var insertIdx = options.FindIndex(o => o.YearCode == oldestYear);
-                        if (insertIdx >= 0)
-                            options.InsertRange(insertIdx, patches.OrderBy(p => p.SemesterCode));
-                        else
-                            options.AddRange(patches.OrderBy(p => p.SemesterCode));
-                        Log($"  Gap-fill: inserted {patches.Count} patch(es) for {oldestYear}");
-                    }
-                }
-            }
+            await RecoverHistoricalPeriodsAsync(client, options);
 
             Log($"Returning {options.Count} option(s).");
             return options;
@@ -635,6 +571,78 @@ public class ScheduleService : IScheduleService, IDisposable
             Log($"Exception: {ex.Message}");
             Debug.WriteLine($"[ScheduleService] FetchAcademicYears error: {ex.Message}");
             return new List<AcademicYearOption>();
+        }
+    }
+
+    private async Task RecoverHistoricalPeriodsAsync(HttpClient pageClient, List<AcademicYearOption> options)
+    {
+        var oldestYear = options.Select(o => o.YearCode)
+            .Where(year => year.Length == 4 && year.All(char.IsAsciiDigit)).Min(StringComparer.Ordinal);
+        if (oldestYear == null || !LoadSettings().TryGetValue("studentId", out var studentId)
+            || string.IsNullOrWhiteSpace(studentId)) return;
+
+        if (_historicalPeriods is not { } cached || cached.StudentId != studentId || cached.OldestYear != oldestYear)
+        {
+            // The registration dropdown can omit entire years that still have schedule data.
+            List<AcademicYearOption> recovered = [];
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
+                var attendancePeriods = await AttendanceService.ReadAvailableSemestersAsync(pageClient, timeout.Token);
+                if (attendancePeriods.Count == 0) return;
+
+                var existing = options.Select(o => o.Value).ToHashSet(StringComparer.Ordinal);
+                var candidates = attendancePeriods.Where(o => o.YearCode.Length == 4 && o.YearCode.All(char.IsAsciiDigit)
+                    && string.CompareOrdinal(o.YearCode, oldestYear) <= 0
+                    && o.SemesterCode is "1" or "2" or "3" && existing.Add(o.Value))
+                    .OrderByDescending(o => o.Value, StringComparer.Ordinal);
+                bool complete = true;
+                using var ajax = BuildHttpClient();
+                foreach (var batch in candidates.Chunk(3))
+                {
+                    var results = await Task.WhenAll(batch.Select(async period =>
+                    {
+                        try
+                        {
+                            var courses = await FetchScheduleListAsync(ajax, studentId, period.Value, timeout.Token);
+                            return (Period: period, Count: courses?.Count);
+                        }
+                        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException)
+                        {
+                            Debug.WriteLine($"[ScheduleService] Could not check period {period.Value}: {ex.Message}");
+                            return (Period: period, Count: (int?)null);
+                        }
+                    }));
+                    foreach (var (period, count) in results)
+                    {
+                        if (count == null) complete = false;
+                        if (count is not > 0) continue;
+
+                        string semester = period.SemesterCode switch { "1" => "GANJIL", "2" => "GENAP", _ => "ANTARA" };
+                        recovered.Add(new AcademicYearOption
+                        {
+                            Value = period.Value,
+                            YearCode = period.YearCode,
+                            SemesterCode = period.SemesterCode,
+                            Text = $"20{period.YearCode[..2]}/20{period.YearCode[2..]} - {semester}"
+                        });
+                    }
+                    if (timeout.IsCancellationRequested) break;
+                }
+                if (complete && !timeout.IsCancellationRequested) _historicalPeriods = (studentId, oldestYear, recovered);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException)
+            {
+                Debug.WriteLine($"[ScheduleService] Could not recover historical periods: {ex.Message}");
+            }
+            cached = (studentId, oldestYear, recovered);
+        }
+
+        foreach (var period in cached.Periods.OrderBy(o => o.Value, StringComparer.Ordinal))
+        {
+            if (options.Any(o => o.Value == period.Value)) continue;
+            int index = options.FindIndex(o => string.CompareOrdinal(o.Value, period.Value) > 0);
+            options.Insert(index < 0 ? options.Count : index, period);
         }
     }
 
